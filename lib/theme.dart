@@ -18,14 +18,14 @@ class AppTheme {
       brightness: Brightness.light,
       primaryColor: AppColors.primaryButton,
       scaffoldBackgroundColor: Colors.white,
-      textTheme: GoogleFonts.poppinsTextTheme().copyWith(
-        displayLarge: GoogleFonts.poppins(
+      textTheme: GoogleFonts.interTextTheme().copyWith(
+        displayLarge: GoogleFonts.inter(
           fontWeight: FontWeight.bold,
           color: AppColors.textHeading,
           fontSize: 60,
           height: 1.2,
         ),
-        bodyLarge: GoogleFonts.poppins(
+        bodyLarge: GoogleFonts.inter(
           fontSize: 16,
           color: AppColors.textBody,
           height: 1.6,

@@ -3,6 +3,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme.dart';
 import '../responsive.dart';
+import '../screens/about_page.dart';
+import '../screens/contact_page.dart';
+import '../screens/my_bookings_screen.dart';
+import '../screens/repair_page.dart';
+import '../screens/privacy_policy_page.dart';
+import '../screens/terms_conditions_page.dart';
+import '../screens/return_refund_page.dart';
+import '../screens/child_protection_page.dart';
 
 class Footer extends StatelessWidget {
   const Footer({super.key});
@@ -32,11 +40,11 @@ class Footer extends StatelessWidget {
                     children: [
                       Expanded(flex: 2, child: _buildBrandSection()),
                       const SizedBox(width: 60),
-                      Expanded(child: _buildQuickLinks()),
+                      Expanded(child: _buildQuickLinks(context)),
                       const SizedBox(width: 40),
                       Expanded(child: _buildServices()),
                       const SizedBox(width: 40),
-                      Expanded(child: _buildContact()),
+                      Expanded(child: _buildLegalSection(context)),
                     ],
                   )
                 : Column(
@@ -44,11 +52,11 @@ class Footer extends StatelessWidget {
                     children: [
                       _buildBrandSection(),
                       const SizedBox(height: 40),
-                      _buildQuickLinks(),
+                      _buildQuickLinks(context),
                       const SizedBox(height: 30),
                       _buildServices(),
                       const SizedBox(height: 30),
-                      _buildContact(),
+                      _buildLegalSection(context),
                     ],
                   ),
           ),
@@ -64,19 +72,31 @@ class Footer extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '© 2024 Ziyonstar. All rights reserved.',
-                        style: GoogleFonts.manrope(
+                        '© 2026 Ziyonstar. All rights reserved.',
+                        style: GoogleFonts.inter(
                           color: Colors.white.withAlpha(180),
                           fontSize: 14,
                         ),
                       ),
                       Row(
                         children: [
-                          _buildFooterLink('Privacy Policy'),
+                          _buildFooterLink(
+                            context,
+                            'Privacy Policy',
+                            const PrivacyPolicyPage(),
+                          ),
                           const SizedBox(width: 24),
-                          _buildFooterLink('Terms of Service'),
+                          _buildFooterLink(
+                            context,
+                            'Terms & Conditions',
+                            const TermsConditionsPage(),
+                          ),
                           const SizedBox(width: 24),
-                          _buildFooterLink('Cookie Policy'),
+                          _buildFooterLink(
+                            context,
+                            'Return & Refund',
+                            const ReturnRefundPage(),
+                          ),
                         ],
                       ),
                     ],
@@ -84,8 +104,8 @@ class Footer extends StatelessWidget {
                 : Column(
                     children: [
                       Text(
-                        '© 2024 Ziyonstar. All rights reserved.',
-                        style: GoogleFonts.manrope(
+                        '© 2026 Ziyonstar. All rights reserved.',
+                        style: GoogleFonts.inter(
                           color: Colors.white.withAlpha(180),
                           fontSize: 14,
                         ),
@@ -96,9 +116,21 @@ class Footer extends StatelessWidget {
                         runSpacing: 8,
                         alignment: WrapAlignment.center,
                         children: [
-                          _buildFooterLink('Privacy Policy'),
-                          _buildFooterLink('Terms of Service'),
-                          _buildFooterLink('Cookie Policy'),
+                          _buildFooterLink(
+                            context,
+                            'Privacy',
+                            const PrivacyPolicyPage(),
+                          ),
+                          _buildFooterLink(
+                            context,
+                            'Terms',
+                            const TermsConditionsPage(),
+                          ),
+                          _buildFooterLink(
+                            context,
+                            'Refund',
+                            const ReturnRefundPage(),
+                          ),
                         ],
                       ),
                     ],
@@ -135,7 +167,7 @@ class Footer extends StatelessWidget {
             const SizedBox(width: 12),
             Text(
               'Ziyonstar',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.inter(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -146,7 +178,7 @@ class Footer extends StatelessWidget {
         const SizedBox(height: 20),
         Text(
           'Your trusted partner for professional device repair services. Quality repairs, expert technicians, and customer satisfaction guaranteed.',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 14,
             color: Colors.white.withAlpha(180),
             height: 1.6,
@@ -168,24 +200,24 @@ class Footer extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickLinks() {
+  Widget _buildQuickLinks(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Quick Links',
-          style: GoogleFonts.poppins(
+          style: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
         const SizedBox(height: 20),
-        _buildLink('About Us'),
-        _buildLink('Our Services'),
-        _buildLink('Locations'),
-        _buildLink('Careers'),
-        _buildLink('Blog'),
+        _buildClickableLink(context, 'Home', null),
+        _buildClickableLink(context, 'Repair Services', const RepairPage()),
+        _buildClickableLink(context, 'About Us', const AboutPage()),
+        _buildClickableLink(context, 'My Bookings', const MyBookingsScreen()),
+        _buildClickableLink(context, 'Contact Us', const ContactPage()),
       ],
     );
   }
@@ -196,7 +228,7 @@ class Footer extends StatelessWidget {
       children: [
         Text(
           'Services',
-          style: GoogleFonts.poppins(
+          style: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -207,86 +239,43 @@ class Footer extends StatelessWidget {
         _buildLink('Battery Replacement'),
         _buildLink('Water Damage'),
         _buildLink('Data Recovery'),
-        _buildLink('Warranty Info'),
+        _buildLink('Doorstep Service'),
       ],
     );
   }
 
-  Widget _buildContact() {
+  Widget _buildLegalSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Contact Us',
-          style: GoogleFonts.poppins(
+          'Legal',
+          style: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
         const SizedBox(height: 20),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              LucideIcons.phone,
-              color: Colors.white.withAlpha(180),
-              size: 16,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                '+1 (555) 123-4567',
-                style: GoogleFonts.manrope(
-                  fontSize: 14,
-                  color: Colors.white.withAlpha(180),
-                ),
-              ),
-            ),
-          ],
+        _buildClickableLink(
+          context,
+          'Privacy Policy',
+          const PrivacyPolicyPage(),
         ),
-        const SizedBox(height: 12),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              LucideIcons.mail,
-              color: Colors.white.withAlpha(180),
-              size: 16,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'support@ziyonstar.com',
-                style: GoogleFonts.manrope(
-                  fontSize: 14,
-                  color: Colors.white.withAlpha(180),
-                ),
-              ),
-            ),
-          ],
+        _buildClickableLink(
+          context,
+          'Terms & Conditions',
+          const TermsConditionsPage(),
         ),
-        const SizedBox(height: 12),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              LucideIcons.mapPin,
-              color: Colors.white.withAlpha(180),
-              size: 16,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                '123 Tech Street, Silicon Valley, CA 94025',
-                style: GoogleFonts.manrope(
-                  fontSize: 14,
-                  color: Colors.white.withAlpha(180),
-                  height: 1.5,
-                ),
-              ),
-            ),
-          ],
+        _buildClickableLink(
+          context,
+          'Return & Refund',
+          const ReturnRefundPage(),
+        ),
+        _buildClickableLink(
+          context,
+          'Child Protection',
+          const ChildProtectionPage(),
         ),
       ],
     );
@@ -297,10 +286,34 @@ class Footer extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
         text,
-        style: GoogleFonts.manrope(
+        style: GoogleFonts.inter(
           fontSize: 14,
           color: Colors.white.withAlpha(180),
           height: 1.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClickableLink(BuildContext context, String text, Widget? page) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: () {
+          if (page != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => page),
+            );
+          }
+        },
+        child: Text(
+          text,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            color: Colors.white.withAlpha(180),
+            height: 1.5,
+          ),
         ),
       ),
     );
@@ -318,12 +331,17 @@ class Footer extends StatelessWidget {
     );
   }
 
-  Widget _buildFooterLink(String text) {
-    return Text(
-      text,
-      style: GoogleFonts.manrope(
-        color: Colors.white.withAlpha(180),
-        fontSize: 14,
+  Widget _buildFooterLink(BuildContext context, String text, Widget page) {
+    return InkWell(
+      onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => page));
+      },
+      child: Text(
+        text,
+        style: GoogleFonts.inter(
+          color: Colors.white.withAlpha(180),
+          fontSize: 14,
+        ),
       ),
     );
   }

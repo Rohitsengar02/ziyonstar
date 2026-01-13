@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme.dart';
+import '../screens/repair_page.dart';
+import '../screens/my_bookings_screen.dart';
+import '../screens/about_page.dart';
+import '../screens/contact_page.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -47,7 +51,7 @@ class AppDrawer extends StatelessWidget {
                         const SizedBox(width: 12),
                         Text(
                           'Ziyonstar',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.inter(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -58,7 +62,7 @@ class AppDrawer extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       'Device Repair Experts',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 14,
                         color: Colors.white.withAlpha(200),
                       ),
@@ -80,29 +84,56 @@ class AppDrawer extends StatelessWidget {
                       onTap: () => Navigator.pop(context),
                     ),
                     _buildDrawerItem(
-                      icon: LucideIcons.shoppingBag,
-                      title: 'Sell Device',
-                      onTap: () {},
-                    ),
-                    _buildDrawerItem(
                       icon: LucideIcons.wrench,
                       title: 'Repair Services',
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const RepairPage(),
+                          ),
+                        );
+                      },
                     ),
                     _buildDrawerItem(
-                      icon: LucideIcons.users,
-                      title: 'Community',
-                      onTap: () {},
+                      icon: LucideIcons.calendarClock,
+                      title: 'My Bookings',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const MyBookingsScreen(),
+                          ),
+                        );
+                      },
                     ),
                     _buildDrawerItem(
-                      icon: LucideIcons.shield,
-                      title: 'Warranty Info',
-                      onTap: () {},
+                      icon: LucideIcons.info,
+                      title: 'About Us',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AboutPage(),
+                          ),
+                        );
+                      },
                     ),
                     _buildDrawerItem(
-                      icon: LucideIcons.mapPin,
-                      title: 'Locations',
-                      onTap: () {},
+                      icon: LucideIcons.phoneCall,
+                      title: 'Contact Us',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ContactPage(),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 16),
                     const Divider(color: Colors.white24),
@@ -144,7 +175,7 @@ class AppDrawer extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               'Sign In',
-                              style: GoogleFonts.poppins(
+                              style: GoogleFonts.inter(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),
@@ -156,7 +187,7 @@ class AppDrawer extends StatelessWidget {
                     const SizedBox(height: 16),
                     Text(
                       '© 2024 Ziyonstar',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         color: Colors.white.withAlpha(180),
                         fontSize: 12,
                       ),
@@ -187,7 +218,7 @@ class AppDrawer extends StatelessWidget {
         ),
         title: Text(
           title,
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             color: isActive ? Colors.white : Colors.white.withAlpha(180),
             fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
             fontSize: 16,

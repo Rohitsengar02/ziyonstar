@@ -3,6 +3,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme.dart';
 import '../responsive.dart';
+import '../screens/repair_page.dart';
+import '../screens/my_bookings_screen.dart';
+import '../screens/about_page.dart';
+import '../screens/contact_page.dart';
+import '../screens/profile_page.dart';
+import '../screens/home_screen.dart';
 
 class Navbar extends StatelessWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
@@ -30,36 +36,50 @@ class Navbar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Left: Logo & Location
+          // Left: Logo + Location (location only on desktop)
           Row(
             children: [
-              // Logo
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppColors.primaryButton, Colors.black],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  LucideIcons.zap,
-                  color: Colors.white,
-                  size: 20,
+              // Logo - Clickable
+              InkWell(
+                onTap: () {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => const HomeScreen()),
+                    (route) => false,
+                  );
+                },
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          LucideIcons.smartphone,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Ziyonstar',
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textHeading,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 12),
               if (isDesktop) ...[
-                Text(
-                  'Ziyonstar',
-                  style: GoogleFonts.poppins(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textHeading,
-                  ),
-                ),
                 const SizedBox(width: 32),
                 Container(
                   height: 24,
@@ -90,7 +110,7 @@ class Navbar extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           'New York, USA',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: AppColors.textHeading,
@@ -115,47 +135,92 @@ class Navbar extends StatelessWidget {
             Row(
               children: [
                 _navLink('Home', active: true),
-                _navLink('Sell'),
-                _navLink('Repair'),
-                _navLink('Community'),
+                _navLink(
+                  'Repair',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const RepairPage(),
+                      ),
+                    );
+                  },
+                ),
+                _navLink(
+                  'About',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AboutPage(),
+                      ),
+                    );
+                  },
+                ),
+                _navLink(
+                  'Bookings',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const MyBookingsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _navLink(
+                  'Contact',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ContactPage(),
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
 
-          // Right: Actions
+          // Right: Profile Avatar
           Row(
             children: [
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(
-                  LucideIcons.search,
-                  color: AppColors.textBody,
-                  size: 22,
+              // Profile Avatar
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProfilePage(),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.primaryButton,
+                        AppColors.primaryButton.withOpacity(0.7),
+                      ],
+                    ),
+                    border: Border.all(
+                      color: AppColors.primaryButton.withOpacity(0.2),
+                      width: 2,
+                    ),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      LucideIcons.user,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Stack(
-                children: [
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(
-                      LucideIcons.shoppingBag,
-                      color: AppColors.textBody,
-                      size: 22,
-                    ),
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: AppColors.accentRed,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                ],
               ),
               if (isDesktop) ...[
                 const SizedBox(width: 16),
@@ -192,11 +257,11 @@ class Navbar extends StatelessWidget {
     );
   }
 
-  Widget _navLink(String text, {bool active = false}) {
+  Widget _navLink(String text, {bool active = false, VoidCallback? onPressed}) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4),
       child: TextButton(
-        onPressed: () {},
+        onPressed: onPressed ?? () {},
         style: TextButton.styleFrom(
           backgroundColor: active
               ? Colors.black.withAlpha(10)

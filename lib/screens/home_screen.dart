@@ -7,10 +7,13 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ziyonstar/responsive.dart';
-import 'package:ziyonstar/screens/process_timeline_screen.dart';
+
 import 'package:ziyonstar/widgets/navbar.dart';
 import 'package:ziyonstar/widgets/footer.dart';
 import 'package:ziyonstar/widgets/app_drawer.dart';
+import 'package:ziyonstar/screens/mobile_home_screen.dart';
+
+import 'package:ziyonstar/screens/repair_page.dart';
 
 // Scroll-triggered animation wrapper for cards
 class FadeInScaleCard extends StatefulWidget {
@@ -92,6 +95,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Show Mobile Design on small screens
+    if (ResponsiveLayout.isMobile(context)) {
+      return const MobileHomeScreen();
+    }
+
     return Stack(
       children: [
         Scaffold(
@@ -227,7 +235,7 @@ class _TextContent extends StatelessWidget {
               SizedBox(width: isDesktop ? 8 : 6),
               Text(
                 'Top Rated Platform 2026',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.inter(
                   fontSize: isDesktop ? 12 : 11,
                   fontWeight: FontWeight.bold,
                   color: AppColors.accentRed,
@@ -241,7 +249,7 @@ class _TextContent extends StatelessWidget {
         RichText(
           textAlign: isDesktop ? TextAlign.left : TextAlign.center,
           text: TextSpan(
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.inter(
               fontSize: isDesktop ? 56 : (screenWidth < 360 ? 28 : 32),
               fontWeight: FontWeight.bold,
               color: AppColors.textHeading,
@@ -843,7 +851,7 @@ class _StatsBar extends StatelessWidget {
           SizedBox(height: isDesktop ? 16 : 12),
           Text(
             number,
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.inter(
               color: Colors.white,
               fontSize: isDesktop ? 28 : 24,
               fontWeight: FontWeight.bold,
@@ -854,7 +862,7 @@ class _StatsBar extends StatelessWidget {
           Text(
             label,
             textAlign: TextAlign.center,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               color: Colors.white70,
               fontSize: isDesktop ? 13 : 11,
               fontWeight: FontWeight.w500,
@@ -980,7 +988,7 @@ class _RepairCategoriesSectionState extends State<_RepairCategoriesSection> {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Text(
               'Our Repair Services',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.inter(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textHeading,
@@ -992,10 +1000,7 @@ class _RepairCategoriesSectionState extends State<_RepairCategoriesSection> {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Text(
               'Professional repairs for every issue',
-              style: GoogleFonts.manrope(
-                fontSize: 16,
-                color: AppColors.textBody,
-              ),
+              style: GoogleFonts.inter(fontSize: 16, color: AppColors.textBody),
             ),
           ),
           const SizedBox(height: 60),
@@ -1084,7 +1089,7 @@ class _RepairCategoriesSectionState extends State<_RepairCategoriesSection> {
                 children: [
                   Text(
                     cat['label'] as String,
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.inter(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
                       color: AppColors.textHeading,
@@ -1093,7 +1098,7 @@ class _RepairCategoriesSectionState extends State<_RepairCategoriesSection> {
                   const SizedBox(height: 8),
                   Text(
                     cat['desc'] as String,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 14,
                       color: AppColors.textBody,
                       height: 1.5,
@@ -1111,7 +1116,7 @@ class _RepairCategoriesSectionState extends State<_RepairCategoriesSection> {
                     ),
                     child: Text(
                       'Learn more',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: AppColors.textHeading,
@@ -1243,7 +1248,7 @@ class _InstantQuoteSection extends StatelessWidget {
                         ),
                         child: Text(
                           '🎯 INSTANT QUOTE',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -1254,7 +1259,7 @@ class _InstantQuoteSection extends StatelessWidget {
                       const SizedBox(height: 32),
                       Text(
                         'Get Your\nRepair Price\nIn Seconds',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.inter(
                           fontSize: 48,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
@@ -1264,7 +1269,7 @@ class _InstantQuoteSection extends StatelessWidget {
                       const SizedBox(height: 24),
                       Text(
                         'Fast, transparent, and hassle-free pricing for all your device repairs.',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: 18,
                           color: Colors.white.withAlpha(230),
                           height: 1.6,
@@ -1302,7 +1307,7 @@ class _InstantQuoteSection extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 'Free diagnostics • No hidden fees • Warranty included',
-                                style: GoogleFonts.manrope(
+                                style: GoogleFonts.inter(
                                   fontSize: 14,
                                   color: Colors.white,
                                   fontWeight: FontWeight.w500,
@@ -1341,7 +1346,7 @@ class _InstantQuoteSection extends StatelessWidget {
             ),
             child: Text(
               '🎯 INSTANT QUOTE',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -1352,7 +1357,7 @@ class _InstantQuoteSection extends StatelessWidget {
           const SizedBox(height: 24),
           Text(
             'Get Your Repair Price',
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.inter(
               fontSize: 28,
               fontWeight: FontWeight.bold,
               color: AppColors.textHeading,
@@ -1363,7 +1368,7 @@ class _InstantQuoteSection extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'Transparent pricing, no hidden fees. Get your quote in seconds!',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 14,
               color: AppColors.textBody,
               height: 1.5,
@@ -1383,7 +1388,7 @@ class _InstantQuoteSection extends StatelessWidget {
       children: [
         Text(
           value,
-          style: GoogleFonts.poppins(
+          style: GoogleFonts.inter(
             fontSize: 32,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -1392,7 +1397,7 @@ class _InstantQuoteSection extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           label,
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 14,
             color: Colors.white.withAlpha(200),
           ),
@@ -1470,9 +1475,7 @@ class _InstantQuoteSection extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const ProcessTimelineScreen(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const RepairPage()),
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -1489,7 +1492,7 @@ class _InstantQuoteSection extends StatelessWidget {
                   const SizedBox(width: 12),
                   Text(
                     'Get Instant Quote',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.inter(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
@@ -1509,7 +1512,7 @@ class _InstantQuoteSection extends StatelessWidget {
               Flexible(
                 child: Text(
                   'Free quote • No commitment',
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 13,
                     color: AppColors.textBody,
                   ),
@@ -1545,7 +1548,7 @@ class _InstantQuoteSection extends StatelessWidget {
             const SizedBox(width: 10),
             Text(
               label,
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.inter(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
                 color: AppColors.textHeading,
@@ -1557,7 +1560,7 @@ class _InstantQuoteSection extends StatelessWidget {
         TextField(
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.manrope(
+            hintStyle: GoogleFonts.inter(
               color: Colors.grey.withAlpha(150),
               fontSize: 15,
             ),
@@ -1607,7 +1610,7 @@ class _InstantQuoteSection extends StatelessWidget {
             const SizedBox(width: 10),
             Text(
               label,
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.inter(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
                 color: AppColors.textHeading,
@@ -1620,7 +1623,7 @@ class _InstantQuoteSection extends StatelessWidget {
           items: items.map((item) {
             return DropdownMenuItem(
               value: item,
-              child: Text(item, style: GoogleFonts.manrope(fontSize: 15)),
+              child: Text(item, style: GoogleFonts.inter(fontSize: 15)),
             );
           }).toList(),
           onChanged: (val) {},
@@ -1777,7 +1780,7 @@ class _CarouselSectionState extends State<_CarouselSection> {
               children: [
                 Text(
                   item['title']!,
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.inter(
                     color: Colors.white,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -1801,7 +1804,7 @@ class _CarouselSectionState extends State<_CarouselSection> {
                     const SizedBox(width: 12),
                     Text(
                       item['subtitle']!,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         color: Colors.white.withAlpha(230),
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
@@ -1875,7 +1878,7 @@ class _BrandSelectionSectionState extends State<_BrandSelectionSection> {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Text(
               'Repair by Brand',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.inter(
                 fontSize: isDesktop ? 32 : 24,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textHeading,
@@ -1966,7 +1969,7 @@ class _BrandSelectionSectionState extends State<_BrandSelectionSection> {
               right: 16,
               child: Text(
                 brand['name']!,
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.inter(
                   color: Colors.white,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -2049,7 +2052,7 @@ class _RepairProcessSection extends StatelessWidget {
             ),
             child: Text(
               'SIMPLE PROCESS',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
                 color: AppColors.primaryButton,
@@ -2060,7 +2063,7 @@ class _RepairProcessSection extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'How It Works',
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.inter(
               fontSize: 36,
               fontWeight: FontWeight.bold,
               color: AppColors.textHeading,
@@ -2069,7 +2072,7 @@ class _RepairProcessSection extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             'Your device repaired in 5 easy steps',
-            style: GoogleFonts.manrope(fontSize: 16, color: AppColors.textBody),
+            style: GoogleFonts.inter(fontSize: 16, color: AppColors.textBody),
           ).animate().fadeIn(delay: 300.ms),
           const SizedBox(height: 40),
           isDesktop
@@ -2158,7 +2161,7 @@ class _RepairProcessSection extends StatelessWidget {
                         ),
                         child: Text(
                           '${index + 1}',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.inter(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -2188,7 +2191,7 @@ class _RepairProcessSection extends StatelessWidget {
                     Text(
                       step['title'] as String,
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.inter(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
                         color: AppColors.textHeading,
@@ -2198,7 +2201,7 @@ class _RepairProcessSection extends StatelessWidget {
                     Text(
                       step['desc'] as String,
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 14,
                         color: AppColors.textBody,
                         height: 1.4,
@@ -2268,7 +2271,7 @@ class _WarrantySection extends StatelessWidget {
             ),
             child: Text(
               'WHY CHOOSE ZIYONSTAR',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
                 color: const Color(0xFF8B5CF6),
@@ -2279,7 +2282,7 @@ class _WarrantySection extends StatelessWidget {
           SizedBox(height: isDesktop ? 20 : 16),
           Text(
             'The Ziyonstar Promise',
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.inter(
               fontSize: isDesktop ? 36 : 28,
               fontWeight: FontWeight.bold,
               color: AppColors.textHeading,
@@ -2290,7 +2293,7 @@ class _WarrantySection extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             child: Text(
               'Premium service standards you can trust',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: isDesktop ? 16 : 14,
                 color: AppColors.textBody,
               ),
@@ -2388,7 +2391,7 @@ class _WarrantyCardState extends State<_WarrantyCard> {
                 Text(
                   widget.badge['label'] as String,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: isDesktop ? 16 : 14,
                     fontWeight: FontWeight.bold,
                     color: _isHovered ? Colors.white : AppColors.textHeading,
@@ -2398,7 +2401,7 @@ class _WarrantyCardState extends State<_WarrantyCard> {
                 Text(
                   widget.badge['desc'] as String,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: isDesktop ? 12 : 11,
                     color: _isHovered
                         ? Colors.white.withAlpha(200)
@@ -2529,7 +2532,7 @@ class _TestimonialsSectionState extends State<_TestimonialsSection> {
                   ),
                   child: Text(
                     'TESTIMONIALS',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: const Color(0xFFEC4899),
@@ -2540,7 +2543,7 @@ class _TestimonialsSectionState extends State<_TestimonialsSection> {
                 const SizedBox(height: 16),
                 Text(
                   'Customer Love',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.inter(
                     fontSize: 36,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textHeading,
@@ -2554,7 +2557,7 @@ class _TestimonialsSectionState extends State<_TestimonialsSection> {
                     const SizedBox(width: 8),
                     Text(
                       '4.9/5 Average Rating',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textHeading,
@@ -2563,7 +2566,7 @@ class _TestimonialsSectionState extends State<_TestimonialsSection> {
                     const SizedBox(width: 8),
                     Text(
                       '(2,400+ reviews)',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 14,
                         color: AppColors.textBody,
                       ),
@@ -2624,7 +2627,7 @@ class _TestimonialsSectionState extends State<_TestimonialsSection> {
                             child: Center(
                               child: Text(
                                 review['name'].toString().substring(0, 1),
-                                style: GoogleFonts.poppins(
+                                style: GoogleFonts.inter(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
@@ -2639,7 +2642,7 @@ class _TestimonialsSectionState extends State<_TestimonialsSection> {
                               children: [
                                 Text(
                                   review['name'] as String,
-                                  style: GoogleFonts.manrope(
+                                  style: GoogleFonts.inter(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
                                     color: AppColors.textHeading,
@@ -2672,7 +2675,7 @@ class _TestimonialsSectionState extends State<_TestimonialsSection> {
                       Expanded(
                         child: Text(
                           '"${review['text']}"',
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 15,
                             color: AppColors.textBody,
                             height: 1.6,
@@ -2683,7 +2686,7 @@ class _TestimonialsSectionState extends State<_TestimonialsSection> {
                       const SizedBox(height: 16),
                       Text(
                         review['date'] as String,
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: 12,
                           color: Colors.grey,
                           fontWeight: FontWeight.w500,
@@ -2796,7 +2799,7 @@ class _DeliveryOptionsSectionState extends State<_DeliveryOptionsSection> {
                   ),
                   child: Text(
                     'SERVICE OPTIONS',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: const Color(0xFF3B82F6),
@@ -2807,7 +2810,7 @@ class _DeliveryOptionsSectionState extends State<_DeliveryOptionsSection> {
                 const SizedBox(height: 20),
                 Text(
                   'Flexible Service Options',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.inter(
                     fontSize: 36,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textHeading,
@@ -2816,7 +2819,7 @@ class _DeliveryOptionsSectionState extends State<_DeliveryOptionsSection> {
                 const SizedBox(height: 12),
                 Text(
                   'Choose how you want to get your device fixed',
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 16,
                     color: AppColors.textBody,
                   ),
@@ -2891,7 +2894,7 @@ class _DeliveryOptionsSectionState extends State<_DeliveryOptionsSection> {
                             children: [
                               Text(
                                 option['title'] as String,
-                                style: GoogleFonts.poppins(
+                                style: GoogleFonts.inter(
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
@@ -2900,7 +2903,7 @@ class _DeliveryOptionsSectionState extends State<_DeliveryOptionsSection> {
                               const SizedBox(height: 12),
                               Text(
                                 option['desc'] as String,
-                                style: GoogleFonts.manrope(
+                                style: GoogleFonts.inter(
                                   fontSize: 14,
                                   color: Colors.white.withAlpha(230),
                                   height: 1.5,
@@ -3029,7 +3032,7 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
                 const SizedBox(width: 12),
                 Text(
                   'Find Your Device',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.inter(
                     fontSize: isDesktop ? 18 : 16,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textHeading,
@@ -3062,7 +3065,7 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
                         const SizedBox(width: 12),
                         Text(
                           'Select Brand',
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             color: Colors.grey.shade600,
                             fontSize: 14,
                           ),
@@ -3092,7 +3095,7 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
                             const SizedBox(width: 12),
                             Text(
                               brand,
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -3150,7 +3153,7 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
                           selectedBrand == null
                               ? 'Select Brand First'
                               : 'Select Model',
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             color: selectedBrand == null
                                 ? Colors.grey.shade400
                                 : Colors.grey.shade600,
@@ -3180,7 +3183,7 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
                               ),
                               child: Text(
                                 model,
-                                style: GoogleFonts.manrope(
+                                style: GoogleFonts.inter(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -3213,7 +3216,7 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const ProcessTimelineScreen(),
+                            builder: (context) => const RepairPage(),
                           ),
                         );
                       }
@@ -3242,7 +3245,7 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
                     const SizedBox(width: 12),
                     Text(
                       'Get Repair Quote',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.inter(
                         fontSize: isDesktop ? 16 : 14,
                         fontWeight: FontWeight.bold,
                         color: selectedBrand != null && selectedModel != null
@@ -3392,7 +3395,7 @@ class _PreloaderState extends State<_Preloader>
                   children: title.split('').asMap().entries.map((entry) {
                     return Text(
                           entry.value,
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.inter(
                             fontSize: 42,
                             fontWeight: FontWeight.bold,
                             color: AppColors.textHeading,
@@ -3413,7 +3416,7 @@ class _PreloaderState extends State<_Preloader>
                 // Tagline
                 Text(
                   'Future of Repair',
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 14,
                     color: AppColors.textBody,
                     letterSpacing: 4,

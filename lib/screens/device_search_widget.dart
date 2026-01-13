@@ -108,7 +108,7 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
               const SizedBox(width: 12),
               Text(
                 'Find Your Device',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.inter(
                   fontSize: isDesktop ? 18 : 16,
                   fontWeight: FontWeight.bold,
                   color: AppColors.textHeading,
@@ -141,7 +141,7 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
                       const SizedBox(width: 12),
                       Text(
                         'Select Brand',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           color: Colors.grey.shade600,
                           fontSize: 14,
                         ),
@@ -171,7 +171,7 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
                           const SizedBox(width: 12),
                           Text(
                             brand,
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                             ),
@@ -227,7 +227,7 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
                         selectedBrand == null
                             ? 'Select Brand First'
                             : 'Select Model',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           color: selectedBrand == null
                               ? Colors.grey.shade400
                               : Colors.grey.shade600,
@@ -255,7 +255,7 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: Text(
                               model,
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -313,7 +313,7 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
                   const SizedBox(width: 12),
                   Text(
                     'Get Repair Quote',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.inter(
                       fontSize: isDesktop ? 16 : 14,
                       fontWeight: FontWeight.bold,
                       color: selectedBrand != null && selectedModel != null

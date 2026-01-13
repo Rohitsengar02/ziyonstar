@@ -167,7 +167,7 @@ class _ProcessTimelineScreenState extends State<ProcessTimelineScreen> {
                   // Title
                   Text(
                     'Book Your Repair',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.inter(
                       fontSize: isDesktop ? 48 : 32,
                       fontWeight: FontWeight.bold,
                       color: AppColors.textHeading,
@@ -177,7 +177,7 @@ class _ProcessTimelineScreenState extends State<ProcessTimelineScreen> {
                   const SizedBox(height: 16),
                   Text(
                     'Professional service for your premium devices. Fast, reliable, and secure.',
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: isDesktop ? 18 : 16,
                       color: AppColors.textBody,
                     ),
@@ -229,14 +229,14 @@ class _ProcessTimelineScreenState extends State<ProcessTimelineScreen> {
                                 children: [
                                   Text(
                                     'Step ${_currentStep + 1} of 8',
-                                    style: GoogleFonts.manrope(
+                                    style: GoogleFonts.inter(
                                       fontWeight: FontWeight.bold,
                                       color: AppColors.primaryButton,
                                     ),
                                   ),
                                   Text(
                                     _getStepTitle(_currentStep),
-                                    style: GoogleFonts.manrope(
+                                    style: GoogleFonts.inter(
                                       color: Colors.grey[600],
                                       fontSize: 12,
                                     ),
@@ -284,7 +284,7 @@ class _ProcessTimelineScreenState extends State<ProcessTimelineScreen> {
                                   ),
                                   label: Text(
                                     'Back',
-                                    style: GoogleFonts.manrope(
+                                    style: GoogleFonts.inter(
                                       fontSize: 16,
                                       color: Colors.grey[600],
                                       fontWeight: FontWeight.w600,
@@ -308,7 +308,7 @@ class _ProcessTimelineScreenState extends State<ProcessTimelineScreen> {
                                 ),
                                 child: Text(
                                   _currentStep == 7 ? 'Book Now' : 'Continue',
-                                  style: GoogleFonts.manrope(
+                                  style: GoogleFonts.inter(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
@@ -476,7 +476,7 @@ class _ProcessTimelineScreenState extends State<ProcessTimelineScreen> {
         const SizedBox(height: 8),
         Text(
           'Select all that apply',
-          style: GoogleFonts.manrope(color: Colors.grey),
+          style: GoogleFonts.inter(color: Colors.grey),
         ),
         const SizedBox(height: 24),
         GridView.builder(
@@ -571,7 +571,7 @@ class _ProcessTimelineScreenState extends State<ProcessTimelineScreen> {
             children: [
               Text(
                 '\$$total',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.inter(
                   fontSize: 64,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primaryButton,
@@ -580,7 +580,7 @@ class _ProcessTimelineScreenState extends State<ProcessTimelineScreen> {
               const SizedBox(height: 8),
               Text(
                 'Includes logic board diagnosis & service fee',
-                style: GoogleFonts.manrope(color: Colors.grey),
+                style: GoogleFonts.inter(color: Colors.grey),
               ),
             ],
           ),
@@ -644,7 +644,7 @@ class _ProcessTimelineScreenState extends State<ProcessTimelineScreen> {
                           const SizedBox(height: 4),
                           Text(
                             m['desc'] as String,
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 12,
                               color: Colors.grey,
                             ),
@@ -853,14 +853,14 @@ class _ProcessTimelineScreenState extends State<ProcessTimelineScreen> {
                 children: [
                   Text(
                     'Total Amount',
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
                     '\$$total',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.inter(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: AppColors.primaryButton,
@@ -915,12 +915,12 @@ class _ProcessTimelineScreenState extends State<ProcessTimelineScreen> {
     margin: const EdgeInsets.symmetric(vertical: 12),
   );
 
-  final TextStyle _headingStyle = GoogleFonts.poppins(
+  final TextStyle _headingStyle = GoogleFonts.inter(
     fontSize: 24,
     fontWeight: FontWeight.bold,
     color: AppColors.textHeading,
   );
-  final TextStyle _labelStyle = GoogleFonts.manrope(
+  final TextStyle _labelStyle = GoogleFonts.inter(
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: AppColors.textHeading,
