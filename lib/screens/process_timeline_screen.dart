@@ -400,10 +400,10 @@ class _ProcessTimelineScreenState extends State<ProcessTimelineScreen> {
           itemCount: _brands.length,
           itemBuilder: (context, index) {
             final brand = _brands[index];
-            final isSelected = _selectedBrand == brand['name'];
+            final isSelected = _selectedBrand == brand['title'];
             return _SelectionCard(
               isSelected: isSelected,
-              onTap: () => setState(() => _selectedBrand = brand['name']),
+              onTap: () => setState(() => _selectedBrand = brand['title']),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -413,7 +413,7 @@ class _ProcessTimelineScreenState extends State<ProcessTimelineScreen> {
                     color: isSelected ? AppColors.primaryButton : Colors.grey,
                   ),
                   const SizedBox(height: 12),
-                  Text(brand['name'] as String, style: _labelStyle),
+                  Text(brand['title'] as String, style: _labelStyle),
                 ],
               ),
             );

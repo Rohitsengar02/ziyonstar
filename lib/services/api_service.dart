@@ -1,0 +1,264 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+class ApiService {
+  static String get baseUrl {
+    if (kIsWeb) {
+      return 'http://localhost:5001/api';
+    }
+    // For local development on physical devices, use your machine's IP address
+    return dotenv.env['BACKEND_URL'] ?? 'http://192.168.1.35:5001/api';
+  }
+
+  Future<List<dynamic>> getIssues() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/issues'));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to fetch issues');
+      }
+    } catch (e) {
+      debugPrint('Error fetching issues: $e');
+      return [];
+    }
+  }
+
+  Future<List<dynamic>> getBrands() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/brands'));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to fetch brands');
+      }
+    } catch (e) {
+      debugPrint('Error fetching brands: $e');
+      return [];
+    }
+  }
+
+  Future<List<dynamic>> getModels(String brandId) async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/models/$brandId'));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to load models');
+      }
+    } catch (e) {
+      debugPrint('Error fetching models: $e');
+      return [];
+    }
+  }
+
+  Future<List<dynamic>> getTechnicians() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/technicians'));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to fetch technicians');
+      }
+    } catch (e) {
+      debugPrint('Error fetching technicians: $e');
+      return [];
+    }
+  }
+
+  // ===== ADDRESS APIs =====
+
+  /// Get all addresses for a user
+  Future<List<dynamic>> getAddresses(String userId) async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/addresses/$userId'));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to fetch addresses');
+      }
+    } catch (e) {
+      debugPrint('Error fetching addresses: $e');
+      return [];
+    }
+  }
+
+  /// Add a new address for a user
+  Future<Map<String, dynamic>?> addAddress({
+    required String userId,
+    required String label,
+    required String fullAddress,
+    String? landmark,
+    String? city,
+    String? state,
+    String? pincode,
+    String? phone,
+    bool isDefault = false,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/addresses/$userId'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'label': label,
+          'fullAddress': fullAddress,
+          'landmark': landmark,
+          'city': city,
+          'state': state,
+          'pincode': pincode,
+          'phone': phone,
+          'isDefault': isDefault,
+        }),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        debugPrint('Failed to add address: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error adding address: $e');
+      return null;
+    }
+  }
+
+  /// Update an existing address
+  Future<Map<String, dynamic>?> updateAddress({
+    required String addressId,
+    String? label,
+    String? fullAddress,
+    String? landmark,
+    String? city,
+    String? state,
+    String? pincode,
+    String? phone,
+    bool? isDefault,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/addresses/$addressId'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'label': label,
+          'fullAddress': fullAddress,
+          'landmark': landmark,
+          'city': city,
+          'state': state,
+          'pincode': pincode,
+          'phone': phone,
+          'isDefault': isDefault,
+        }),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        debugPrint('Failed to update address: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error updating address: $e');
+      return null;
+    }
+  }
+
+  /// Delete an address
+  Future<bool> deleteAddress(String addressId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/addresses/$addressId'),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Error deleting address: $e');
+      return false;
+    }
+  }
+
+  /// Set an address as default
+  Future<bool> setDefaultAddress(String addressId) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/addresses/$addressId/default'),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Error setting default address: $e');
+      return false;
+    }
+  }
+  // ===== USER APIs =====
+
+  Future<Map<String, dynamic>?> registerUser(
+    Map<String, dynamic> userData,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse(
+          '$baseUrl/users/register',
+        ), // Ensure your backend route is /api/users/register
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(userData),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        debugPrint('Failed to register user: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error registering user: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getUser(String firebaseUid) async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/users/$firebaseUid'));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        debugPrint('Failed to get user: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error getting user: $e');
+      return null;
+    }
+  }
+
+  // ===== UPLOAD API =====
+  Future<String?> uploadImage(XFile file) async {
+    try {
+      var uri = Uri.parse('$baseUrl/upload');
+      var request = http.MultipartRequest('POST', uri);
+
+      if (kIsWeb) {
+        final bytes = await file.readAsBytes();
+        request.files.add(
+          http.MultipartFile.fromBytes('file', bytes, filename: file.name),
+        );
+      } else {
+        request.files.add(await http.MultipartFile.fromPath('file', file.path));
+      }
+
+      var response = await request.send();
+
+      if (response.statusCode == 200) {
+        final respStr = await response.stream.bytesToString();
+        final json = jsonDecode(respStr);
+        return json['url'];
+      } else {
+        debugPrint('Upload failed: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error uploading image: $e');
+      return null;
+    }
+  }
+}

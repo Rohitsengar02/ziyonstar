@@ -12,6 +12,9 @@ import 'repair_page.dart';
 import 'about_page.dart';
 import 'contact_page.dart';
 import '../widgets/mobile_bottom_nav.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/api_service.dart';
+import 'sign_in_screen.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -22,6 +25,45 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final ApiService _apiService = ApiService();
+  Map<String, dynamic>? _userProfile;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? uid = prefs.getString('user_uid');
+
+      if (uid != null) {
+        // Try fetching from backend
+        final profile = await _apiService.getUser(uid);
+        if (profile != null) {
+          if (mounted) setState(() => _userProfile = profile);
+        } else {
+          // Fallback to local
+          if (mounted) {
+            setState(() {
+              _userProfile = {
+                'name': prefs.getString('user_name') ?? 'Guest User',
+                'email': prefs.getString('user_email') ?? 'guest@example.com',
+                'phone': prefs.getString('user_phone') ?? '+1 (555) 000-0000',
+              };
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Error loading profile: $e");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -124,20 +166,33 @@ class _ProfilePageState extends State<ProfilePage> {
                     height: 112,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          const Color(0xFF667eea).withOpacity(0.8),
-                          const Color(0xFF764ba2).withOpacity(0.8),
-                        ],
-                      ),
+                      image:
+                          (_userProfile != null &&
+                              _userProfile!['photoUrl'] != null &&
+                              _userProfile!['photoUrl'].toString().isNotEmpty)
+                          ? DecorationImage(
+                              image: NetworkImage(_userProfile!['photoUrl']),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                      gradient: (_userProfile?['photoUrl'] == null)
+                          ? LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                const Color(0xFF667eea).withOpacity(0.8),
+                                const Color(0xFF764ba2).withOpacity(0.8),
+                              ],
+                            )
+                          : null,
                     ),
-                    child: const Icon(
-                      LucideIcons.user,
-                      size: 50,
-                      color: Colors.white,
-                    ),
+                    child: (_userProfile?['photoUrl'] == null)
+                        ? const Icon(
+                            LucideIcons.user,
+                            size: 50,
+                            color: Colors.white,
+                          )
+                        : null,
                   ),
                 ),
               ),
@@ -145,15 +200,17 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           const SizedBox(height: 32),
           // Name
-          Text(
-            'John Doe',
-            style: GoogleFonts.poppins(
-              fontSize: isDesktop ? 36 : 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: -0.5,
-            ),
-          ),
+          _isLoading
+              ? const CircularProgressIndicator(color: Colors.white)
+              : Text(
+                  _userProfile?['name'] ?? 'John Doe',
+                  style: GoogleFonts.poppins(
+                    fontSize: isDesktop ? 36 : 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: -0.5,
+                  ),
+                ),
           const SizedBox(height: 12),
           // Email
           Container(
@@ -176,7 +233,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'john.doe@example.com',
+                  _userProfile?['email'] ?? 'john.doe@example.com',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: Colors.white.withOpacity(0.95),
@@ -208,7 +265,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '+1 (555) 123-4567',
+                  _userProfile?['phone'] ?? '+1 (555) 000-0000',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: Colors.white.withOpacity(0.95),
@@ -218,35 +275,26 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ),
           ),
-          const SizedBox(height: 40),
-          // Edit Profile Button
+          const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              final result = await Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const EditProfilePage(),
-                ),
+                MaterialPageRoute(builder: (_) => const EditProfilePage()),
               );
+              if (result == true) {
+                _loadUserProfile();
+              }
             },
-            icon: const Icon(LucideIcons.edit, size: 18),
-            label: Text(
-              'Edit Profile',
-              style: GoogleFonts.inter(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.3,
-              ),
-            ),
+            icon: const Icon(LucideIcons.edit, size: 16),
+            label: const Text("Edit Profile"),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFF667eea),
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              foregroundColor: AppColors.primaryButton,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
+                borderRadius: BorderRadius.circular(20),
               ),
-              elevation: 8,
-              shadowColor: Colors.black.withOpacity(0.3),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),
         ],
@@ -449,7 +497,18 @@ class _ProfilePageState extends State<ProfilePage> {
                   icon: LucideIcons.logOut,
                   title: 'Log Out',
                   subtitle: 'Sign out of your account',
-                  onTap: () {},
+                  onTap: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.clear(); // Clear all data
+                    if (context.mounted) {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (context) => const SignInScreen(),
+                        ),
+                        (route) => false,
+                      );
+                    }
+                  },
                   isDestructive: true,
                 ),
               ],

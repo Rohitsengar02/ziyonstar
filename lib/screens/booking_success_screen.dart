@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:ziyonstar/data/device_data.dart';
-import 'package:ziyonstar/screens/home_screen.dart';
+
 import 'package:ziyonstar/screens/my_bookings_screen.dart';
 import 'package:ziyonstar/theme.dart';
 import '../widgets/navbar.dart';
@@ -274,7 +273,6 @@ class _BookingSuccessScreenState extends State<BookingSuccessScreen>
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(
                 children: widget.selectedIssues.map((issue) {
-                  final data = DeviceData.issueData[issue];
                   return Padding(
                     padding: const EdgeInsets.only(right: 12),
                     child: Tooltip(
@@ -288,9 +286,7 @@ class _BookingSuccessScreenState extends State<BookingSuccessScreen>
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.grey[300]!),
                         ),
-                        child: data != null && data['image'] != null
-                            ? Image.asset(data['image'])
-                            : const Icon(LucideIcons.alertCircle, size: 24),
+                        child: const Icon(LucideIcons.wrench, size: 24),
                       ),
                     ),
                   );

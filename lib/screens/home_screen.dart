@@ -12,7 +12,7 @@ import 'package:ziyonstar/widgets/navbar.dart';
 import 'package:ziyonstar/widgets/footer.dart';
 import 'package:ziyonstar/widgets/app_drawer.dart';
 import 'package:ziyonstar/screens/mobile_home_screen.dart';
-
+import 'package:ziyonstar/services/api_service.dart';
 import 'package:ziyonstar/screens/repair_page.dart';
 
 // Scroll-triggered animation wrapper for cards
@@ -889,74 +889,73 @@ class _RepairCategoriesSectionState extends State<_RepairCategoriesSection> {
   final ScrollController _scrollController = ScrollController();
   Timer? _timer;
   bool _isUserScrolling = false;
-
-  final List<Map<String, dynamic>> categories = [
-    {
-      'icon': LucideIcons.smartphone,
-      'label': 'Screen Repair',
-      'desc': 'Cracked screen replacement',
-      'color': Color(0xFF8B5CF6), // Violet
-    },
-    {
-      'icon': LucideIcons.battery,
-      'label': 'Battery Change',
-      'desc': 'New battery installation',
-      'color': Color(0xFFEC4899), // Pink
-    },
-    {
-      'icon': LucideIcons.plug,
-      'label': 'Charging Port',
-      'desc': 'Fix connection issues',
-      'color': Color(0xFF3B82F6), // Blue
-    },
-    {
-      'icon': LucideIcons.camera,
-      'label': 'Camera Repair',
-      'desc': 'Lens and sensor fix',
-      'color': Color(0xFF10B981), // Green
-    },
-    {
-      'icon': LucideIcons.smartphone,
-      'label': 'Back Glass',
-      'desc': 'Rear housing replacement',
-      'color': Color(0xFFF59E0B), // Amber
-    },
-    {
-      'icon': LucideIcons.speaker,
-      'label': 'Speaker / Mic',
-      'desc': 'Audio component repair',
-      'color': Color(0xFF06B6D4), // Cyan
-    },
-    {
-      'icon': LucideIcons.cpu,
-      'label': 'Motherboard',
-      'desc': 'Chip level diagnosis',
-      'color': Color(0xFF6366F1), // Indigo
-    },
-    {
-      'icon': LucideIcons.droplet,
-      'label': 'Water Damage',
-      'desc': 'Liquid damage treatment',
-      'color': Color(0xFF38BDF8), // Light Blue
-    },
-    {
-      'icon': LucideIcons.scanFace,
-      'label': 'Face ID',
-      'desc': 'Biometric sensor repair',
-      'color': Color(0xFF8B5CF6), // Violet
-    },
-    {
-      'icon': LucideIcons.hardDrive,
-      'label': 'Data Recovery',
-      'desc': 'Retrieve lost files',
-      'color': Color(0xFFEC4899), // Pink
-    },
-  ];
+  final ApiService _apiService = ApiService();
+  List<dynamic> _apiCategories = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _fetchIssues();
     WidgetsBinding.instance.addPostFrameCallback((_) => _startAutoScroll());
+  }
+
+  Future<void> _fetchIssues() async {
+    try {
+      final issues = await _apiService.getIssues();
+      if (mounted) {
+        setState(() {
+          _apiCategories = issues;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching issues: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  IconData _getIcon(String? iconName) {
+    switch (iconName) {
+      case 'smartphone':
+        return LucideIcons.smartphone;
+      case 'battery':
+        return LucideIcons.battery;
+      case 'plug':
+        return LucideIcons.plug;
+      case 'camera':
+        return LucideIcons.camera;
+      case 'speaker':
+        return LucideIcons.speaker;
+      case 'cpu':
+        return LucideIcons.cpu;
+      case 'droplet':
+        return LucideIcons.droplet;
+      case 'scanFace':
+        return LucideIcons.scanFace;
+      case 'hardDrive':
+        return LucideIcons.hardDrive;
+      case 'wrench':
+        return LucideIcons.wrench;
+      case 'mic':
+        return LucideIcons.mic;
+      default:
+        return LucideIcons.wrench;
+    }
+  }
+
+  Color _getColor(int index) {
+    List<Color> colors = [
+      const Color(0xFF8B5CF6),
+      const Color(0xFFEC4899),
+      const Color(0xFF3B82F6),
+      const Color(0xFF10B981),
+      const Color(0xFFF59E0B),
+      const Color(0xFF06B6D4),
+      const Color(0xFF6366F1),
+      const Color(0xFF38BDF8),
+    ];
+    return colors[index % colors.length];
   }
 
   void _startAutoScroll() {
@@ -1004,40 +1003,51 @@ class _RepairCategoriesSectionState extends State<_RepairCategoriesSection> {
             ),
           ),
           const SizedBox(height: 60),
-          SizedBox(
-            height: 380,
-            child: NotificationListener<UserScrollNotification>(
-              onNotification: (notification) {
-                if (notification.direction == ScrollDirection.idle) {
-                  _isUserScrolling = false;
-                } else {
-                  _isUserScrolling = true;
-                }
-                return false;
-              },
-              child: ScrollConfiguration(
-                behavior: ScrollConfiguration.of(context).copyWith(
-                  dragDevices: {
-                    PointerDeviceKind.touch,
-                    PointerDeviceKind.mouse,
-                  },
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _apiCategories.isEmpty
+              ? const Center(child: Text('No repair services available'))
+              : SizedBox(
+                  height: 380,
+                  child: NotificationListener<UserScrollNotification>(
+                    onNotification: (notification) {
+                      if (notification.direction == ScrollDirection.idle) {
+                        _isUserScrolling = false;
+                      } else {
+                        _isUserScrolling = true;
+                      }
+                      return false;
+                    },
+                    child: ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context).copyWith(
+                        dragDevices: {
+                          PointerDeviceKind.touch,
+                          PointerDeviceKind.mouse,
+                        },
+                      ),
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: 1000000,
+                        itemBuilder: (context, index) {
+                          final item =
+                              _apiCategories[index % _apiCategories.length];
+                          final cat = {
+                            'icon': _getIcon(item['icon']),
+                            'label': item['name'] ?? '',
+                            'desc': item['category'] ?? '',
+                            'color': _getColor(index % _apiCategories.length),
+                          };
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: _buildCategoryCard(cat),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
                 ),
-                child: ListView.builder(
-                  controller: _scrollController,
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: 1000000,
-                  itemBuilder: (context, index) {
-                    final cat = categories[index % categories.length];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _buildCategoryCard(cat),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -1968,7 +1978,7 @@ class _BrandSelectionSectionState extends State<_BrandSelectionSection> {
               left: 16,
               right: 16,
               child: Text(
-                brand['name']!,
+                brand['title'] ?? '',
                 style: GoogleFonts.inter(
                   color: Colors.white,
                   fontSize: 20,

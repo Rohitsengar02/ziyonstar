@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/api_service.dart';
 import '../theme.dart';
 import '../widgets/mobile_bottom_nav.dart';
 import 'edit_profile_page.dart';
@@ -11,8 +13,54 @@ import 'contact_page.dart';
 import 'privacy_policy_page.dart';
 import 'return_refund_page.dart';
 
-class MobileProfilePage extends StatelessWidget {
+class MobileProfilePage extends StatefulWidget {
   const MobileProfilePage({super.key});
+
+  @override
+  State<MobileProfilePage> createState() => _MobileProfilePageState();
+}
+
+class _MobileProfilePageState extends State<MobileProfilePage> {
+  final ApiService _apiService = ApiService();
+  Map<String, dynamic>? _userProfile;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? uid = prefs.getString('user_uid');
+
+      if (uid != null) {
+        // Try fetching from backend
+        final profile = await _apiService.getUser(uid);
+        if (profile != null) {
+          if (mounted) setState(() => _userProfile = profile);
+        } else {
+          // Fallback to local
+          if (mounted) {
+            setState(() {
+              _userProfile = {
+                'name': prefs.getString('user_name') ?? 'Guest User',
+                'email': prefs.getString('user_email') ?? 'guest@example.com',
+                'phone': prefs.getString('user_phone') ?? '',
+                'photoUrl': prefs.getString('user_photo'),
+              };
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Error loading profile: $e");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,13 +126,23 @@ class MobileProfilePage extends StatelessWidget {
                       offset: const Offset(0, 5),
                     ),
                   ],
-                  image: const DecorationImage(
-                    image: AssetImage(
-                      'assets/images/tech_avatar_1.png',
-                    ), // Placeholder or User Avatar
-                    fit: BoxFit.cover,
-                  ),
+                  color: Colors.grey.shade200,
+                  image:
+                      (_userProfile != null &&
+                          _userProfile!['photoUrl'] != null &&
+                          _userProfile!['photoUrl'].toString().isNotEmpty)
+                      ? DecorationImage(
+                          image: NetworkImage(_userProfile!['photoUrl']),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
                 ),
+                child:
+                    (_userProfile == null ||
+                        _userProfile!['photoUrl'] == null ||
+                        _userProfile!['photoUrl'].toString().isEmpty)
+                    ? const Icon(LucideIcons.user, size: 50, color: Colors.grey)
+                    : null,
               ),
               Positioned(
                 bottom: 0,
@@ -105,30 +163,39 @@ class MobileProfilePage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Text(
-            'John Doe',
-            style: GoogleFonts.poppins(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          Text(
-            'john.doe@example.com',
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Colors.white.withOpacity(0.9),
-            ),
-          ),
+          _isLoading
+              ? const CircularProgressIndicator(color: Colors.white)
+              : Column(
+                  children: [
+                    Text(
+                      _userProfile?['name'] ?? 'John Doe',
+                      style: GoogleFonts.poppins(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      _userProfile?['email'] ?? 'john.doe@example.com',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.9),
+                      ),
+                    ),
+                  ],
+                ),
           const SizedBox(height: 20),
           ElevatedButton(
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => const EditProfilePage(),
                 ),
               );
+              if (result == true) {
+                _loadUserProfile();
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white.withOpacity(0.2),
@@ -303,7 +370,14 @@ class MobileProfilePage extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () {},
+            onTap: () async {
+              // Clear prefs and navigate to login?
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.clear();
+              // Assuming routing to home or login logic exists externally or we pushreplacement.
+              // For now just show snackbar or print.
+              debugPrint("Logged out");
+            },
             borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),

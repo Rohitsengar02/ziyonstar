@@ -10,6 +10,13 @@ class TechnicianProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Extract expertise data
+    final brandExpertise = technician['brandExpertise'] as List<dynamic>? ?? [];
+    final repairExpertise =
+        technician['repairExpertise'] as List<dynamic>? ?? [];
+    final isOnline = technician['isOnline'] ?? false;
+    final status = technician['status'] ?? 'pending';
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: CustomScrollView(
@@ -22,14 +29,24 @@ class TechnicianProfilePage extends StatelessWidget {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.asset(
-                    technician['image'],
-                    fit: BoxFit.cover,
-                    errorBuilder: (c, e, s) => Container(
-                      color: Colors.grey[200],
-                      child: const Icon(LucideIcons.user, size: 60),
-                    ),
-                  ),
+                  technician['photoUrl'] != null &&
+                          technician['photoUrl'].isNotEmpty
+                      ? Image.network(
+                          technician['photoUrl'],
+                          fit: BoxFit.cover,
+                          errorBuilder: (c, e, s) => Container(
+                            color: Colors.grey.shade200,
+                            child: const Icon(LucideIcons.user, size: 60),
+                          ),
+                        )
+                      : Image.asset(
+                          'assets/images/tech_avatar_1.png',
+                          fit: BoxFit.cover,
+                          errorBuilder: (c, e, s) => Container(
+                            color: Colors.grey.shade200,
+                            child: const Icon(LucideIcons.user, size: 60),
+                          ),
+                        ),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -37,7 +54,7 @@ class TechnicianProfilePage extends StatelessWidget {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          Colors.black.withOpacity(0.7),
+                          Colors.black.withValues(alpha: 0.7),
                         ],
                       ),
                     ),
@@ -45,17 +62,59 @@ class TechnicianProfilePage extends StatelessWidget {
                   Positioned(
                     bottom: 20,
                     left: 20,
+                    right: 20,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          technician['name'],
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                technician['name'] ?? 'Technician',
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            if (status == 'approved' || status == 'active')
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isOnline
+                                      ? Colors.green
+                                      : Colors.grey.shade600,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      isOnline
+                                          ? LucideIcons.zap
+                                          : LucideIcons.clock,
+                                      size: 12,
+                                      color: Colors.white,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      isOnline ? 'ONLINE' : 'OFFLINE',
+                                      style: GoogleFonts.inter(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
                         ),
+                        const SizedBox(height: 8),
                         Row(
                           children: [
                             const Icon(
@@ -65,7 +124,7 @@ class TechnicianProfilePage extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '${technician['rating']} (${technician['jobs']} Repairs)',
+                              '${technician['rating'] ?? '4.9'} • ${technician['completedJobs'] ?? '50+'} repairs completed',
                               style: GoogleFonts.inter(
                                 color: Colors.white70,
                                 fontSize: 14,
@@ -92,6 +151,8 @@ class TechnicianProfilePage extends StatelessWidget {
                 children: [
                   _buildStatRow(),
                   const SizedBox(height: 24),
+
+                  // About Section
                   Text(
                     "About",
                     style: GoogleFonts.inter(
@@ -101,29 +162,157 @@ class TechnicianProfilePage extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "Certified mobile repair specialist with over 5 years of experience. Expert in screen replacements, battery issues, and motherboard diagnostics. Dedicated to providing quick and reliable service.",
+                    technician['bio'] ??
+                        "Certified mobile repair specialist. Expert in screen replacements, battery issues, and motherboard diagnostics. Dedicated to providing quick and reliable service.",
                     style: GoogleFonts.inter(
                       color: Colors.grey[600],
                       height: 1.5,
                     ),
                   ),
+
+                  // Brand Expertise Section
+                  if (brandExpertise.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    Text(
+                      "Brand Expertise",
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 100,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: brandExpertise.length,
+                        itemBuilder: (context, index) {
+                          final brand = brandExpertise[index];
+                          return Container(
+                            width: 80,
+                            margin: const EdgeInsets.only(right: 12),
+                            child: Column(
+                              children: [
+                                Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.grey.shade200,
+                                    ),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: brand['imageUrl'] != null
+                                        ? Image.network(
+                                            brand['imageUrl'],
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (c, e, s) =>
+                                                const Icon(
+                                                  LucideIcons.smartphone,
+                                                  color: Colors.grey,
+                                                ),
+                                          )
+                                        : const Icon(
+                                            LucideIcons.smartphone,
+                                            color: Colors.grey,
+                                          ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  brand['title'] ?? brand['name'] ?? '',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+
+                  // Repair Expertise Section
+                  if (repairExpertise.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    Text(
+                      "Repair Expertise",
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: repairExpertise.map<Widget>((repair) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryButton.withValues(
+                              alpha: 0.1,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: AppColors.primaryButton.withValues(
+                                alpha: 0.3,
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                LucideIcons.wrench,
+                                size: 14,
+                                color: AppColors.primaryButton,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                repair['name'] ?? '',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.primaryButton,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+
+                  // Contact Info
                   const SizedBox(height: 24),
                   Text(
-                    "Certifications",
+                    "Contact",
                     style: GoogleFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 12,
-                    children: [
-                      _buildChip("Apple Certified"),
-                      _buildChip("Samsung Expert"),
-                      _buildChip("Level 3 Repair"),
-                    ],
+                  _buildContactItem(
+                    LucideIcons.mail,
+                    technician['email'] ?? 'Not provided',
                   ),
+                  if (technician['phone'] != null &&
+                      technician['phone'].isNotEmpty)
+                    _buildContactItem(LucideIcons.phone, technician['phone']),
+
                   const SizedBox(height: 24),
                   Text(
                     "Recent Reviews",
@@ -160,7 +349,10 @@ class TechnicianProfilePage extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+            ),
           ],
         ),
         child: ElevatedButton(
@@ -186,12 +378,17 @@ class TechnicianProfilePage extends StatelessWidget {
   }
 
   Widget _buildStatRow() {
+    final brandCount =
+        (technician['brandExpertise'] as List<dynamic>?)?.length ?? 0;
+    final repairCount =
+        (technician['repairExpertise'] as List<dynamic>?)?.length ?? 0;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        _buildStatItem("5 Years", "Experience"),
-        _buildStatItem("98%", "Success Rate"),
-        _buildStatItem("30 mins", "Avg Time"),
+        _buildStatItem(technician['experience'] ?? "5+ Years", "Experience"),
+        _buildStatItem("$brandCount", "Brands"),
+        _buildStatItem("$repairCount", "Repairs"),
       ],
     );
   }
@@ -207,22 +404,26 @@ class TechnicianProfilePage extends StatelessWidget {
             color: AppColors.primaryButton,
           ),
         ),
-        Text(label, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey)),
+        Text(
+          label,
+          style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade600),
+        ),
       ],
     );
   }
 
-  Widget _buildChip(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500),
+  Widget _buildContactItem(IconData icon, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Colors.grey.shade600),
+          const SizedBox(width: 12),
+          Text(
+            value,
+            style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade700),
+          ),
+        ],
       ),
     );
   }
@@ -232,7 +433,7 @@ class TechnicianProfilePage extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -248,7 +449,7 @@ class TechnicianProfilePage extends StatelessWidget {
                   (index) => Icon(
                     LucideIcons.star,
                     size: 14,
-                    color: index < rating ? Colors.amber : Colors.grey[300],
+                    color: index < rating ? Colors.amber : Colors.grey.shade300,
                   ),
                 ),
               ),
@@ -257,7 +458,7 @@ class TechnicianProfilePage extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             comment,
-            style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[600]),
+            style: GoogleFonts.inter(fontSize: 13, color: Colors.grey.shade600),
           ),
         ],
       ),

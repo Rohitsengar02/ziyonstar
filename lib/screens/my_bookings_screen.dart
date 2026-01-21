@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:ziyonstar/data/device_data.dart';
 import 'package:ziyonstar/theme.dart';
 import 'package:ziyonstar/responsive.dart';
 import '../widgets/navbar.dart';
@@ -314,7 +313,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                         children: (_selectedBooking!['issues'] as List).map((
                           issue,
                         ) {
-                          final data = DeviceData.issueData[issue];
                           return Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
@@ -323,17 +321,10 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                             ),
                             child: Column(
                               children: [
-                                if (data != null && data['image'] != null)
-                                  Image.asset(
-                                    data['image'],
-                                    width: isDesktop ? 40 : 35,
-                                    height: isDesktop ? 40 : 35,
-                                  )
-                                else
-                                  Icon(
-                                    LucideIcons.alertCircle,
-                                    size: isDesktop ? 40 : 35,
-                                  ),
+                                Icon(
+                                  LucideIcons.wrench,
+                                  size: isDesktop ? 40 : 35,
+                                ),
                                 const SizedBox(height: 4),
                                 Text(
                                   issue,
@@ -781,7 +772,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                       ...(booking['issues'] as List).take(3).map<Widget>((
                         issue,
                       ) {
-                        final data = DeviceData.issueData[issue];
                         return Container(
                           width: isMobile ? 60 : 50,
                           height: isMobile ? 60 : 50,
@@ -792,30 +782,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.grey.shade100),
                           ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              if (data != null && data['image'] != null)
-                                Expanded(
-                                  child: Image.asset(
-                                    data['image'],
-                                    fit: BoxFit.contain,
-                                  ),
-                                )
-                              else
-                                const Icon(LucideIcons.alertCircle, size: 20),
-                              SizedBox(height: isMobile ? 4 : 2),
-                              Text(
-                                issue,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.inter(
-                                  fontSize: isMobile ? 9 : 8,
-                                  color: Colors.grey[700],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
+                          child: const Center(
+                            child: Icon(LucideIcons.wrench, size: 24),
                           ),
                         );
                       }),

@@ -7,7 +7,7 @@ import 'technician_selection_period.dart';
 import '../widgets/navbar.dart';
 import '../widgets/footer.dart';
 import '../widgets/app_drawer.dart';
-import '../data/device_data.dart';
+import '../services/api_service.dart';
 
 class RepairPage extends StatefulWidget {
   final String deviceBrand;
@@ -26,16 +26,78 @@ class RepairPage extends StatefulWidget {
 class _RepairPageState extends State<RepairPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // State
   late String _currentBrand;
   late String _currentModel;
   final Set<String> _selectedIssues = {};
+  final ApiService _apiService = ApiService();
+  List<dynamic> _apiIssues = [];
+  List<dynamic> _apiBrands = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _currentBrand = widget.deviceBrand;
     _currentModel = widget.deviceModel;
+    _fetchIssues();
+    _fetchBrands();
+  }
+
+  Future<void> _fetchBrands() async {
+    try {
+      final brands = await _apiService.getBrands();
+      if (mounted) {
+        setState(() {
+          _apiBrands = brands;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching brands: $e');
+    }
+  }
+
+  Future<void> _fetchIssues() async {
+    try {
+      final issues = await _apiService.getIssues();
+      if (mounted) {
+        setState(() {
+          _apiIssues = issues;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching issues: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  IconData _getIcon(String? iconName) {
+    switch (iconName) {
+      case 'smartphone':
+        return LucideIcons.smartphone;
+      case 'battery':
+        return LucideIcons.battery;
+      case 'plug':
+        return LucideIcons.plug;
+      case 'camera':
+        return LucideIcons.camera;
+      case 'speaker':
+        return LucideIcons.speaker;
+      case 'cpu':
+        return LucideIcons.cpu;
+      case 'droplet':
+        return LucideIcons.droplet;
+      case 'scanFace':
+        return LucideIcons.scanFace;
+      case 'hardDrive':
+        return LucideIcons.hardDrive;
+      case 'wrench':
+        return LucideIcons.wrench;
+      case 'mic':
+        return LucideIcons.mic;
+      default:
+        return LucideIcons.wrench;
+    }
   }
 
   String _repairOption = 'Doorstep';
@@ -46,6 +108,35 @@ class _RepairPageState extends State<RepairPage> {
     String tempModel = _currentModel;
 
     Widget buildContent(StateSetter setStateDialog) {
+      // Local state for the dialog to handle model fetching
+      List<dynamic> models = [];
+      bool isLoadingModels = false;
+
+      Future<void> fetchModelsForBrand(String brandName) async {
+        final brand = _apiBrands.firstWhere(
+          (b) => b['title'] == brandName,
+          orElse: () => null,
+        );
+        if (brand == null) return;
+
+        setStateDialog(() => isLoadingModels = true);
+        try {
+          final fetchedModels = await _apiService.getModels(brand['_id']);
+          setStateDialog(() {
+            models = fetchedModels;
+            isLoadingModels = false;
+            if (models.isNotEmpty) {
+              tempModel = models.first['name'];
+            } else {
+              tempModel = 'No Models';
+            }
+          });
+        } catch (e) {
+          debugPrint('Error fetching models: $e');
+          setStateDialog(() => isLoadingModels = false);
+        }
+      }
+
       return Container(
         padding: const EdgeInsets.all(24),
         width: isDesktop ? 400 : double.infinity,
@@ -89,27 +180,34 @@ class _RepairPageState extends State<RepairPage> {
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
-                  value: tempBrand,
+                  value: _apiBrands.any((b) => (b['title'] ?? '') == tempBrand)
+                      ? tempBrand
+                      : null,
+                  hint: const Text('Select Brand'),
                   isExpanded: true,
-                  items: DeviceData.brands.map((brand) {
-                    return DropdownMenuItem<String>(
-                      value: brand['name'] as String,
-                      child: Row(
-                        children: [
-                          Icon(brand['icon'] as IconData, size: 20),
-                          const SizedBox(width: 12),
-                          Text(brand['name'] as String),
-                        ],
-                      ),
-                    );
-                  }).toList(),
+                  items: _apiBrands
+                      .map((brand) {
+                        final name = (brand['title'] ?? '') as String;
+                        if (name.isEmpty) return null;
+                        return DropdownMenuItem<String>(
+                          value: name,
+                          child: Row(
+                            children: [
+                              Icon(LucideIcons.smartphone, size: 20),
+                              const SizedBox(width: 12),
+                              Text(name),
+                            ],
+                          ),
+                        );
+                      })
+                      .whereType<DropdownMenuItem<String>>()
+                      .toList(),
                   onChanged: (value) {
                     if (value != null) {
                       setStateDialog(() {
                         tempBrand = value;
-                        tempModel =
-                            DeviceData.modelsByBrand[value]?.first ?? 'Unknown';
                       });
+                      fetchModelsForBrand(value);
                     }
                   },
                 ),
@@ -133,25 +231,42 @@ class _RepairPageState extends State<RepairPage> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: tempModel,
-                  isExpanded: true,
-                  items: (DeviceData.modelsByBrand[tempBrand] ?? []).map((
-                    model,
-                  ) {
-                    return DropdownMenuItem<String>(
-                      value: model,
-                      child: Text(model),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setStateDialog(() {
-                        tempModel = value;
-                      });
-                    }
-                  },
-                ),
+                child: isLoadingModels
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      )
+                    : DropdownButton<String>(
+                        value: models.any((m) => (m['name'] ?? '') == tempModel)
+                            ? tempModel
+                            : null,
+                        hint: const Text('Select Model'),
+                        isExpanded: true,
+                        items: models
+                            .map((model) {
+                              final name = (model['name'] ?? '') as String;
+                              if (name.isEmpty) return null;
+                              return DropdownMenuItem<String>(
+                                value: name,
+                                child: Text(name),
+                              );
+                            })
+                            .whereType<DropdownMenuItem<String>>()
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setStateDialog(() {
+                              tempModel = value;
+                            });
+                          }
+                        },
+                      ),
               ),
             ),
             const SizedBox(height: 32),
@@ -434,6 +549,13 @@ class _RepairPageState extends State<RepairPage> {
 
   Widget _buildIssuesGrid() {
     final bool isDesktop = ResponsiveLayout.isDesktop(context);
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_apiIssues.isEmpty) {
+      return const Center(child: Text('No repair issues found in database'));
+    }
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -441,13 +563,22 @@ class _RepairPageState extends State<RepairPage> {
         crossAxisCount: isDesktop ? 4 : 2,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 1.0, // Square cards to allow image room
+        childAspectRatio: 1.0,
       ),
-      itemCount: DeviceData.issueData.length,
+      itemCount: _apiIssues.length,
       itemBuilder: (context, index) {
-        final key = DeviceData.issueData.keys.elementAt(index);
-        final data = DeviceData.issueData[key]!;
+        final item = _apiIssues[index];
+        final key = item['name'] as String;
         final isSelected = _selectedIssues.contains(key);
+
+        // Map API data to what _IssueCard expects (wrapped in a map for legacy compatibility if needed)
+        final data = {
+          'icon': _getIcon(item['icon']),
+          'imageUrl': item['imageUrl'],
+          'price': item['base_price'],
+          'warranty': '6 Months', // Default
+          'time': '45 mins', // Default
+        };
 
         return _IssueCard(
           title: key,
@@ -507,7 +638,13 @@ class _RepairPageState extends State<RepairPage> {
                 )
               else
                 ..._selectedIssues.map((issue) {
-                  final data = DeviceData.issueData[issue]!;
+                  final item = _apiIssues.firstWhere((i) => i['name'] == issue);
+                  final data = {
+                    'imageUrl': item['imageUrl'],
+                    'price': item['base_price'],
+                    'warranty': '6 Months',
+                    'time': '45 mins',
+                  };
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(12),
@@ -527,10 +664,14 @@ class _RepairPageState extends State<RepairPage> {
                             color: Colors.grey[50],
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Image.asset(
-                            data['image'],
-                            fit: BoxFit.contain,
-                          ),
+                          child:
+                              (item['imageUrl'] != null &&
+                                  item['imageUrl'].isNotEmpty)
+                              ? Image.network(
+                                  item['imageUrl'],
+                                  fit: BoxFit.contain,
+                                )
+                              : Icon(_getIcon(item['icon']), size: 24),
                         ),
                         const SizedBox(width: 12),
                         // Details
@@ -789,7 +930,10 @@ class _RepairPageState extends State<RepairPage> {
                   height: 140,
                   width: 140,
                   margin: const EdgeInsets.only(bottom: 24),
-                  child: Image.asset(data['image'], fit: BoxFit.contain),
+                  child:
+                      (data['imageUrl'] != null && data['imageUrl'].isNotEmpty)
+                      ? Image.network(data['imageUrl'], fit: BoxFit.contain)
+                      : Icon(data['icon'], size: 80, color: Colors.grey),
                 ),
               ),
               Row(
@@ -1141,7 +1285,13 @@ class _RepairPageState extends State<RepairPage> {
   int _calculateTotal() {
     int total = 0;
     for (var issueName in _selectedIssues) {
-      total += DeviceData.issueData[issueName]!['price'] as int;
+      final item = _apiIssues.firstWhere(
+        (i) => i['name'] == issueName,
+        orElse: () => null,
+      );
+      if (item != null) {
+        total += int.tryParse(item['base_price'].toString()) ?? 0;
+      }
     }
     return total;
   }
@@ -1176,8 +1326,11 @@ class _IssueCardState extends State<_IssueCard> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          transform: Matrix4.identity()
-            ..scale(_isHovering || widget.isSelected ? 1.05 : 1.0),
+          transform: Matrix4.diagonal3Values(
+            _isHovering || widget.isSelected ? 1.05 : 1.0,
+            _isHovering || widget.isSelected ? 1.05 : 1.0,
+            1.0,
+          ),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
@@ -1185,7 +1338,7 @@ class _IssueCardState extends State<_IssueCard> {
               color: widget.isSelected
                   ? AppColors.primaryButton
                   : (_isHovering
-                        ? AppColors.primaryButton.withOpacity(0.5)
+                        ? AppColors.primaryButton.withValues(alpha: 0.5)
                         : Colors.transparent),
               width: 2,
             ),
@@ -1226,8 +1379,8 @@ class _IssueCardState extends State<_IssueCard> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.white.withOpacity(0.0),
-                        Colors.white.withOpacity(0.9),
+                        Colors.white.withValues(alpha: 0.0),
+                        Colors.white.withValues(alpha: 0.9),
                         Colors.white,
                       ],
                     ),

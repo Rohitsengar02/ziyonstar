@@ -2,11 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import '../data/device_data.dart';
 import '../theme.dart';
 import 'profile_page.dart';
 import 'mobile_repair_page.dart';
 import '../widgets/mobile_bottom_nav.dart';
+import '../services/api_service.dart';
 
 class MobileHomeScreen extends StatefulWidget {
   const MobileHomeScreen({super.key});
@@ -21,6 +21,13 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
   Timer? _timer;
   String? _selectedBrand;
   String? _selectedModel;
+  final ApiService _apiService = ApiService();
+  List<dynamic> _apiIssues = [];
+  List<dynamic> _apiBrands = [];
+  List<dynamic> _apiModels = [];
+  bool _isLoadingIssues = true;
+  bool _isLoadingBrands = true;
+  bool _isLoadingModels = false;
 
   final List<Map<String, String>> _banners = [
     {
@@ -58,6 +65,83 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
         );
       }
     });
+    _fetchIssues();
+    _fetchBrands();
+  }
+
+  Future<void> _fetchBrands() async {
+    try {
+      final brands = await _apiService.getBrands();
+      if (mounted) {
+        setState(() {
+          _apiBrands = brands;
+          _isLoadingBrands = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching brands: $e');
+      if (mounted) setState(() => _isLoadingBrands = false);
+    }
+  }
+
+  Future<void> _fetchModels(String brandId) async {
+    setState(() => _isLoadingModels = true);
+    try {
+      final models = await _apiService.getModels(brandId);
+      if (mounted) {
+        setState(() {
+          _apiModels = models;
+          _isLoadingModels = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching models: $e');
+      if (mounted) setState(() => _isLoadingModels = false);
+    }
+  }
+
+  Future<void> _fetchIssues() async {
+    try {
+      final issues = await _apiService.getIssues();
+      if (mounted) {
+        setState(() {
+          _apiIssues = issues;
+          _isLoadingIssues = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching issues: $e');
+      if (mounted) setState(() => _isLoadingIssues = false);
+    }
+  }
+
+  IconData _getIcon(String? iconName) {
+    switch (iconName) {
+      case 'smartphone':
+        return LucideIcons.smartphone;
+      case 'battery':
+        return LucideIcons.battery;
+      case 'plug':
+        return LucideIcons.plug;
+      case 'camera':
+        return LucideIcons.camera;
+      case 'speaker':
+        return LucideIcons.speaker;
+      case 'cpu':
+        return LucideIcons.cpu;
+      case 'droplet':
+        return LucideIcons.droplet;
+      case 'scanFace':
+        return LucideIcons.scanFace;
+      case 'hardDrive':
+        return LucideIcons.hardDrive;
+      case 'wrench':
+        return LucideIcons.wrench;
+      case 'mic':
+        return LucideIcons.mic;
+      default:
+        return LucideIcons.wrench;
+    }
   }
 
   @override
@@ -69,25 +153,32 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
 
   // Getter for 5 issues + More button
   List<Map<String, dynamic>> get _gridItems {
-    final issues = DeviceData.issueData.entries
-        .take(5)
-        .map(
-          (e) => {
-            'type': 'issue',
-            'name': e.key,
-            'image': e.value['image'],
-            'icon': e.value['icon'],
-          },
-        )
-        .toList();
+    final List<Map<String, dynamic>> items = [];
 
-    issues.add({
+    if (_apiIssues.isNotEmpty) {
+      items.addAll(
+        _apiIssues
+            .take(5)
+            .map(
+              (e) => {
+                'type': 'issue',
+                'name': e['name'],
+                'image': e['imageUrl'],
+                'icon': _getIcon(e['icon']),
+              },
+            ),
+      );
+    } else if (!_isLoadingIssues) {
+      // Fallback or empty state handled in UI
+    }
+
+    items.add({
       'type': 'more',
       'name': 'View All',
       'icon': LucideIcons.layoutGrid,
       'image': null,
     });
-    return issues;
+    return items;
   }
 
   @override
@@ -154,9 +245,9 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.grey[50],
+                    color: Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: Colors.grey[200]!),
+                    border: Border.all(color: Colors.grey.shade200),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -250,13 +341,13 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
                   image: DecorationImage(
-                    image: AssetImage(banner['image']!),
+                    image: AssetImage(banner['image'] ?? ''),
                     fit: BoxFit.cover,
                     onError: (e, s) {},
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 5),
                     ),
@@ -277,7 +368,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryButton,
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -291,7 +382,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        banner['title']!,
+                        banner['title'] ?? '',
                         style: GoogleFonts.poppins(
                           color: const Color.fromARGB(255, 78, 78, 78),
                           fontSize: 22,
@@ -299,7 +390,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                         ),
                       ),
                       Text(
-                        banner['subtitle']!,
+                        banner['subtitle'] ?? '',
                         style: GoogleFonts.inter(
                           color: const Color.fromARGB(221, 145, 145, 145),
                           fontSize: 12,
@@ -326,7 +417,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
               decoration: BoxDecoration(
                 color: _currentBannerIndex == index
                     ? AppColors.primaryButton
-                    : Colors.grey[300],
+                    : Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(4),
               ),
             );
@@ -376,8 +467,8 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
                     color: isMore
-                        ? AppColors.primaryButton.withOpacity(0.1)
-                        : Colors.grey[100],
+                        ? AppColors.primaryButton.withValues(alpha: 0.1)
+                        : Colors.grey.shade100,
                     border: Border.all(
                       color: isMore
                           ? const Color.fromARGB(
@@ -385,8 +476,8 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                               222,
                               222,
                               222,
-                            ).withOpacity(0.3)
-                          : const Color.fromARGB(255, 246, 246, 246)!,
+                            ).withValues(alpha: 0.3)
+                          : const Color.fromARGB(255, 246, 246, 246),
                     ),
                   ),
                   child: ClipRRect(
@@ -412,19 +503,47 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                               ),
                             ),
                           )
-                        : Image.asset(
-                            item['image'] as String,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Center(
-                                  child: Icon(
-                                    item['icon'] as IconData,
-                                    size: 40,
-                                    color: Colors.blue.withOpacity(0.5),
-                                  ),
-                                ),
+                        : (item['image'] != null &&
+                              (item['image'] as String).isNotEmpty)
+                        ? ((item['image'] as String).startsWith('http')
+                              ? Image.network(
+                                  item['image'] as String,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Center(
+                                        child: Icon(
+                                          item['icon'] as IconData,
+                                          size: 40,
+                                          color: Colors.blue.withValues(
+                                            alpha: 0.5,
+                                          ),
+                                        ),
+                                      ),
+                                )
+                              : Image.asset(
+                                  item['image'] as String,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Center(
+                                        child: Icon(
+                                          item['icon'] as IconData,
+                                          size: 40,
+                                          color: Colors.blue.withValues(
+                                            alpha: 0.5,
+                                          ),
+                                        ),
+                                      ),
+                                ))
+                        : Center(
+                            child: Icon(
+                              item['icon'] as IconData,
+                              size: 40,
+                              color: Colors.blue.withValues(alpha: 0.5),
+                            ),
                           ),
                   ),
                 ),
@@ -434,7 +553,9 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                 item['name'] as String,
                 style: GoogleFonts.inter(
                   fontSize: 12,
-                  color: isMore ? AppColors.primaryButton : Colors.grey[800],
+                  color: isMore
+                      ? AppColors.primaryButton
+                      : Colors.grey.shade800,
                   fontWeight: FontWeight.w600,
                 ),
                 textAlign: TextAlign.center,
@@ -471,12 +592,12 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
         ],
-        border: Border.all(color: Colors.grey[100]!),
+        border: Border.all(color: Colors.grey.shade100),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -486,7 +607,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryButton.withOpacity(0.1),
+                  color: AppColors.primaryButton.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
@@ -511,7 +632,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                     Text(
                       'Get an instant repair quote',
                       style: GoogleFonts.inter(
-                        color: Colors.grey[600],
+                        color: Colors.grey.shade600,
                         fontSize: 12,
                       ),
                     ),
@@ -523,31 +644,42 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
           const SizedBox(height: 24),
 
           // Brand Dropdown
-          _buildDropdown(
-            value: _selectedBrand,
-            hint: 'Select Brand',
-            items: DeviceData.brands.map((b) => b['name'] as String).toList(),
-            onChanged: (val) {
-              setState(() {
-                _selectedBrand = val;
-                _selectedModel = null;
-              });
-            },
-          ),
+          _isLoadingBrands
+              ? const Center(child: CircularProgressIndicator())
+              : _buildDropdownField(
+                  hint: 'Select Brand',
+                  value: _selectedBrand,
+                  items: _apiBrands
+                      .map((b) => (b['title'] ?? '') as String)
+                      .where((name) => name.isNotEmpty)
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      final brand = _apiBrands.firstWhere(
+                        (b) => b['title'] == value,
+                      );
+                      setState(() {
+                        _selectedBrand = value;
+                        _selectedModel = null;
+                        _apiModels = [];
+                      });
+                      _fetchModels(brand['_id']);
+                    }
+                  },
+                ),
           const SizedBox(height: 16),
-
-          // Model Dropdown
-          _buildDropdown(
-            value: _selectedModel,
-            hint: 'Select Model',
-            items: _selectedBrand == null
-                ? []
-                : (DeviceData.modelsByBrand[_selectedBrand] ?? []),
-            isEnabled: _selectedBrand != null,
-            onChanged: (val) {
-              setState(() => _selectedModel = val);
-            },
-          ),
+          _isLoadingModels
+              ? const Center(child: CircularProgressIndicator())
+              : _buildDropdownField(
+                  hint: 'Select Model',
+                  value: _selectedModel,
+                  items: _apiModels
+                      .map((m) => (m['name'] ?? '') as String)
+                      .where((name) => name.isNotEmpty)
+                      .toList(),
+                  onChanged: (value) => setState(() => _selectedModel = value),
+                  isEnabled: _selectedBrand != null,
+                ),
 
           if (_selectedModel != null) ...[
             const SizedBox(height: 20),
@@ -589,7 +721,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
     );
   }
 
-  Widget _buildDropdown({
+  Widget _buildDropdownField({
     required String? value,
     required String hint,
     required List<String> items,
@@ -599,21 +731,21 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.grey[50], // Light grey input
+        color: Colors.grey.shade50, // Light grey input
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[200]!),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
           hint: Text(
             hint,
-            style: GoogleFonts.inter(color: Colors.grey[500], fontSize: 13),
+            style: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13),
           ),
           isExpanded: true,
           icon: Icon(
             LucideIcons.chevronDown,
-            color: isEnabled ? Colors.grey[700] : Colors.grey[300],
+            color: isEnabled ? Colors.grey.shade700 : Colors.grey.shade300,
             size: 20,
           ),
           items: items.map((String item) {
@@ -623,7 +755,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                 item,
                 style: GoogleFonts.inter(
                   fontWeight: FontWeight.w500,
-                  color: Colors.grey[900],
+                  color: Colors.grey.shade900,
                 ),
               ),
             );
@@ -638,15 +770,21 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
   }
 
   Widget _buildBrandGallery() {
+    if (_isLoadingBrands) {
+      return const SizedBox(
+        height: 160,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
     return SizedBox(
       height: 160,
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
-        itemCount: DeviceData.brands.length,
+        itemCount: _apiBrands.length,
         itemBuilder: (context, index) {
-          final brand = DeviceData.brands[index];
-          final name = brand['name'] as String;
+          final brand = _apiBrands[index];
+          final name = (brand['title'] ?? '') as String;
           final imagePath = 'assets/images/brand_${name.toLowerCase()}.png';
 
           return Container(
@@ -658,24 +796,42 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                   child: Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
-                      color: Colors.grey[100],
-                      border: Border.all(color: Colors.grey[200]!),
+                      color: Colors.grey.shade100,
+                      border: Border.all(color: Colors.grey.shade200),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(20),
-                      child: Image.asset(
-                        imagePath,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                        errorBuilder: (context, error, stackTrace) => Center(
-                          child: Icon(
-                            brand['icon'] as IconData,
-                            size: 32,
-                            color: Colors.grey[400],
-                          ),
-                        ),
-                      ),
+                      child:
+                          (brand['imageUrl'] != null &&
+                              brand['imageUrl'].isNotEmpty)
+                          ? Image.network(
+                              brand['imageUrl'],
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Center(
+                                    child: Icon(
+                                      LucideIcons.smartphone,
+                                      size: 32,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                  ),
+                            )
+                          : Image.asset(
+                              imagePath,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Center(
+                                    child: Icon(
+                                      LucideIcons.smartphone,
+                                      size: 32,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                  ),
+                            ),
                     ),
                   ),
                 ),
@@ -684,7 +840,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                   name,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Colors.grey[800],
+                    color: Colors.grey.shade800,
                     fontWeight: FontWeight.w600,
                   ),
                   textAlign: TextAlign.center,
@@ -712,7 +868,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF6366F1).withOpacity(0.3),
+            color: const Color(0xFF6366F1).withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -743,7 +899,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -767,7 +923,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                       Text(
                         'On your first screen repair',
                         style: GoogleFonts.inter(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           fontSize: 12,
                         ),
                       ),
@@ -807,10 +963,10 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey[100]!),
+        border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -820,9 +976,9 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildStatItem('5k+', 'Repairs'),
-          Container(width: 1, height: 40, color: Colors.grey[200]),
+          Container(width: 1, height: 40, color: Colors.grey.shade200),
           _buildStatItem('4.8', 'Rating'),
-          Container(width: 1, height: 40, color: Colors.grey[200]),
+          Container(width: 1, height: 40, color: Colors.grey.shade200),
           _buildStatItem('24h', 'Turnaround'),
         ],
       ),
@@ -842,7 +998,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
         ),
         Text(
           label,
-          style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[500]),
+          style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade500),
         ),
       ],
     );
@@ -882,7 +1038,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.grey[200]!),
+              border: Border.all(color: Colors.grey.shade200),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -891,7 +1047,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryButton.withOpacity(0.1),
+                    color: AppColors.primaryButton.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -913,7 +1069,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                   step['desc'] as String,
                   style: GoogleFonts.inter(
                     fontSize: 11,
-                    color: Colors.grey[500],
+                    color: Colors.grey.shade500,
                   ),
                 ),
               ],
@@ -958,14 +1114,14 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey[100]!),
+            border: Border.all(color: Colors.grey.shade100),
           ),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.grey[50],
+                  color: Colors.grey.shade50,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -991,7 +1147,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                       feat['desc'] as String,
                       style: GoogleFonts.inter(
                         fontSize: 10,
-                        color: Colors.grey[500],
+                        color: Colors.grey.shade500,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1021,7 +1177,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.grey[200]!),
+              border: Border.all(color: Colors.grey.shade200),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1030,7 +1186,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                   children: [
                     CircleAvatar(
                       radius: 16,
-                      backgroundColor: Colors.grey[200],
+                      backgroundColor: Colors.grey.shade200,
                       backgroundImage: const AssetImage(
                         'assets/images/tech_avatar_1.png',
                       ),
@@ -1065,7 +1221,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                   "Amazing service! Fixed my phone screen in just 20 minutes. The technician was very professional.",
                   style: GoogleFonts.inter(
                     fontSize: 11,
-                    color: Colors.grey[600],
+                    color: Colors.grey.shade600,
                     fontStyle: FontStyle.italic,
                   ),
                   maxLines: 3,

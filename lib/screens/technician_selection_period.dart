@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ziyonstar/screens/booking_success_screen.dart';
-import 'package:ziyonstar/widgets/app_drawer.dart';
-import 'package:ziyonstar/widgets/navbar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme.dart';
 import '../responsive.dart';
+import '../services/api_service.dart';
 
 class TechnicianSelectionScreen extends StatefulWidget {
   final String deviceName;
@@ -33,14 +33,12 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
   int _currentStep = 0; // 0: Select Tech, 1: Schedule
 
   // Interactive Selection State
-  String _currentAddress = 'Select Delivery Address';
+  Map<String, dynamic>? _selectedAddress;
   String _currentPaymentMethod = 'Select Payment Method';
 
-  // Mock Data
-  final List<String> _savedAddresses = [
-    '123 Main Street, Apt 4B, New York, NY 10001',
-    '456 Park Avenue, Suite 10, New York, NY 10022',
-  ];
+  // Dynamic Addresses from API
+  List<dynamic> _savedAddresses = [];
+  bool _isLoadingAddresses = true;
 
   final List<String> _paymentMethods = [
     'Cash on Delivery',
@@ -49,48 +47,12 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
   ];
 
   // Mock Technician Data
-  final List<Map<String, dynamic>> _technicians = [
-    {
-      'name': 'David Miller',
-      'image': 'assets/images/tech_avatar_1.png',
-      'rating': 4.9,
-      'reviews': 1240,
-      'specialty': 'Apple Specialist',
-      'experience': '6 Years',
-      'jobs': 3400,
-      'badges': ['Doorstep', 'Pickup'],
-      'isOnline': true,
-      'distance': '2.4 km',
-    },
-    {
-      'name': 'Maria Garcia',
-      'image': 'assets/images/tech_avatar_2.png',
-      'rating': 4.8,
-      'reviews': 850,
-      'specialty': 'Android & Chip Level',
-      'experience': '4 Years',
-      'jobs': 1200,
-      'badges': ['Walk-in', 'Doorstep'],
-      'isOnline': false,
-      'distance': '1.2 km',
-    },
-    {
-      'name': 'Robert Fox',
-      'image': 'assets/images/tech_avatar_3.png',
-      'rating': 5.0,
-      'reviews': 2100,
-      'specialty': 'Master Technician',
-      'experience': '10+ Years',
-      'jobs': 5600,
-      'badges': ['Complex Repairs'],
-      'isOnline': true,
-      'distance': '5.0 km',
-    },
-  ];
+  // Removed _technicians mock list
 
   // Removed _dates list
 
   // Expanded to 8 Time Slots
+  // Time Slots
   final List<String> _timeSlots = [
     '09:00 AM - 10:00 AM',
     '10:00 AM - 11:00 AM',
@@ -101,6 +63,81 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
     '03:00 PM - 04:00 PM',
     '04:00 PM - 05:00 PM',
   ];
+
+  final ApiService _apiService = ApiService();
+  List<dynamic> _apiTechnicians = [];
+  bool _isLoadingTechs = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTechnicians();
+    _initAndFetchAddresses();
+  }
+
+  String _userId = 'guest_user'; // Will be loaded from SharedPreferences
+
+  Future<void> _initAndFetchAddresses() async {
+    // Get or create a persistent user ID
+    final prefs = await SharedPreferences.getInstance();
+    // Prioritize authenticated user UID
+    String? storedId = prefs.getString('user_uid');
+
+    if (storedId == null) {
+      // Fallback to guest user_id
+      storedId = prefs.getString('user_id');
+      if (storedId == null) {
+        // Generate a simple unique ID for this device
+        storedId = 'user_${DateTime.now().millisecondsSinceEpoch}';
+        await prefs.setString('user_id', storedId);
+      }
+    }
+    _userId = storedId!;
+    _fetchAddresses();
+  }
+
+  Future<void> _fetchAddresses() async {
+    try {
+      final addresses = await _apiService.getAddresses(_userId);
+      if (mounted) {
+        setState(() {
+          _savedAddresses = addresses;
+          _isLoadingAddresses = false;
+          // Set default address if available
+          if (_savedAddresses.isNotEmpty && _selectedAddress == null) {
+            final defaultAddr = _savedAddresses.firstWhere(
+              (a) => a['isDefault'] == true,
+              orElse: () => _savedAddresses.first,
+            );
+            _selectedAddress = defaultAddr;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching addresses: $e');
+      if (mounted) setState(() => _isLoadingAddresses = false);
+    }
+  }
+
+  Future<void> _fetchTechnicians() async {
+    try {
+      final techs = await _apiService.getTechnicians();
+      if (mounted) {
+        setState(() {
+          // Filter only approved/active technicians
+          _apiTechnicians = techs
+              .where(
+                (t) => t['status'] == 'approved' || t['status'] == 'active',
+              )
+              .toList();
+          _isLoadingTechs = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching technicians: $e');
+      if (mounted) setState(() => _isLoadingTechs = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -293,7 +330,7 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
                       ),
                     ),
                     Text(
-                      '${widget.selectedIssues.join(", ")}',
+                      widget.selectedIssues.join(", "),
                       style: GoogleFonts.inter(
                         color: Colors.white70,
                         fontSize: 12,
@@ -319,9 +356,17 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
                   ),
                   child: CircleAvatar(
                     radius: 24,
-                    backgroundImage: AssetImage(
-                      _technicians[_selectedTechIndex!]['image'],
-                    ),
+                    backgroundColor: Colors.grey[200],
+                    backgroundImage:
+                        _apiTechnicians[_selectedTechIndex!]['photoUrl'] !=
+                                null &&
+                            _apiTechnicians[_selectedTechIndex!]['photoUrl']
+                                .isNotEmpty
+                        ? NetworkImage(
+                            _apiTechnicians[_selectedTechIndex!]['photoUrl'],
+                          )
+                        : const AssetImage('assets/images/tech_avatar_1.png')
+                              as ImageProvider,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -337,7 +382,7 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
                         ),
                       ),
                       Text(
-                        _technicians[_selectedTechIndex!]['name'],
+                        _apiTechnicians[_selectedTechIndex!]['name'],
                         style: GoogleFonts.poppins(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -393,7 +438,7 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
             _buildDarkDetailRow(
               LucideIcons.mapPin,
               'Address',
-              _currentAddress,
+              _selectedAddress?['fullAddress'] ?? 'Select Delivery Address',
               onTap: _showAddressManager,
             ),
             Divider(height: 24, color: Colors.white.withAlpha(20)),
@@ -473,14 +518,32 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
   }
 
   Widget _buildTechnicianList() {
+    if (_isLoadingTechs) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_apiTechnicians.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40.0),
+          child: Text('No technicians available in your area.'),
+        ),
+      );
+    }
+
     return ListView.separated(
       key: const ValueKey('TechList'),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: _technicians.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 20),
+      itemCount: _apiTechnicians.length,
+      separatorBuilder: (_, index) => const SizedBox(height: 20),
       itemBuilder: (context, index) {
-        final tech = _technicians[index];
+        final tech = _apiTechnicians[index];
         final isSelected = _selectedTechIndex == index;
         return GestureDetector(
           onTap: () {
@@ -536,7 +599,15 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
                         ),
                         child: CircleAvatar(
                           radius: 36,
-                          backgroundImage: AssetImage(tech['image']),
+                          backgroundColor: Colors.grey[200],
+                          backgroundImage:
+                              tech['photoUrl'] != null &&
+                                  tech['photoUrl'].isNotEmpty
+                              ? NetworkImage(tech['photoUrl'])
+                              : const AssetImage(
+                                      'assets/images/tech_avatar_1.png',
+                                    )
+                                    as ImageProvider,
                         ),
                       ),
                     ),
@@ -549,14 +620,14 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                tech['name'],
+                                tech['name'] ?? 'Technician',
                                 style: GoogleFonts.poppins(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 18,
                                   color: AppColors.textHeading,
                                 ),
                               ),
-                              if (tech['isOnline'])
+                              if (tech['isOnline'] == true)
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 10,
@@ -592,29 +663,30 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
                                 ),
                             ],
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 8),
                           Row(
                             children: [
                               const Icon(
-                                LucideIcons.star,
-                                size: 16,
-                                color: Color(0xFFF59E0B),
+                                LucideIcons.briefcase,
+                                size: 14,
+                                color: Colors.grey,
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 8),
                               Text(
-                                '${tech['rating']}',
+                                tech['experience'] ?? 'No Exp Info',
                                 style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              Text(
-                                ' (${tech['reviews']} Verified Reviews)',
-                                style: GoogleFonts.inter(
-                                  color: Colors.grey,
+                                  color: Colors.grey[600],
                                   fontSize: 13,
                                 ),
                               ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              _buildTechBadge(LucideIcons.star, '4.9'),
+                              const SizedBox(width: 12),
+                              _buildTechBadge(LucideIcons.briefcase, 'Active'),
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -741,6 +813,31 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
     );
   }
 
+  Widget _buildTechBadge(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: Colors.grey[600]),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTimeSelector() {
     return Wrap(
       spacing: 12,
@@ -801,7 +898,7 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
         boxShadow: isReady
             ? [
                 BoxShadow(
-                  color: AppColors.primaryButton.withOpacity(0.3),
+                  color: AppColors.primaryButton.withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -816,9 +913,11 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
                   MaterialPageRoute(
                     builder: (context) => BookingSuccessScreen(
                       deviceName: widget.deviceName,
-                      technicianName: _technicians[_selectedTechIndex!]['name'],
+                      technicianName:
+                          _apiTechnicians[_selectedTechIndex!]['name'],
                       technicianImage:
-                          _technicians[_selectedTechIndex!]['image'],
+                          _apiTechnicians[_selectedTechIndex!]['photoUrl'] ??
+                          '',
                       selectedIssues: widget.selectedIssues,
                       timeSlot: _selectedTimeSlot!,
                       date: _selectedDate,
@@ -887,7 +986,7 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
             boxShadow: isReady
                 ? [
                     BoxShadow(
-                      color: AppColors.primaryButton.withOpacity(0.4),
+                      color: AppColors.primaryButton.withValues(alpha: 0.4),
                       blurRadius: 15,
                       offset: const Offset(0, 8),
                     ),
@@ -903,9 +1002,10 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
                         builder: (context) => BookingSuccessScreen(
                           deviceName: widget.deviceName,
                           technicianName:
-                              _technicians[_selectedTechIndex!]['name'],
+                              _apiTechnicians[_selectedTechIndex!]['name'],
                           technicianImage:
-                              _technicians[_selectedTechIndex!]['image'],
+                              _apiTechnicians[_selectedTechIndex!]['photoUrl'] ??
+                              '',
                           selectedIssues: widget.selectedIssues,
                           timeSlot: _selectedTimeSlot!,
                           date: _selectedDate,
@@ -950,97 +1050,6 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
     );
   }
 
-  Widget _buildConfirmationSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Confirmation',
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            'Review your details',
-            style: GoogleFonts.inter(fontSize: 14, color: Colors.grey),
-          ),
-          const SizedBox(height: 20),
-          _buildDetailRow(
-            LucideIcons.mapPin,
-            'Address',
-            _currentAddress,
-            onTap: _showAddressManager,
-          ),
-          Divider(height: 30, color: Colors.grey[100]),
-          _buildDetailRow(
-            LucideIcons.creditCard,
-            'Payment',
-            _currentPaymentMethod,
-            onTap: _showPaymentSelector,
-          ),
-          Divider(height: 30, color: Colors.grey[100]),
-          _buildDetailRow(
-            LucideIcons.shieldCheck,
-            'Warranty',
-            '6 Months Screen Warranty Applied',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(
-    IconData icon,
-    String label,
-    String value, {
-    VoidCallback? onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 20, color: Colors.grey),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    value,
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w600,
-                      color: value.startsWith('Select')
-                          ? AppColors.primaryButton
-                          : AppColors.textHeading,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (onTap != null)
-              Icon(LucideIcons.chevronRight, size: 16, color: Colors.grey[300]),
-          ],
-        ),
-      ),
-    );
-  }
-
   // --- Address Logic ---
 
   void _showAddressManager() {
@@ -1070,69 +1079,118 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
               ),
               const SizedBox(height: 16),
               Expanded(
-                child: ListView.separated(
-                  controller: controller,
-                  itemCount: _savedAddresses.length + 1,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    if (index == _savedAddresses.length) {
-                      return OutlinedButton.icon(
-                        onPressed: _showAddAddressForm,
-                        icon: const Icon(LucideIcons.plus),
-                        label: const Text('Add New Address'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          side: BorderSide(
-                            color: AppColors.primaryButton.withAlpha(50),
-                          ),
-                        ),
-                      );
-                    }
-                    final address = _savedAddresses[index];
-                    final isSelected = address == _currentAddress;
-                    return InkWell(
-                      onTap: () {
-                        setState(() => _currentAddress = address);
-                        Navigator.pop(context);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.primaryButton.withAlpha(10)
-                              : Colors.grey[50],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isSelected
-                                ? AppColors.primaryButton
-                                : Colors.transparent,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              isSelected
-                                  ? LucideIcons.checkCircle
-                                  : LucideIcons.mapPin,
-                              color: isSelected
-                                  ? AppColors.primaryButton
-                                  : Colors.grey,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                address,
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.w500,
+                child: _isLoadingAddresses
+                    ? const Center(child: CircularProgressIndicator())
+                    : ListView.separated(
+                        controller: controller,
+                        itemCount: _savedAddresses.length + 1,
+                        separatorBuilder: (_, index) =>
+                            const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          if (index == _savedAddresses.length) {
+                            return OutlinedButton.icon(
+                              onPressed: _showAddAddressForm,
+                              icon: const Icon(LucideIcons.plus),
+                              label: const Text('Add New Address'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                side: BorderSide(
+                                  color: AppColors.primaryButton.withAlpha(50),
                                 ),
                               ),
+                            );
+                          }
+                          final address = _savedAddresses[index];
+                          final isSelected =
+                              address['_id'] == _selectedAddress?['_id'];
+                          return InkWell(
+                            onTap: () {
+                              setState(() => _selectedAddress = address);
+                              Navigator.pop(context);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? AppColors.primaryButton.withAlpha(10)
+                                    : Colors.grey[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? AppColors.primaryButton
+                                      : Colors.transparent,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    isSelected
+                                        ? LucideIcons.checkCircle
+                                        : LucideIcons.mapPin,
+                                    color: isSelected
+                                        ? AppColors.primaryButton
+                                        : Colors.grey,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        if (address['label'] != null)
+                                          Text(
+                                            address['label'],
+                                            style: GoogleFonts.inter(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                              color: AppColors.primaryButton,
+                                            ),
+                                          ),
+                                        Text(
+                                          address['fullAddress'] ?? '',
+                                          style: GoogleFonts.inter(
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        if (address['phone'] != null &&
+                                            address['phone'].isNotEmpty)
+                                          Text(
+                                            address['phone'],
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (address['isDefault'] == true)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.withAlpha(20),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        'Default',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 10,
+                                          color: Colors.green,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
               ),
             ],
           ),
@@ -1142,44 +1200,164 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
   }
 
   void _showAddAddressForm() {
-    final TextEditingController addressController = TextEditingController();
+    final labelController = TextEditingController(text: 'Home');
+    final addressController = TextEditingController();
+    final landmarkController = TextEditingController();
+    final cityController = TextEditingController();
+    final pincodeController = TextEditingController();
+    final phoneController = TextEditingController();
+    bool isDefault = _savedAddresses.isEmpty;
+    bool isSaving = false;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Add New Address',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-        ),
-        content: TextField(
-          controller: addressController,
-          decoration: const InputDecoration(
-            hintText: 'Enter full address (e.g. Street, City, Zip)',
-            border: OutlineInputBorder(),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(
+            'Add New Address',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
           ),
-          maxLines: 3,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (addressController.text.isNotEmpty) {
-                setState(() {
-                  _savedAddresses.add(addressController.text);
-                  _currentAddress = addressController.text;
-                });
-                Navigator.pop(context); // Close Dialog
-                Navigator.pop(context); // Close Sheet (optional, or keep open)
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryButton,
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: labelController.text,
+                  decoration: const InputDecoration(
+                    labelText: 'Address Type',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: ['Home', 'Office', 'Other']
+                      .map((l) => DropdownMenuItem(value: l, child: Text(l)))
+                      .toList(),
+                  onChanged: (v) => labelController.text = v ?? 'Home',
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: addressController,
+                  decoration: const InputDecoration(
+                    labelText: 'Full Address *',
+                    hintText: 'Street, Building, Floor',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: landmarkController,
+                  decoration: const InputDecoration(
+                    labelText: 'Landmark',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: cityController,
+                        decoration: const InputDecoration(
+                          labelText: 'City',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: pincodeController,
+                        decoration: const InputDecoration(
+                          labelText: 'Pincode',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: phoneController,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 12),
+                CheckboxListTile(
+                  value: isDefault,
+                  onChanged: (v) =>
+                      setDialogState(() => isDefault = v ?? false),
+                  title: const Text('Set as default address'),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ],
             ),
-            child: const Text('Save Address'),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      if (addressController.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please enter the full address'),
+                          ),
+                        );
+                        return;
+                      }
+                      setDialogState(() => isSaving = true);
+
+                      final newAddress = await _apiService.addAddress(
+                        userId: _userId,
+                        label: labelController.text,
+                        fullAddress: addressController.text,
+                        landmark: landmarkController.text,
+                        city: cityController.text,
+                        pincode: pincodeController.text,
+                        phone: phoneController.text,
+                        isDefault: isDefault,
+                      );
+
+                      if (newAddress != null) {
+                        setState(() {
+                          _savedAddresses.add(newAddress);
+                          _selectedAddress = newAddress;
+                        });
+                        Navigator.pop(context); // Close Dialog
+                        Navigator.pop(context); // Close Sheet
+                      } else {
+                        setDialogState(() => isSaving = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Failed to save address'),
+                          ),
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryButton,
+              ),
+              child: isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Save Address'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1438,7 +1616,15 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
                           ),
                           child: CircleAvatar(
                             radius: 40,
-                            backgroundImage: AssetImage(tech['image']),
+                            backgroundColor: Colors.grey[200],
+                            backgroundImage:
+                                tech['photoUrl'] != null &&
+                                    tech['photoUrl'].isNotEmpty
+                                ? NetworkImage(tech['photoUrl'])
+                                : const AssetImage(
+                                        'assets/images/tech_avatar_1.png',
+                                      )
+                                      as ImageProvider,
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -1456,7 +1642,7 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
                                 ),
                               ),
                               Text(
-                                tech['specialty'],
+                                tech['experience'] ?? 'Technician',
                                 style: GoogleFonts.inter(
                                   color: Colors.white70, // Lighter Text
                                   fontWeight: FontWeight.w600,
@@ -1476,63 +1662,200 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildProfileStat(
-                      LucideIcons.star,
-                      '${tech['rating']}',
-                      'Rating',
-                    ),
+                    _buildProfileStat(LucideIcons.star, '4.9', 'Rating'),
                     _buildProfileStat(
                       LucideIcons.briefcase,
-                      '${tech['jobs']}+',
-                      'Repairs',
+                      tech['isOnline'] == true ? 'Online' : 'Offline',
+                      'Status',
                     ),
                     _buildProfileStat(
                       LucideIcons.clock,
-                      '${tech['experience']}',
+                      tech['experience'] ?? '5+ Yrs',
                       'Experience',
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 32),
+              // Brand Expertise Section
+              if ((tech['brandExpertise'] as List?)?.isNotEmpty ?? false) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Brand Expertise',
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        height: 90,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: (tech['brandExpertise'] as List).length,
+                          itemBuilder: (context, index) {
+                            final brand =
+                                (tech['brandExpertise'] as List)[index];
+                            return Container(
+                              width: 80,
+                              margin: const EdgeInsets.only(right: 12),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    width: 50,
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: brand['imageUrl'] != null
+                                          ? Image.network(
+                                              brand['imageUrl'],
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (c, e, s) =>
+                                                  const Icon(
+                                                    LucideIcons.smartphone,
+                                                    color: Colors.grey,
+                                                  ),
+                                            )
+                                          : const Icon(
+                                              LucideIcons.smartphone,
+                                              color: Colors.grey,
+                                            ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    brand['title'] ?? brand['name'] ?? '',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              // Repair Expertise Section
+              if ((tech['repairExpertise'] as List?)?.isNotEmpty ?? false) ...[
+                const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Repair Expertise',
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: (tech['repairExpertise'] as List).map<Widget>(
+                          (repair) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryButton.withAlpha(25),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: AppColors.primaryButton.withAlpha(75),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    LucideIcons.wrench,
+                                    size: 14,
+                                    color: AppColors.primaryButton,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    repair['name'] ?? '',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.primaryButton,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              // Contact Info
+              const SizedBox(height: 24),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Recent Work',
+                      'Contact',
                       style: GoogleFonts.poppins(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
+                    const SizedBox(height: 12),
+                    Row(
                       children: [
-                        _buildPortfolioItem(
-                          'assets/images/repair_before_screen.png',
-                          'Screen Damage',
-                        ),
-                        _buildPortfolioItem(
-                          'assets/images/repair_after_screen.png',
-                          'Screen Fixed',
-                        ),
-                        _buildPortfolioItem(
-                          'assets/images/repair_before_back.png',
-                          'Back Damage',
-                        ),
-                        _buildPortfolioItem(
-                          'assets/images/repair_after_back.png',
-                          'Back Restore',
+                        Icon(LucideIcons.mail, size: 16, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Text(
+                          tech['email'] ?? 'Not provided',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: Colors.grey.shade700,
+                          ),
                         ),
                       ],
                     ),
+                    if (tech['phone'] != null &&
+                        tech['phone'].toString().isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(LucideIcons.phone, size: 16, color: Colors.grey),
+                          const SizedBox(width: 8),
+                          Text(
+                            tech['phone'],
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1562,39 +1885,6 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
         ),
         Text(label, style: GoogleFonts.inter(color: Colors.grey, fontSize: 12)),
       ],
-    );
-  }
-
-  Widget _buildPortfolioItem(String imagePath, String label) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        image: DecorationImage(image: AssetImage(imagePath), fit: BoxFit.cover),
-      ),
-      alignment: Alignment.bottomCenter,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          borderRadius: const BorderRadius.vertical(
-            bottom: Radius.circular(12),
-          ),
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.transparent, Colors.black.withAlpha(150)],
-          ),
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.inter(
-            color: Colors.white,
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ),
     );
   }
 
