@@ -7,9 +7,15 @@ exports.registerUser = async (req, res) => {
 
         let user = await User.findOne({ firebaseUid });
 
+        if (!user) {
+            // Fallback: Check if user exists with the same email
+            user = await User.findOne({ email });
+        }
+
         if (user) {
             user.name = name || user.name;
             user.email = email || user.email;
+            user.firebaseUid = firebaseUid || user.firebaseUid; // Update UID if it changed
             user.photoUrl = photoUrl || user.photoUrl;
             user.phone = phone || user.phone;
             // Only update role if provided
@@ -43,6 +49,17 @@ exports.getUser = async (req, res) => {
             return res.status(404).json({ msg: 'User not found' });
         }
         res.json(user);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// Get All Users (for admin analytics)
+exports.getAllUsers = async (req, res) => {
+    try {
+        const users = await User.find().select('-__v');
+        res.json(users);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');

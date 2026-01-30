@@ -69,6 +69,21 @@ class ApiService {
     }
   }
 
+  Future<List<dynamic>> getTechnicianReviews(String technicianId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/reviews/technician/$technicianId'),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error fetching technician reviews: $e');
+      return [];
+    }
+  }
+
   // ===== ADDRESS APIs =====
 
   /// Get all addresses for a user
@@ -96,6 +111,8 @@ class ApiService {
     String? state,
     String? pincode,
     String? phone,
+    double? latitude,
+    double? longitude,
     bool isDefault = false,
   }) async {
     try {
@@ -110,6 +127,8 @@ class ApiService {
           'state': state,
           'pincode': pincode,
           'phone': phone,
+          'latitude': latitude,
+          'longitude': longitude,
           'isDefault': isDefault,
         }),
       );
@@ -194,40 +213,43 @@ class ApiService {
   Future<Map<String, dynamic>?> registerUser(
     Map<String, dynamic> userData,
   ) async {
+    final url = Uri.parse('$baseUrl/users/register');
+    debugPrint('ApiService: Registering user at $url');
     try {
       final response = await http.post(
-        Uri.parse(
-          '$baseUrl/users/register',
-        ), // Ensure your backend route is /api/users/register
+        url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(userData),
       );
 
+      debugPrint('ApiService: Register response code: ${response.statusCode}');
       if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body);
       } else {
-        debugPrint('Failed to register user: ${response.body}');
-        return null;
+        throw 'Failed to register: ${response.statusCode} - ${response.body}';
       }
     } catch (e) {
-      debugPrint('Error registering user: $e');
-      return null;
+      debugPrint('ApiService: Error registering user: $e');
+      rethrow;
     }
   }
 
   Future<Map<String, dynamic>?> getUser(String firebaseUid) async {
+    final url = Uri.parse('$baseUrl/users/$firebaseUid');
+    debugPrint('ApiService: Getting user from $url');
     try {
-      final response = await http.get(Uri.parse('$baseUrl/users/$firebaseUid'));
-
+      final response = await http.get(url);
+      debugPrint('ApiService: GetUser response code: ${response.statusCode}');
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
-      } else {
-        debugPrint('Failed to get user: ${response.body}');
+      } else if (response.statusCode == 404) {
         return null;
+      } else {
+        throw 'Failed to get user: ${response.statusCode}';
       }
     } catch (e) {
-      debugPrint('Error getting user: $e');
-      return null;
+      debugPrint('ApiService: Error getting user: $e');
+      rethrow;
     }
   }
 
@@ -258,6 +280,188 @@ class ApiService {
       }
     } catch (e) {
       debugPrint('Error uploading image: $e');
+      return null;
+    }
+  }
+  // ===== BOOKING APIs =====
+
+  Future<Map<String, dynamic>?> createBooking(
+    Map<String, dynamic> bookingData,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/bookings'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(bookingData),
+      );
+      if (response.statusCode == 201) {
+        return jsonDecode(response.body);
+      }
+      throw Exception('Failed to create booking: ${response.body}');
+    } catch (e) {
+      debugPrint('Error creating booking: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<dynamic>> getUserBookings(String userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/bookings/user/$userId'),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting user bookings: $e');
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> reassignBooking(String bookingId) async {
+    final url = Uri.parse('$baseUrl/bookings/$bookingId/reassign');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to reassign: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error reassigning: $e');
+      return null;
+    }
+  }
+
+  // ===== NOTIFICATION APIs =====
+
+  Future<List<dynamic>> getUserNotifications(String userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/notifications/user/$userId'),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting user notifications: $e');
+      return [];
+    }
+  }
+
+  Future<bool> markNotificationAsSeen(String notificationId) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/notifications/$notificationId/seen'),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Error marking notification as seen: $e');
+      return false;
+    }
+  }
+
+  Future<bool> clearNotifications(String userId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/notifications/user/$userId'),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Error clearing notifications: $e');
+      return false;
+    }
+  }
+
+  // ===== DISPUTE APIs =====
+  Future<Map<String, dynamic>?> createDispute({
+    required String bookingId,
+    required String userId,
+    required String reason,
+    String? description,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/disputes'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'bookingId': bookingId,
+          'userId': userId,
+          'reason': reason,
+          'description': description,
+        }),
+      );
+      if (response.statusCode == 201) {
+        return jsonDecode(response.body);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error creating dispute: $e');
+      return null;
+    }
+  }
+
+  Future<bool> submitReview({
+    required String bookingId,
+    required int rating,
+    String? reviewText,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/bookings/$bookingId/review'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'rating': rating, 'reviewText': reviewText ?? ''}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Error submitting review: $e');
+      return false;
+    }
+  }
+
+  // ===== CONTACT API =====
+  Future<bool> submitContactForm({
+    required String name,
+    required String email,
+    required String phone,
+    required String message,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/contact'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'name': name,
+          'email': email,
+          'phone': phone,
+          'message': message,
+        }),
+      );
+      return response.statusCode == 201;
+    } catch (e) {
+      debugPrint('Error submitting contact form: $e');
+      return false;
+    }
+  }
+
+  // ===== SETTINGS API =====
+  Future<Map<String, dynamic>?> getCompanyInfo() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/settings/contact-info'),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching company info: $e');
       return null;
     }
   }

@@ -11,7 +11,7 @@ exports.registerTechnician = async (req, res) => {
             brandExpertise, repairExpertise,
             serviceTypes, coverageAreas,
             bankName, accountHolderName, accountNumber, ifscCode, upiId,
-            agreedToTerms
+            agreedToTerms, isOnline
         } = req.body;
 
         // Check if technician exists
@@ -26,13 +26,18 @@ exports.registerTechnician = async (req, res) => {
                 brandExpertise, repairExpertise,
                 serviceTypes, coverageAreas,
                 bankName, accountHolderName, accountNumber, ifscCode, upiId,
-                agreedToTerms
+                agreedToTerms, isOnline
             };
 
             // Only update fields that are present in the request
             Object.keys(fieldsToUpdate).forEach(key => {
                 if (fieldsToUpdate[key] !== undefined) {
-                    technician[key] = fieldsToUpdate[key];
+                    // Explicitly handle booleans to avoid truthy/falsy string confusion
+                    if (key === 'isOnline' || key === 'agreedToTerms') {
+                        technician[key] = fieldsToUpdate[key] === true || fieldsToUpdate[key] === 'true';
+                    } else {
+                        technician[key] = fieldsToUpdate[key];
+                    }
                 }
             });
 
@@ -41,6 +46,16 @@ exports.registerTechnician = async (req, res) => {
             }
 
             await technician.save();
+
+            // Emit status update if isOnline was changed
+            if (fieldsToUpdate.isOnline !== undefined) {
+                const io = req.app.get('io');
+                io.emit('technicianStatusUpdate', {
+                    technicianId: technician._id,
+                    isOnline: technician.isOnline
+                });
+            }
+
             return res.status(200).json({ msg: 'Technician updated', technician });
         } else {
             // Create new
@@ -52,6 +67,7 @@ exports.registerTechnician = async (req, res) => {
                 serviceTypes, coverageAreas,
                 bankName, accountHolderName, accountNumber, ifscCode, upiId,
                 agreedToTerms,
+                isOnline,
                 status: 'pending'
             });
             if (agreedToTerms) technician.agreementDate = new Date();

@@ -7,7 +7,7 @@ import '../screens/repair_page.dart';
 import '../screens/my_bookings_screen.dart';
 import '../screens/about_page.dart';
 import '../screens/contact_page.dart';
-import '../screens/profile_page.dart';
+import '../screens/mobile_profile_page.dart';
 import '../screens/home_screen.dart';
 
 class Navbar extends StatelessWidget {
@@ -191,7 +191,7 @@ class Navbar extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const ProfilePage(),
+                      builder: (context) => const MobileProfilePage(),
                     ),
                   );
                 },

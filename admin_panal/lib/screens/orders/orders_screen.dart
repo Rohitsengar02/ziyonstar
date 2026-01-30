@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'order_detail_screen.dart';
 import '../../theme/app_colors.dart';
+import '../../services/api_service.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -12,48 +13,27 @@ class OrdersScreen extends StatefulWidget {
 }
 
 class _OrdersScreenState extends State<OrdersScreen> {
-  final List<Map<String, dynamic>> _orders = [
-    {
-      'id': '#ORD-8821',
-      'user': 'Amit Verma',
-      'device': 'iPhone 14 Pro',
-      'issue': 'Display Replacement',
-      'status': 'In Progress',
-      'tech': 'Rahul Kumar',
-      'amount': '₹4,500',
-      'date': 'Oct 12, 10:30 AM',
-    },
-    {
-      'id': '#ORD-8819',
-      'user': 'Sneha Kapoor',
-      'device': 'Samsung S23',
-      'issue': 'Battery Swap',
-      'status': 'Pending',
-      'tech': 'Unassigned',
-      'amount': '₹1,200',
-      'date': 'Oct 12, 09:15 AM',
-    },
-    {
-      'id': '#ORD-8815',
-      'user': 'Rohan Das',
-      'device': 'Macbook Air M1',
-      'issue': 'Keyboard Repair',
-      'status': 'Delayed',
-      'tech': 'Vikram Singh',
-      'amount': '₹3,800',
-      'date': 'Oct 11, 04:45 PM',
-    },
-    {
-      'id': '#ORD-8810',
-      'user': 'Priya Rai',
-      'device': 'OnePlus 11',
-      'issue': 'Charging Port',
-      'status': 'Ready',
-      'tech': 'Arjun Malhotra',
-      'amount': '₹850',
-      'date': 'Oct 11, 11:20 AM',
-    },
-  ];
+  List<dynamic> _orders = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchOrders();
+  }
+
+  Future<void> _fetchOrders() async {
+    try {
+      final orders = await ApiService().getBookings();
+      setState(() {
+        _orders = orders;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error fetching orders: $e');
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,8 +50,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
         elevation: 0,
         actions: [
           IconButton(
-            onPressed: () {},
-            icon: const Icon(LucideIcons.filter, size: 20),
+            onPressed: () {
+              setState(() => _isLoading = true);
+              _fetchOrders();
+            },
+            icon: const Icon(LucideIcons.refreshCw, size: 20),
           ),
         ],
       ),
@@ -79,13 +62,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
         children: [
           _buildOrderStats(),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(20),
-              itemCount: _orders.length,
-              itemBuilder: (context, index) {
-                return _buildOrderCard(_orders[index]);
-              },
-            ),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _orders.isEmpty
+                ? const Center(child: Text('No orders found'))
+                : ListView.builder(
+                    padding: const EdgeInsets.all(20),
+                    itemCount: _orders.length,
+                    itemBuilder: (context, index) {
+                      return _buildOrderCard(_orders[index]);
+                    },
+                  ),
           ),
         ],
       ),
@@ -93,15 +80,39 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   Widget _buildOrderStats() {
+    int active = _orders
+        .where((o) => o['status'] == 'In_Progress' || o['status'] == 'Accepted')
+        .length;
+    int pending = _orders
+        .where(
+          (o) =>
+              o['status'] == 'Pending_Assignment' ||
+              o['status'] == 'Pending_Acceptance',
+        )
+        .length;
+    int completed = _orders.where((o) => o['status'] == 'Completed').length;
+
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildMiniStat('Active', '24', Colors.blue),
-          _buildMiniStat('Pending', '08', Colors.orange),
-          _buildMiniStat('Alerts', '03', Colors.red),
+          _buildMiniStat(
+            'Active',
+            active.toString().padLeft(2, '0'),
+            Colors.blue,
+          ),
+          _buildMiniStat(
+            'Pending',
+            pending.toString().padLeft(2, '0'),
+            Colors.orange,
+          ),
+          _buildMiniStat(
+            'Completed',
+            completed.toString().padLeft(2, '0'),
+            Colors.green,
+          ),
         ],
       ),
     );
@@ -123,22 +134,41 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
-  Widget _buildOrderCard(Map<String, dynamic> order) {
-    Color statusColor = order['status'] == 'In Progress'
+  Widget _buildOrderCard(dynamic order) {
+    String status = order['status'] ?? 'Pending';
+    Color statusColor = status == 'In_Progress'
         ? Colors.blue
-        : order['status'] == 'Pending'
+        : (status.contains('Pending'))
         ? Colors.orange
-        : order['status'] == 'Delayed'
+        : status == 'Cancelled'
         ? Colors.red
         : Colors.green;
 
+    String id = order['_id']
+        .toString()
+        .substring(order['_id'].toString().length - 8)
+        .toUpperCase();
+    String userName = order['userId']?['name'] ?? 'Unknown User';
+    String techName = order['technicianId']?['name'] ?? 'Unassigned';
+    String device =
+        '${order['deviceBrand'] ?? ''} ${order['deviceModel'] ?? 'Device'}'
+            .trim();
+
+    List<dynamic> issues = order['issues'] ?? [];
+    String issueStr = issues.isNotEmpty
+        ? (issues[0] is Map ? issues[0]['issueName'] : issues[0].toString())
+        : 'Repair Service';
+
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => OrderDetailScreen(order: order),
-        ),
-      ),
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OrderDetailScreen(order: order),
+          ),
+        );
+        _fetchOrders();
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(18),
@@ -153,7 +183,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  order['id'],
+                  '#ORD-$id',
                   style: GoogleFonts.poppins(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
@@ -169,7 +199,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    order['status'],
+                    status.replaceAll('_', ' '),
                     style: GoogleFonts.inter(
                       fontSize: 10,
                       color: statusColor,
@@ -196,14 +226,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        order['device'],
+                        device,
                         style: GoogleFonts.poppins(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
                         ),
                       ),
                       Text(
-                        order['issue'],
+                        issueStr,
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           color: Colors.grey,
@@ -213,7 +243,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   ),
                 ),
                 Text(
-                  order['amount'],
+                  '₹${order['totalPrice']}',
                   style: GoogleFonts.poppins(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -230,7 +260,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     const Icon(LucideIcons.user, size: 14, color: Colors.grey),
                     const SizedBox(width: 6),
                     Text(
-                      order['user'],
+                      userName,
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
@@ -247,7 +277,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      order['tech'],
+                      techName,
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         color: AppColors.primary,

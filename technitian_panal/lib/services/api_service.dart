@@ -100,7 +100,15 @@ class ApiService {
       }
     } catch (e) {
       debugPrint('Error getting technician: $e');
-      rethrow;
+      // If error, return null to force Onboarding/Welcome if appropriate,
+      // but maybe we should show error?
+      // For now, let's allow return null to fall through.
+      // But rethrow might cause StreamBuilder to receive error?
+      // StreamBuilder doesn't catch FutureBuilder errors.
+      // FutureBuilder snapshot will have error.
+      // Let's NOT rethrow but return null to be safe for now,
+      // OR better: debugPrint is enough.
+      return null;
     }
   }
 
@@ -204,6 +212,30 @@ class ApiService {
     }
   }
 
+  // Update Technician Online Status
+  Future<void> updateTechnicianOnlineStatus(
+    String firebaseUid,
+    bool isOnline,
+  ) async {
+    final url = Uri.parse('$baseUrl/technicians/register');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'firebaseUid': firebaseUid, 'isOnline': isOnline}),
+      );
+
+      debugPrint('Status Update Response: ${response.body}');
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw Exception('Failed to update status: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error updating online status: $e');
+      rethrow;
+    }
+  }
+
   // Fetch Brands
   Future<List<dynamic>> getBrands() async {
     final url = Uri.parse('$baseUrl/brands');
@@ -260,6 +292,105 @@ class ApiService {
     } catch (e) {
       debugPrint('Error submitting expertise request: $e');
       rethrow;
+    }
+  }
+
+  // Fetch Technician Bookings
+  Future<List<dynamic>> getTechnicianBookings(String technicianId) async {
+    final url = Uri.parse('$baseUrl/bookings/technician/$technicianId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as List<dynamic>;
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error fetching bookings: $e');
+      return [];
+    }
+  }
+
+  // Respond to Booking
+  Future<Map<String, dynamic>> respondToBooking(
+    String bookingId,
+    String action, {
+    String? reason,
+  }) async {
+    final url = Uri.parse('$baseUrl/bookings/$bookingId/respond');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'action': action, 'reason': reason}),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to respond to booking: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error responding to booking: $e');
+      rethrow;
+    }
+  }
+
+  // Get Booking by ID
+  Future<Map<String, dynamic>?> getBookingById(String bookingId) async {
+    final url = Uri.parse('$baseUrl/bookings/$bookingId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching booking: $e');
+      return null;
+    }
+  }
+
+  // Update Booking Status
+  Future<Map<String, dynamic>> updateBookingStatus(
+    String bookingId,
+    String status,
+  ) async {
+    final url = Uri.parse('$baseUrl/bookings/$bookingId/status');
+    debugPrint('Updating booking status: $bookingId -> $status');
+    debugPrint('URL: $url');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'status': status}),
+      );
+
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to update status: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error updating booking status: $e');
+      rethrow;
+    }
+  }
+
+  // Get Technician Wallet Stats
+  Future<Map<String, dynamic>?> getTechnicianWallet(String technicianId) async {
+    final url = Uri.parse('$baseUrl/bookings/technician/$technicianId/wallet');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching wallet stats: $e');
+      return null;
     }
   }
 }

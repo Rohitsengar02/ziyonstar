@@ -117,6 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 _InstantQuoteSection(),
                 _RepairProcessSection(),
                 _WarrantySection(),
+                const _TrustSignalsSection(),
                 _TestimonialsSection(),
                 _DeliveryOptionsSection(),
                 const Footer(),
@@ -146,7 +147,7 @@ class _HeroSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isDesktop = ResponsiveLayout.isDesktop(context);
     final screenWidth = MediaQuery.of(context).size.width;
-    final double horizontalPadding = isDesktop ? screenWidth * 0.08 : 20;
+    final double horizontalPadding = isDesktop ? (screenWidth - 1400 > 0 ? (screenWidth - 1400) / 2 : 20) : 20;
 
     return Container(
       decoration: BoxDecoration(
@@ -234,7 +235,7 @@ class _TextContent extends StatelessWidget {
               ),
               SizedBox(width: isDesktop ? 8 : 6),
               Text(
-                'Top Rated Platform 2026',
+                'Expert Mobile Repair Services',
                 style: GoogleFonts.inter(
                   fontSize: isDesktop ? 12 : 11,
                   fontWeight: FontWeight.bold,
@@ -269,17 +270,17 @@ class _TextContent extends StatelessWidget {
                   ),
                   alignment: PlaceholderAlignment.middle,
                 ),
-              const TextSpan(text: 'Selling '),
+              const TextSpan(text: 'Fixing '),
               TextSpan(
-                text: 'Old\n${isDesktop ? "Things " : ""}',
+                text: 'Your\n${isDesktop ? "Phone " : ""}',
                 style: const TextStyle(color: AppColors.accentRed),
               ),
-              TextSpan(text: '${isDesktop ? "" : "Things "}becomes\n'),
-              TextSpan(text: '${isDesktop ? "——— " : ""}More Fun '),
+              TextSpan(text: '${isDesktop ? "" : "Phone "}Made\n'),
+              TextSpan(text: '${isDesktop ? "——— " : ""}Simple '),
               if (isDesktop)
                 WidgetSpan(
                   child:
-                      Icon(Icons.sunny, color: AppColors.accentYellow, size: 50)
+                      Icon(Icons.build, color: AppColors.accentYellow, size: 50)
                           .animate(onPlay: (controller) => controller.repeat())
                           .rotate(duration: 10.seconds),
                   alignment: PlaceholderAlignment.middle,
@@ -293,7 +294,7 @@ class _TextContent extends StatelessWidget {
             maxWidth: isDesktop ? 500 : double.infinity,
           ),
           child: Text(
-            'We ensure the best price for your used gadgets. Simple, fast, and secure process to sell or repair your devices.',
+            'Professional mobile repair at your doorstep. Fast, affordable, and backed by warranty. Get your device fixed today!',
             textAlign: isDesktop ? TextAlign.left : TextAlign.center,
             style: TextStyle(
               fontSize: isDesktop ? 16 : 14,
@@ -323,7 +324,7 @@ class _TextContent extends StatelessWidget {
                 ),
               ),
               child: Text(
-                'Sell Now',
+                'Book Repair',
                 style: TextStyle(
                   fontSize: isDesktop ? 16 : 14,
                   fontWeight: FontWeight.bold,
@@ -341,7 +342,7 @@ class _TextContent extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Browse Services',
+                    'View Services',
                     style: TextStyle(
                       color: AppColors.textHeading,
                       fontWeight: FontWeight.bold,
@@ -717,7 +718,7 @@ class _HorizontalSearchSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isDesktop = ResponsiveLayout.isDesktop(context);
     final screenWidth = MediaQuery.of(context).size.width;
-    final double horizontalPadding = isDesktop ? screenWidth * 0.08 : 20;
+    final double horizontalPadding = isDesktop ? (screenWidth - 1400 > 0 ? (screenWidth - 1400) / 2 : 20) : 20;
 
     return Container(
       color: Colors.white,
@@ -727,7 +728,12 @@ class _HorizontalSearchSection extends StatelessWidget {
         top: 0,
         bottom: isDesktop ? 60 : 40,
       ),
-      child: const _DeviceSearchWidget(),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1400),
+          child: const _DeviceSearchWidget(),
+        ),
+      ),
     ).animate().fadeIn(delay: 800.ms).slideY(begin: 0.1, end: 0);
   }
 }
@@ -739,7 +745,7 @@ class _StatsBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isDesktop = ResponsiveLayout.isDesktop(context);
     final screenWidth = MediaQuery.of(context).size.width;
-    final double padding = isDesktop ? screenWidth * 0.08 : 20;
+    final double padding = isDesktop ? (screenWidth - 1400 > 0 ? (screenWidth - 1400) / 2 : 20) : 20;
 
     final stats = [
       {
@@ -771,46 +777,49 @@ class _StatsBar extends StatelessWidget {
         horizontal: padding,
         vertical: isDesktop ? 60 : 40,
       ),
-      child: isDesktop
-          ? Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                for (int i = 0; i < stats.length; i++) ...[
-                  Expanded(
-                    child: _statItem(
-                      stats[i]['icon'] as IconData,
-                      stats[i]['number'] as String,
-                      stats[i]['label'] as String,
-                      isDesktop: isDesktop,
-                      delay: i * 100,
-                    ),
-                  ),
-                  if (i < stats.length - 1) _divider(),
-                ],
-              ],
-            )
-          : Wrap(
-              spacing: 16,
-              runSpacing: 24,
-              alignment: WrapAlignment.center,
-              children: [
-                for (int i = 0; i < stats.length; i++)
-                  SizedBox(
-                    width: screenWidth < 400
-                        ? (screenWidth - 40 - 16) /
-                              2 // 2 columns on very small screens
-                        : (screenWidth - 40 - 32) /
-                              3, // 3 columns on larger mobile
-                    child: _statItem(
-                      stats[i]['icon'] as IconData,
-                      stats[i]['number'] as String,
-                      stats[i]['label'] as String,
-                      isDesktop: isDesktop,
-                      delay: i * 100,
-                    ),
-                  ),
-              ],
-            ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1400),
+          child: isDesktop
+              ? Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    for (int i = 0; i < stats.length; i++) ...[
+                      _statItem(
+                        stats[i]['icon'] as IconData,
+                        stats[i]['number'] as String,
+                        stats[i]['label'] as String,
+                        isDesktop: isDesktop,
+                        delay: i * 100,
+                      ),
+                      if (i < stats.length - 1) _divider(),
+                    ],
+                  ],
+                )
+              : Wrap(
+                  spacing: 16,
+                  runSpacing: 24,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    for (int i = 0; i < stats.length; i++)
+                      SizedBox(
+                        width: screenWidth < 400
+                            ? (screenWidth - 40 - 16) /
+                                  2 // 2 columns on very small screens
+                            : (screenWidth - 40 - 32) /
+                                  3, // 3 columns on larger mobile
+                        child: _statItem(
+                          stats[i]['icon'] as IconData,
+                          stats[i]['number'] as String,
+                          stats[i]['label'] as String,
+                          isDesktop: isDesktop,
+                          delay: i * 100,
+                        ),
+                      ),
+                  ],
+                ),
+        ),
+      ),
     );
   }
 
@@ -981,56 +990,65 @@ class _RepairCategoriesSectionState extends State<_RepairCategoriesSection> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 30),
       color: Colors.white,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              'Our Repair Services',
-              style: GoogleFonts.inter(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textHeading,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1400),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Our Repair Services',
+                    style: GoogleFonts.inter(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textHeading,
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              'Professional repairs for every issue',
-              style: GoogleFonts.inter(fontSize: 16, color: AppColors.textBody),
-            ),
-          ),
-          const SizedBox(height: 60),
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _apiCategories.isEmpty
-              ? const Center(child: Text('No repair services available'))
-              : SizedBox(
-                  height: 380,
-                  child: NotificationListener<UserScrollNotification>(
-                    onNotification: (notification) {
-                      if (notification.direction == ScrollDirection.idle) {
-                        _isUserScrolling = false;
-                      } else {
-                        _isUserScrolling = true;
-                      }
-                      return false;
-                    },
-                    child: ScrollConfiguration(
-                      behavior: ScrollConfiguration.of(context).copyWith(
-                        dragDevices: {
-                          PointerDeviceKind.touch,
-                          PointerDeviceKind.mouse,
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Professional repairs for every issue',
+                    style: GoogleFonts.inter(fontSize: 16, color: AppColors.textBody),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 60),
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _apiCategories.isEmpty
+                  ? const Center(child: Text('No repair services available'))
+                  : SizedBox(
+                      height: 380,
+                      child: NotificationListener<UserScrollNotification>(
+                        onNotification: (notification) {
+                          if (notification.direction == ScrollDirection.idle) {
+                            _isUserScrolling = false;
+                          } else {
+                            _isUserScrolling = true;
+                          }
+                          return false;
                         },
-                      ),
-                      child: ListView.builder(
-                        controller: _scrollController,
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: 1000000,
-                        itemBuilder: (context, index) {
+                        child: ScrollConfiguration(
+                          behavior: ScrollConfiguration.of(context).copyWith(
+                            dragDevices: {
+                              PointerDeviceKind.touch,
+                              PointerDeviceKind.mouse,
+                            },
+                          ),
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: 1000000,
+                            itemBuilder: (context, index) {
                           final item =
                               _apiCategories[index % _apiCategories.length];
                           final cat = {
@@ -1048,7 +1066,9 @@ class _RepairCategoriesSectionState extends State<_RepairCategoriesSection> {
                     ),
                   ),
                 ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1215,179 +1235,189 @@ class _InstantQuoteSection extends StatelessWidget {
   }
 
   Widget _buildDesktopLayout(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 60),
-      child: Row(
-        children: [
-          // Left side - Beautiful gradient card with content
-          Expanded(
-            flex: 5,
-            child: Container(
-              height: 650,
-              padding: const EdgeInsets.all(50),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                ),
-                borderRadius: BorderRadius.circular(32),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0xFF667eea).withAlpha(60),
-                    blurRadius: 40,
-                    offset: const Offset(-10, 20),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(50),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          '🎯 INSTANT QUOTE',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      Text(
-                        'Get Your\nRepair Price\nIn Seconds',
-                        style: GoogleFonts.inter(
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          height: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Fast, transparent, and hassle-free pricing for all your device repairs.',
-                        style: GoogleFonts.inter(
-                          fontSize: 18,
-                          color: Colors.white.withAlpha(230),
-                          height: 1.6,
-                        ),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1400),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            children: [
+              // Left side - Beautiful gradient card with content
+              Expanded(
+                flex: 5,
+                child: Container(
+                  height: 650,
+                  padding: const EdgeInsets.all(50),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                    ),
+                    borderRadius: BorderRadius.circular(32),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0xFF667eea).withAlpha(60),
+                        blurRadius: 40,
+                        offset: const Offset(-10, 20),
                       ),
                     ],
                   ),
-                  // Stats
-                  Column(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildStat('50K+', 'Repairs Done'),
-                          const SizedBox(width: 40),
-                          _buildStat('4.9★', 'Rating'),
-                          const SizedBox(width: 40),
-                          _buildStat('24Hr', 'Turnaround'),
-                        ],
-                      ),
-                      const SizedBox(height: 40),
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(30),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              LucideIcons.checkCircle,
-                              color: Colors.white,
-                              size: 24,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
                             ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Text(
-                                'Free diagnostics • No hidden fees • Warranty included',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withAlpha(50),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              '🎯 INSTANT QUOTE',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: 1.5,
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 32),
+                          Text(
+                            'Get Your\nRepair Price\nIn Seconds',
+                            style: GoogleFonts.inter(
+                              fontSize: 48,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              height: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            'Fast, transparent, and hassle-free pricing for all your device repairs.',
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              color: Colors.white.withAlpha(230),
+                              height: 1.6,
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Stats
+                      Column(
+                        children: [
+                          Row(
+                            children: [
+                              _buildStat('50K+', 'Repairs Done'),
+                              const SizedBox(width: 40),
+                              _buildStat('4.9★', 'Rating'),
+                              const SizedBox(width: 40),
+                              _buildStat('24Hr', 'Turnaround'),
+                            ],
+                          ),
+                          const SizedBox(height: 40),
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withAlpha(30),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  LucideIcons.checkCircle,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Text(
+                                    'Free diagnostics • No hidden fees • Warranty included',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ).animate().fadeIn(delay: 300.ms).slideX(begin: -0.2, end: 0),
               ),
-            ).animate().fadeIn(delay: 300.ms).slideX(begin: -0.2, end: 0),
+              const SizedBox(width: 40),
+              // Right side - Form
+              Expanded(flex: 5, child: _buildForm(context)),
+            ],
           ),
-          const SizedBox(width: 40),
-          // Right side - Form
-          Expanded(flex: 5, child: _buildForm(context)),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildMobileLayout(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-              ),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: Text(
-              '🎯 INSTANT QUOTE',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: 1.5,
-              ),
-            ),
-          ).animate().fadeIn(duration: 600.ms).scale(delay: 200.ms),
-          const SizedBox(height: 24),
-          Text(
-            'Get Your Repair Price',
-            style: GoogleFonts.inter(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textHeading,
-              height: 1.2,
-            ),
-            textAlign: TextAlign.center,
-          ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.3, end: 0),
-          const SizedBox(height: 16),
-          Text(
-            'Transparent pricing, no hidden fees. Get your quote in seconds!',
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: AppColors.textBody,
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
-          ).animate().fadeIn(delay: 400.ms),
-          const SizedBox(height: 32),
-          _buildForm(context, isDesktop: false),
-        ],
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1400),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                  ),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Text(
+                  '🎯 INSTANT QUOTE',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ).animate().fadeIn(duration: 600.ms).scale(delay: 200.ms),
+              const SizedBox(height: 24),
+              Text(
+                'Get Your Repair Price',
+                style: GoogleFonts.inter(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textHeading,
+                  height: 1.2,
+                ),
+                textAlign: TextAlign.center,
+              ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.3, end: 0),
+              const SizedBox(height: 16),
+              Text(
+                'Transparent pricing, no hidden fees. Get your quote in seconds!',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppColors.textBody,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ).animate().fadeIn(delay: 400.ms),
+              const SizedBox(height: 32),
+              _buildForm(context, isDesktop: false),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1730,22 +1760,47 @@ class _CarouselSectionState extends State<_CarouselSection> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = ResponsiveLayout.isDesktop(context);
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 80),
-      height: 560,
-      child: ListView.builder(
-        controller: _scrollController,
-        scrollDirection: Axis.horizontal,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: 1000000,
-        itemBuilder: (context, index) {
-          final item = _items[index % _items.length];
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: _carouselCard(item),
-          );
-        },
+      padding: const EdgeInsets.symmetric(vertical: 60),
+      height: isDesktop ? 600 : 500,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1400),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  'Exclusive Offers',
+                  style: GoogleFonts.inter(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textHeading,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 40),
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  scrollDirection: Axis.horizontal,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: 1000000,
+                  itemBuilder: (context, index) {
+                    final item = _items[index % _items.length];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: _carouselCard(item),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1884,51 +1939,63 @@ class _BrandSelectionSectionState extends State<_BrandSelectionSection> {
       padding: EdgeInsets.symmetric(vertical: isDesktop ? 60 : 40),
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              'Repair by Brand',
-              style: GoogleFonts.inter(
-                fontSize: isDesktop ? 32 : 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textHeading,
-              ),
-            ),
-          ),
-          SizedBox(height: isDesktop ? 40 : 24),
-          SizedBox(
-            height: isDesktop ? 180 : 140,
-            child: NotificationListener<UserScrollNotification>(
-              onNotification: (notification) {
-                if (notification.direction == ScrollDirection.idle) {
-                  _isUserScrolling = false;
-                } else {
-                  _isUserScrolling = true;
-                }
-                return false;
-              },
-              child: ScrollConfiguration(
-                behavior: ScrollConfiguration.of(context).copyWith(
-                  dragDevices: {
-                    PointerDeviceKind.touch,
-                    PointerDeviceKind.mouse,
-                  },
-                ),
-                child: ListView.builder(
-                  controller: _scrollController,
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: 1000000,
-                  itemBuilder: (context, index) {
-                    final brand = _brands[index % _brands.length];
-                    return Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isDesktop ? 16 : 10,
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1400),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Align(
+                       alignment: Alignment.centerLeft, // Keep title left-aligned within content area
+                       child: Text(
+                        'Repair by Brand',
+                        style: GoogleFonts.inter(
+                          fontSize: isDesktop ? 32 : 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textHeading,
+                        ),
                       ),
-                      child: _brandCard(brand, isDesktop),
-                    );
-                  },
-                ),
+                    ),
+                  ),
+                  SizedBox(height: isDesktop ? 40 : 24),
+                  SizedBox(
+                    height: isDesktop ? 180 : 140,
+                    child: NotificationListener<UserScrollNotification>(
+                      onNotification: (notification) {
+                        if (notification.direction == ScrollDirection.idle) {
+                          _isUserScrolling = false;
+                        } else {
+                          _isUserScrolling = true;
+                        }
+                        return false;
+                      },
+                      child: ScrollConfiguration(
+                        behavior: ScrollConfiguration.of(context).copyWith(
+                          dragDevices: {
+                            PointerDeviceKind.touch,
+                            PointerDeviceKind.mouse,
+                          },
+                        ),
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: 1000000,
+                          itemBuilder: (context, index) {
+                            final brand = _brands[index % _brands.length];
+                            return Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isDesktop ? 16 : 10,
+                              ),
+                              child: _brandCard(brand, isDesktop),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -2052,65 +2119,70 @@ class _RepairProcessSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 24),
       color: const Color(0xFFFAFAFA),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.primaryButton.withAlpha(20),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'SIMPLE PROCESS',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primaryButton,
-                letterSpacing: 1.5,
-              ),
-            ),
-          ).animate().fadeIn(duration: 600.ms),
-          const SizedBox(height: 16),
-          Text(
-            'How It Works',
-            style: GoogleFonts.inter(
-              fontSize: 36,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textHeading,
-            ),
-          ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2, end: 0),
-          const SizedBox(height: 12),
-          Text(
-            'Your device repaired in 5 easy steps',
-            style: GoogleFonts.inter(fontSize: 16, color: AppColors.textBody),
-          ).animate().fadeIn(delay: 300.ms),
-          const SizedBox(height: 40),
-          isDesktop
-              ? Row(
-                  children: steps.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final step = entry.value;
-                    return Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          right: index != steps.length - 1 ? 20 : 0,
-                        ),
-                        child: _buildProcessCard(step, index),
-                      ),
-                    );
-                  }).toList(),
-                )
-              : Column(
-                  children: steps.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final step = entry.value;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 24),
-                      child: _buildProcessCard(step, index),
-                    );
-                  }).toList(),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1400),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryButton.withAlpha(20),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-        ],
+                child: Text(
+                  'SIMPLE PROCESS',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryButton,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ).animate().fadeIn(duration: 600.ms),
+              const SizedBox(height: 16),
+              Text(
+                'How It Works',
+                style: GoogleFonts.inter(
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textHeading,
+                ),
+              ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2, end: 0),
+              const SizedBox(height: 12),
+              Text(
+                'Your device repaired in 5 easy steps',
+                style: GoogleFonts.inter(fontSize: 16, color: AppColors.textBody),
+              ).animate().fadeIn(delay: 300.ms),
+              const SizedBox(height: 40),
+              isDesktop
+                  ? Row(
+                      children: steps.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final step = entry.value;
+                        return Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              right: index != steps.length - 1 ? 20 : 0,
+                            ),
+                            child: _buildProcessCard(step, index),
+                          ),
+                        );
+                      }).toList(),
+                    )
+                  : Column(
+                      children: steps.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final step = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 24),
+                          child: _buildProcessCard(step, index),
+                        );
+                      }).toList(),
+                    ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -2271,55 +2343,76 @@ class _WarrantySection extends StatelessWidget {
       color: Colors.white,
       padding: EdgeInsets.symmetric(vertical: isDesktop ? 60 : 40),
       width: double.infinity,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF8B5CF6).withAlpha(20),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'WHY CHOOSE ZIYONSTAR',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF8B5CF6),
-                letterSpacing: 1.5,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1400),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B5CF6).withAlpha(20),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'WHY CHOOSE ZIYONSTAR',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF8B5CF6),
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ).animate().fadeIn(),
+              SizedBox(height: isDesktop ? 20 : 16),
+              Text(
+                'The Ziyonstar Promise',
+                style: GoogleFonts.inter(
+                  fontSize: isDesktop ? 36 : 28,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textHeading,
+                ),
+                textAlign: TextAlign.center,
+              ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2, end: 0),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                child: Text(
+                  'Premium service standards you can trust',
+                  style: GoogleFonts.inter(
+                    fontSize: isDesktop ? 16 : 14,
+                    color: AppColors.textBody,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
-            ),
-          ).animate().fadeIn(),
-          SizedBox(height: isDesktop ? 20 : 16),
-          Text(
-            'The Ziyonstar Promise',
-            style: GoogleFonts.inter(
-              fontSize: isDesktop ? 36 : 28,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textHeading,
-            ),
-            textAlign: TextAlign.center,
-          ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2, end: 0),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            child: Text(
-              'Premium service standards you can trust',
-              style: GoogleFonts.inter(
-                fontSize: isDesktop ? 16 : 14,
-                color: AppColors.textBody,
-              ),
-              textAlign: TextAlign.center,
-            ).animate().fadeIn(delay: 300.ms),
+              const SizedBox(height: 40),
+              isDesktop
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: badges.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final badge = entry.value;
+                        return Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isDesktop ? 10 : 8,
+                          ),
+                          child: _WarrantyCard(badge: badge, index: index),
+                        );
+                      }).toList(),
+                    )
+                  : Column(
+                      children: badges.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final badge = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 20),
+                          child: _WarrantyCard(badge: badge, index: index),
+                        );
+                      }).toList(),
+                    ),
+            ],
           ),
-          SizedBox(height: isDesktop ? 60 : 40),
-          Wrap(
-            spacing: isDesktop ? 24 : 16,
-            runSpacing: isDesktop ? 24 : 16,
-            alignment: WrapAlignment.center,
-            children: badges.asMap().entries.map((entry) {
-              return _WarrantyCard(badge: entry.value, index: entry.key);
-            }).toList(),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -2525,190 +2618,195 @@ class _TestimonialsSectionState extends State<_TestimonialsSection> {
     return Container(
       color: const Color(0xFFFAFAFA),
       padding: const EdgeInsets.symmetric(vertical: 40),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEC4899).withAlpha(20),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'TESTIMONIALS',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFFEC4899),
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                ).animate().fadeIn(),
-                const SizedBox(height: 16),
-                Text(
-                  'Customer Love',
-                  style: GoogleFonts.inter(
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textHeading,
-                  ),
-                ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2, end: 0),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1400),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
                   children: [
-                    const Icon(Icons.star, color: Colors.amber, size: 24),
-                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEC4899).withAlpha(20),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'TESTIMONIALS',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFFEC4899),
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                    ).animate().fadeIn(),
+                    const SizedBox(height: 16),
                     Text(
-                      '4.9/5 Average Rating',
+                      'Customer Love',
                       style: GoogleFonts.inter(
-                        fontSize: 16,
+                        fontSize: 36,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textHeading,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '(2,400+ reviews)',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppColors.textBody,
-                      ),
+                    ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2, end: 0),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.star, color: Colors.amber, size: 24),
+                        const SizedBox(width: 8),
+                        Text(
+                          '4.9/5 Average Rating',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textHeading,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '(2,400+ reviews)',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: AppColors.textBody,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 50),
-          SizedBox(
-            height: 300,
-            child: ListView.builder(
-              controller: _scrollController,
-              scrollDirection: Axis.horizontal,
-              itemCount: reviews.length * 100, // Infinite loop illusion
-              itemBuilder: (context, index) {
-                final review = reviews[index % reviews.length];
-                final color = review['color'] as Color;
+              ),
+              const SizedBox(height: 50),
+              SizedBox(
+                height: 300,
+                child: ListView.builder(
+                  controller: _scrollController,
+                  scrollDirection: Axis.horizontal,
+                  itemCount: reviews.length * 100, // Infinite loop illusion
+                  itemBuilder: (context, index) {
+                    final review = reviews[index % reviews.length];
+                    final color = review['color'] as Color;
 
-                return Container(
-                  width: isDesktop ? 380 : 320,
-                  margin: EdgeInsets.only(
-                    left: index == 0 ? 24 : 0,
-                    right: 24,
-                    bottom: 20,
-                    top: 10,
-                  ),
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(10),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
+                    return Container(
+                      width: isDesktop ? 380 : 320,
+                      margin: EdgeInsets.only(
+                        left: index == 0 ? 24 : 0,
+                        right: 24,
+                        bottom: 20,
+                        top: 10,
                       ),
-                    ],
-                    border: Border.all(color: Colors.grey.withAlpha(10)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [color, color.withAlpha(150)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: Text(
-                                review['name'].toString().substring(0, 1),
-                                style: GoogleFonts.inter(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(32),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(10),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  review['name'] as String,
-                                  style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: AppColors.textHeading,
+                        ],
+                        border: Border.all(color: Colors.grey.withAlpha(10)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [color, color.withAlpha(150)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
                                   ),
+                                  shape: BoxShape.circle,
                                 ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: List.generate(
-                                    5,
-                                    (i) => Icon(
-                                      Icons.star,
-                                      size: 14,
-                                      color: i < (review['rating'] as int)
-                                          ? const Color(0xFFF59E0B)
-                                          : Colors.grey.withAlpha(50),
+                                child: Center(
+                                  child: Text(
+                                    review['name'].toString().substring(0, 1),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
                                     ),
                                   ),
                                 ),
-                              ],
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      review['name'] as String,
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                        color: AppColors.textHeading,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: List.generate(
+                                        5,
+                                        (i) => Icon(
+                                          Icons.star,
+                                          size: 14,
+                                          color: i < (review['rating'] as int)
+                                              ? const Color(0xFFF59E0B)
+                                              : Colors.grey.withAlpha(50),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                LucideIcons.quote,
+                                color: color.withAlpha(30),
+                                size: 40,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          Expanded(
+                            child: Text(
+                              '"${review['text']}"',
+                              style: GoogleFonts.inter(
+                                fontSize: 15,
+                                color: AppColors.textBody,
+                                height: 1.6,
+                                fontStyle: FontStyle.italic,
+                              ),
                             ),
                           ),
-                          Icon(
-                            LucideIcons.quote,
-                            color: color.withAlpha(30),
-                            size: 40,
+                          const SizedBox(height: 16),
+                          Text(
+                            review['date'] as String,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
-                      Expanded(
-                        child: Text(
-                          '"${review['text']}"',
-                          style: GoogleFonts.inter(
-                            fontSize: 15,
-                            color: AppColors.textBody,
-                            height: 1.6,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        review['date'] as String,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -2792,146 +2890,152 @@ class _DeliveryOptionsSectionState extends State<_DeliveryOptionsSection> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 40),
       color: Colors.white,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3B82F6).withAlpha(20),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'SERVICE OPTIONS',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF3B82F6),
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                ).animate().fadeIn(),
-                const SizedBox(height: 20),
-                Text(
-                  'Flexible Service Options',
-                  style: GoogleFonts.inter(
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textHeading,
-                  ),
-                ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2, end: 0),
-                const SizedBox(height: 12),
-                Text(
-                  'Choose how you want to get your device fixed',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    color: AppColors.textBody,
-                  ),
-                ).animate().fadeIn(delay: 300.ms),
-              ],
-            ),
-          ),
-          const SizedBox(height: 50),
-          SizedBox(
-            height: isDesktop ? 200 : 240,
-            child: ListView.builder(
-              controller: _scrollController,
-              scrollDirection: Axis.horizontal,
-              itemCount: options.length * 100,
-              itemBuilder: (context, index) {
-                final option = options[index % options.length];
-                final color = option['color'] as Color;
-                final gradient = option['gradient'] as List<Color>;
-
-                return Container(
-                  width: isDesktop ? 420 : 340,
-                  margin: EdgeInsets.only(
-                    left: index == 0 ? 24 : 0,
-                    right: 24,
-                    bottom: 20,
-                    top: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: gradient,
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: color.withAlpha(40),
-                        blurRadius: 25,
-                        offset: const Offset(0, 10),
-                        spreadRadius: 2,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1400),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
                       ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withAlpha(30),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.white.withAlpha(60),
-                              width: 2,
-                            ),
-                          ),
-                          child: Center(
-                            child: Icon(
-                              option['icon'] as IconData,
-                              size: 40,
-                              color: Colors.white,
-                            ),
-                          ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF3B82F6).withAlpha(20),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'DELIVERY OPTIONS',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF3B82F6),
+                          letterSpacing: 1.5,
                         ),
-                        const SizedBox(width: 24),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                option['title'] as String,
-                                style: GoogleFonts.inter(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
+                      ),
+                    ).animate().fadeIn(),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Convenient Repair Solutions',
+                      style: GoogleFonts.inter(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textHeading,
+                      ),
+                    ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2, end: 0),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Choose the repair method that suits you best',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        color: AppColors.textBody,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 50),
+              SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  controller: _scrollController,
+                  scrollDirection: Axis.horizontal,
+                  itemCount: options.length * 100,
+                  itemBuilder: (context, index) {
+                    final option = options[index % options.length];
+                    final color = option['color'] as Color;
+                    final gradient = option['gradient'] as List<Color>;
+
+                    return Container(
+                      width: isDesktop ? 420 : 340,
+                      margin: EdgeInsets.only(
+                        left: index == 0 ? 24 : 0,
+                        right: 24,
+                        bottom: 20,
+                        top: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: gradient,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: color.withAlpha(40),
+                            blurRadius: 25,
+                            offset: const Offset(0, 10),
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withAlpha(30),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withAlpha(60),
+                                  width: 2,
+                                ),
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  option['icon'] as IconData,
+                                  size: 40,
                                   color: Colors.white,
                                 ),
                               ),
-                              const SizedBox(height: 12),
-                              Text(
-                                option['desc'] as String,
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  color: Colors.white.withAlpha(230),
-                                  height: 1.5,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(width: 24),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    option['title'] as String,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    option['desc'] as String,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      color: Colors.white.withAlpha(230),
+                                      height: 1.5,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -2948,54 +3052,50 @@ class _DeviceSearchWidget extends StatefulWidget {
 class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
   String? selectedBrand;
   String? selectedModel;
+  Map<String, dynamic>? selectedModelData;
 
-  final Map<String, List<String>> brandModels = {
-    'Apple': [
-      'iPhone 15 Pro Max',
-      'iPhone 15 Pro',
-      'iPhone 15',
-      'iPhone 14 Pro Max',
-      'iPhone 14 Pro',
-      'iPhone 14',
-      'iPhone 13 Pro Max',
-      'iPhone 13',
-      'iPhone 12',
-    ],
-    'Samsung': [
-      'Galaxy S24 Ultra',
-      'Galaxy S24+',
-      'Galaxy S24',
-      'Galaxy S23 Ultra',
-      'Galaxy S23',
-      'Galaxy Z Fold 5',
-      'Galaxy Z Flip 5',
-      'Galaxy A54',
-    ],
-    'Google': [
-      'Pixel 8 Pro',
-      'Pixel 8',
-      'Pixel 7 Pro',
-      'Pixel 7',
-      'Pixel 6 Pro',
-      'Pixel 6',
-    ],
-    'OnePlus': [
-      'OnePlus 12',
-      'OnePlus 11',
-      'OnePlus 10 Pro',
-      'OnePlus 9 Pro',
-      'OnePlus Nord 3',
-    ],
-    'Xiaomi': [
-      'Xiaomi 14 Pro',
-      'Xiaomi 13 Pro',
-      'Xiaomi 12 Pro',
-      'Redmi Note 13 Pro',
-      'Redmi Note 12 Pro',
-    ],
-    'Oppo': ['Find X6 Pro', 'Find X5 Pro', 'Reno 11 Pro', 'Reno 10 Pro', 'A78'],
-    'Vivo': ['X100 Pro', 'X90 Pro', 'V29 Pro', 'V27 Pro', 'Y100'],
-  };
+  final ApiService _apiService = ApiService();
+  List<dynamic> _apiBrands = [];
+  List<dynamic> _apiModels = [];
+  bool _isLoadingBrands = true;
+  bool _isLoadingModels = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBrands();
+  }
+
+  Future<void> _fetchBrands() async {
+    try {
+      final brands = await _apiService.getBrands();
+      if (mounted) {
+        setState(() {
+          _apiBrands = brands;
+          _isLoadingBrands = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching brands: $e');
+      if (mounted) setState(() => _isLoadingBrands = false);
+    }
+  }
+
+  Future<void> _fetchModels(String brandId) async {
+    setState(() => _isLoadingModels = true);
+    try {
+      final models = await _apiService.getModels(brandId);
+      if (mounted) {
+        setState(() {
+          _apiModels = models;
+          _isLoadingModels = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching models: $e');
+      if (mounted) setState(() => _isLoadingModels = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -3090,36 +3190,51 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
                       color: Colors.grey.shade400,
                     ),
                   ),
-                  items: brandModels.keys.map((String brand) {
-                    return DropdownMenuItem<String>(
-                      value: brand,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              LucideIcons.smartphone,
-                              size: 18,
-                              color: AppColors.primaryButton,
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              brand,
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
+                  items: _isLoadingBrands
+                      ? []
+                      : _apiBrands.map((brand) {
+                          final brandName = (brand['title'] ?? '') as String;
+                          if (brandName.isEmpty) return null;
+                          return DropdownMenuItem<String>(
+                            value: brandName,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    LucideIcons.smartphone,
+                                    size: 18,
+                                    color: AppColors.primaryButton,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    brandName,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                          );
+                        }).whereType<DropdownMenuItem<String>>().toList(),
                   onChanged: (String? newValue) {
-                    setState(() {
-                      selectedBrand = newValue;
-                      selectedModel = null;
-                    });
+                    if (newValue != null) {
+                      final brand = _apiBrands.firstWhere(
+                        (b) => b['title'] == newValue,
+                        orElse: () => null,
+                      );
+                      setState(() {
+                        selectedBrand = newValue;
+                        selectedModel = null;
+                        selectedModelData = null;
+                        _apiModels = [];
+                      });
+                      if (brand != null) {
+                        _fetchModels(brand['_id']);
+                      }
+                    }
                   },
                   borderRadius: BorderRadius.circular(16),
                   dropdownColor: Colors.white,
@@ -3182,17 +3297,19 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
                           : Colors.grey.shade400,
                     ),
                   ),
-                  items: selectedBrand == null
+                  items: _isLoadingModels || selectedBrand == null
                       ? []
-                      : brandModels[selectedBrand]!.map((String model) {
+                      : _apiModels.map((model) {
+                          final modelName = (model['name'] ?? '') as String;
+                          if (modelName.isEmpty) return null;
                           return DropdownMenuItem<String>(
-                            value: model,
+                            value: modelName,
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
                               ),
                               child: Text(
-                                model,
+                                modelName,
                                 style: GoogleFonts.inter(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
@@ -3200,13 +3317,20 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
                               ),
                             ),
                           );
-                        }).toList(),
-                  onChanged: selectedBrand == null
+                        }).whereType<DropdownMenuItem<String>>().toList(),
+                  onChanged: selectedBrand == null || _isLoadingModels
                       ? null
                       : (String? newValue) {
-                          setState(() {
-                            selectedModel = newValue;
-                          });
+                          if (newValue != null) {
+                            final model = _apiModels.firstWhere(
+                              (m) => m['name'] == newValue,
+                              orElse: () => null,
+                            );
+                            setState(() {
+                              selectedModel = newValue;
+                              selectedModelData = model;
+                            });
+                          }
                         },
                   borderRadius: BorderRadius.circular(16),
                   dropdownColor: Colors.white,
@@ -3226,7 +3350,11 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const RepairPage(),
+                            builder: (context) => RepairPage(
+                              deviceBrand: selectedBrand!,
+                              deviceModel: selectedModel!,
+                              modelData: selectedModelData,
+                            ),
                           ),
                         );
                       }
@@ -3437,6 +3565,90 @@ class _PreloaderState extends State<_Preloader>
           ],
         ),
       ),
+    );
+  }
+}
+
+class _TrustSignalsSection extends StatelessWidget {
+  const _TrustSignalsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isDesktop = ResponsiveLayout.isDesktop(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    return Container(
+      color: Colors.white,
+      padding: EdgeInsets.symmetric(vertical: isDesktop ? 60 : 40),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1400),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: isDesktop
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildSignal(LucideIcons.shieldCheck, 'Certified Technicians',
+                          'Expert professionals you can trust'),
+                      _buildSignal(LucideIcons.clock, 'Fast Turnaround',
+                          'Most repairs done in under 30 mins'),
+                      _buildSignal(LucideIcons.creditCard, 'Secure Payment',
+                          '100% safe and encrypted transactions'),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      _buildSignal(LucideIcons.shieldCheck, 'Certified Technicians',
+                          'Expert professionals you can trust'),
+                      const SizedBox(height: 24),
+                      _buildSignal(LucideIcons.clock, 'Fast Turnaround',
+                          'Most repairs done in under 30 mins'),
+                      const SizedBox(height: 24),
+                      _buildSignal(LucideIcons.creditCard, 'Secure Payment',
+                          '100% safe and encrypted transactions'),
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSignal(IconData icon, String title, String subtitle) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.primaryButton.withAlpha(15),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: AppColors.primaryButton, size: 24),
+        ),
+        const SizedBox(width: 16),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                color: AppColors.textHeading,
+              ),
+            ),
+            Text(
+              subtitle,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: AppColors.textBody,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

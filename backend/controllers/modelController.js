@@ -46,7 +46,19 @@ exports.updateModel = async (req, res) => {
 exports.getModelsByBrand = async (req, res) => {
     try {
         const models = await Model.find({ brandId: req.params.brandId }).sort({ createdAt: -1 });
-        res.json(models);
+        const modelsWithImages = models.map(model => {
+            const repairPrices = model.repairPrices.map(price => {
+                return {
+                    ...price.toObject(),
+                    imageUrl: price.imageUrl || ''
+                };
+            });
+            return {
+                ...model.toObject(),
+                repairPrices
+            };
+        });
+        res.json(modelsWithImages);
     } catch (err) {
         console.error(err);
         res.status(500).send('Server Error');

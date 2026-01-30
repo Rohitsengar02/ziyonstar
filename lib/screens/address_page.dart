@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme.dart';
+import '../services/api_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'add_address_page.dart';
 
 class AddressPage extends StatefulWidget {
   const AddressPage({super.key});
@@ -11,24 +15,48 @@ class AddressPage extends StatefulWidget {
 }
 
 class _AddressPageState extends State<AddressPage> {
-  final List<Map<String, dynamic>> _addresses = [
-    {
-      'id': '1',
-      'label': 'Home',
-      'address':
-          'B-403, Galaxy Heights, Linking Road, Bandra West, Mumbai, Maharashtra 400050',
-      'isDefault': true,
-      'icon': LucideIcons.home,
-    },
-    {
-      'id': '2',
-      'label': 'Office',
-      'address':
-          'WeWork Enam Sambhav, C-20, G Block, Bandra Kurla Complex, Mumbai, Maharashtra 400051',
-      'isDefault': false,
-      'icon': LucideIcons.briefcase,
-    },
-  ];
+  final ApiService _apiService = ApiService();
+  List<dynamic> _addresses = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAddresses();
+  }
+
+  Future<void> _fetchAddresses() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      String? uid;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        uid = user.uid;
+      } else {
+        uid = prefs.getString('user_uid') ?? prefs.getString('user_id');
+      }
+
+      if (uid != null) {
+        final userData = await _apiService.getUser(uid);
+        if (userData != null) {
+          final addresses = await _apiService.getAddresses(userData['_id']);
+          if (mounted) {
+            setState(() {
+              _addresses = addresses;
+              _isLoading = false;
+            });
+          }
+        } else {
+          if (mounted) setState(() => _isLoading = false);
+        }
+      } else {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      debugPrint('Error fetching addresses: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +78,9 @@ class _AddressPageState extends State<AddressPage> {
         ),
         centerTitle: true,
       ),
-      body: _addresses.isEmpty
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _addresses.isEmpty
           ? _buildEmptyState()
           : ListView.builder(
               padding: const EdgeInsets.all(20),
@@ -63,11 +93,14 @@ class _AddressPageState extends State<AddressPage> {
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(20),
         child: ElevatedButton.icon(
-          onPressed: () {
-            // TODO: Implement Add Address Logic
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Add Address Feature Coming Soon")),
+          onPressed: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (c) => const AddAddressPage()),
             );
+            if (result == true) {
+              _fetchAddresses();
+            }
           },
           icon: const Icon(LucideIcons.plus),
           label: Text(
@@ -124,7 +157,7 @@ class _AddressPageState extends State<AddressPage> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
-                    address['icon'] as IconData,
+                    _getIcon(address['label']),
                     color: AppColors.primaryButton,
                     size: 24,
                   ),
@@ -137,7 +170,7 @@ class _AddressPageState extends State<AddressPage> {
                       Row(
                         children: [
                           Text(
-                            address['label'] as String,
+                            (address['label'] ?? 'Home') as String,
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -169,7 +202,7 @@ class _AddressPageState extends State<AddressPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        address['address'] as String,
+                        (address['fullAddress'] ?? '') as String,
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           color: AppColors.textBody,
@@ -231,5 +264,14 @@ class _AddressPageState extends State<AddressPage> {
         ],
       ),
     );
+  }
+
+  IconData _getIcon(String? label) {
+    if (label == null) return LucideIcons.mapPin;
+    final l = label.toLowerCase();
+    if (l.contains('home')) return LucideIcons.home;
+    if (l.contains('office') || l.contains('work'))
+      return LucideIcons.briefcase;
+    return LucideIcons.mapPin;
   }
 }

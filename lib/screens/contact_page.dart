@@ -6,6 +6,7 @@ import '../responsive.dart';
 import '../widgets/navbar.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/footer.dart';
+import '../services/api_service.dart';
 
 class ContactPage extends StatefulWidget {
   const ContactPage({super.key});
@@ -22,6 +23,23 @@ class _ContactPageState extends State<ContactPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
+
+  final ApiService _apiService = ApiService();
+  bool _isLoading = false;
+  Map<String, dynamic>? _companyInfo;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCompanyInfo();
+  }
+
+  Future<void> _fetchCompanyInfo() async {
+    final info = await _apiService.getCompanyInfo();
+    if (mounted && info != null) {
+      setState(() => _companyInfo = info);
+    }
+  }
 
   @override
   void dispose() {
@@ -77,9 +95,6 @@ class _ContactPageState extends State<ContactPage> {
 
             // Contact Form & Info Section
             _buildContactSection(isDesktop),
-
-            // Contact Cards
-            _buildContactCards(isDesktop),
 
             // Map/Location Section
             _buildLocationSection(isDesktop),
@@ -244,22 +259,48 @@ class _ContactPageState extends State<ContactPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    // Handle form submission
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Message sent successfully!'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                    // Clear form
-                    _nameController.clear();
-                    _emailController.clear();
-                    _phoneController.clear();
-                    _messageController.clear();
-                  }
-                },
+                onPressed: _isLoading
+                    ? null
+                    : () async {
+                        if (_formKey.currentState!.validate()) {
+                          setState(() => _isLoading = true);
+                          try {
+                            final success = await _apiService.submitContactForm(
+                              name: _nameController.text,
+                              email: _emailController.text,
+                              phone: _phoneController.text,
+                              message: _messageController.text,
+                            );
+
+                            if (!mounted) return;
+
+                            if (success) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Message sent successfully!'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                              // Clear form
+                              _nameController.clear();
+                              _emailController.clear();
+                              _phoneController.clear();
+                              _messageController.clear();
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Failed to send message. Please try again.',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          } finally {
+                            if (mounted) setState(() => _isLoading = false);
+                          }
+                        }
+                      },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryButton,
                   padding: const EdgeInsets.symmetric(vertical: 20),
@@ -329,6 +370,13 @@ class _ContactPageState extends State<ContactPage> {
   }
 
   Widget _buildContactInfo() {
+    final phone = _companyInfo?['phone'] ?? '+1 (555) 123-4567';
+    final email = _companyInfo?['email'] ?? 'support@ziyonstar.com';
+    final address =
+        _companyInfo?['address'] ?? '123 Tech Street, Silicon Valley, CA 94025';
+    final hours =
+        _companyInfo?['workingHours'] ?? 'Monday - Friday: 9:00 AM - 6:00 PM';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -353,22 +401,22 @@ class _ContactPageState extends State<ContactPage> {
         _buildContactInfoItem(
           icon: LucideIcons.phone,
           title: 'Phone',
-          value: '+1 (555) 123-4567',
+          value: phone,
           subtitle: 'Mon-Fri 9am-6pm',
         ),
         const SizedBox(height: 24),
         _buildContactInfoItem(
           icon: LucideIcons.mail,
           title: 'Email',
-          value: 'support@ziyonstar.com',
+          value: email,
           subtitle: 'We reply within 24 hours',
         ),
         const SizedBox(height: 24),
         _buildContactInfoItem(
           icon: LucideIcons.mapPin,
           title: 'Office',
-          value: '123 Tech Street, Silicon Valley',
-          subtitle: 'CA 94025, USA',
+          value: address,
+          subtitle: 'Main HQ',
         ),
         const SizedBox(height: 32),
         Container(
@@ -400,7 +448,7 @@ class _ContactPageState extends State<ContactPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Monday - Friday: 9:00 AM - 6:00 PM\nWeekends: 10:00 AM - 4:00 PM',
+                      hours,
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         color: AppColors.textBody,
@@ -476,110 +524,10 @@ class _ContactPageState extends State<ContactPage> {
     );
   }
 
-  Widget _buildContactCards(bool isDesktop) {
-    final cards = [
-      {
-        'icon': LucideIcons.headphones,
-        'title': '24/7 Support',
-        'description': 'Round the clock customer support for all your queries',
-      },
-      {
-        'icon': LucideIcons.messageCircle,
-        'title': 'Live Chat',
-        'description': 'Instant answers to your questions via live chat',
-      },
-      {
-        'icon': LucideIcons.zap,
-        'title': 'Quick Response',
-        'description': 'We respond to all inquiries within 2 hours',
-      },
-    ];
-
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isDesktop ? 80 : 20,
-        vertical: isDesktop ? 60 : 40,
-      ),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(colors: [Color(0xFFF9FAFB), Colors.white]),
-      ),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: isDesktop ? 3 : 1,
-          mainAxisSpacing: 24,
-          crossAxisSpacing: 24,
-          childAspectRatio: isDesktop ? 1.2 : 2,
-        ),
-        itemCount: cards.length,
-        itemBuilder: (context, index) {
-          return Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: AppColors.primaryButton.withOpacity(0.1),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primaryButton.withOpacity(0.06),
-                  blurRadius: 15,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.primaryButton,
-                        AppColors.primaryButton.withOpacity(0.7),
-                      ],
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    cards[index]['icon'] as IconData,
-                    color: Colors.white,
-                    size: 32,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  cards[index]['title'] as String,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textHeading,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  cards[index]['description'] as String,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: AppColors.textBody,
-                    height: 1.5,
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildLocationSection(bool isDesktop) {
+    final address =
+        _companyInfo?['address'] ?? '123 Tech Street, Silicon Valley, CA 94025';
+
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: isDesktop ? 80 : 20,
@@ -625,13 +573,16 @@ class _ContactPageState extends State<ContactPage> {
                     color: AppColors.primaryButton.withOpacity(0.5),
                   ),
                   const SizedBox(height: 24),
-                  Text(
-                    '123 Tech Street, Silicon Valley\nCA 94025, USA',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      color: AppColors.textBody,
-                      height: 1.6,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      address,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        color: AppColors.textBody,
+                        height: 1.6,
+                      ),
                     ),
                   ),
                 ],

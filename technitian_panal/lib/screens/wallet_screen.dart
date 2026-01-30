@@ -1,112 +1,183 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../services/api_service.dart';
 
-class WalletScreen extends StatelessWidget {
-  const WalletScreen({super.key});
+class WalletScreen extends StatefulWidget {
+  final String technicianId;
+  const WalletScreen({super.key, required this.technicianId});
+
+  @override
+  State<WalletScreen> createState() => _WalletScreenState();
+}
+
+class _WalletScreenState extends State<WalletScreen> {
+  final ApiService _apiService = ApiService();
+  bool _isLoading = true;
+  Map<String, dynamic>? _walletData;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchWalletData();
+  }
+
+  Future<void> _fetchWalletData() async {
+    try {
+      setState(() => _isLoading = true);
+      final data = await _apiService.getTechnicianWallet(widget.technicianId);
+      setState(() {
+        _walletData = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      debugPrint('Error fetching wallet: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8F9FB),
+        appBar: _buildAppBar(),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final balance = _walletData?['balance']?.toDouble() ?? 0.0;
+    final today = _walletData?['today']?.toDouble() ?? 0.0;
+    final week = _walletData?['week']?.toDouble() ?? 0.0;
+    final month = _walletData?['month']?.toDouble() ?? 0.0;
+    final pending = _walletData?['pending']?.toDouble() ?? 0.0;
+    final activities = (_walletData?['activities'] as List?) ?? [];
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
-      appBar: AppBar(
-        title: Text(
-          'Wallet',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 20),
-        ),
-        centerTitle: false,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Balance Card
-            _buildBalanceCard(),
-            const SizedBox(height: 24),
+      appBar: _buildAppBar(),
+      body: RefreshIndicator(
+        onRefresh: _fetchWalletData,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Balance Card
+              _buildBalanceCard(balance),
+              const SizedBox(height: 24),
 
-            // Earnings Snapshot
-            Text(
-              'Earnings Snapshot',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              // Earnings Snapshot
+              Text(
+                'Earnings Snapshot',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                _buildEarningsItem('Today', '₹2,450', Colors.green),
-                const SizedBox(width: 12),
-                _buildEarningsItem('This Week', '₹12,800', Colors.blue),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _buildEarningsItem('This Month', '₹48,200', Colors.orange),
-                const SizedBox(width: 12),
-                _buildEarningsItem('Pending', '₹1,500', Colors.grey),
-              ],
-            ),
-
-            const SizedBox(height: 32),
-
-            // Recent Transactions
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Recent Payouts',
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  _buildEarningsItem(
+                    'Today',
+                    '₹${today.toStringAsFixed(0)}',
+                    Colors.green,
                   ),
-                ),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text(
-                    'View All',
-                    style: TextStyle(color: Colors.black),
+                  const SizedBox(width: 12),
+                  _buildEarningsItem(
+                    'This Week',
+                    '₹${week.toStringAsFixed(0)}',
+                    Colors.blue,
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            _buildTransactionItem(
-              'Payout Transferred',
-              '12 Jan, 2024',
-              '₹8,500',
-              true,
-            ),
-            _buildTransactionItem(
-              'Repair Earnings',
-              'ORD-#8271',
-              '₹2,100',
-              false,
-            ),
-            _buildTransactionItem(
-              'Repair Earnings',
-              'ORD-#8269',
-              '₹1,450',
-              false,
-            ),
-            _buildTransactionItem(
-              'Payout Transferred',
-              '05 Jan, 2024',
-              '₹12,000',
-              true,
-            ),
-          ],
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _buildEarningsItem(
+                    'This Month',
+                    '₹${month.toStringAsFixed(0)}',
+                    Colors.orange,
+                  ),
+                  const SizedBox(width: 12),
+                  _buildEarningsItem(
+                    'Pending',
+                    '₹${pending.toStringAsFixed(0)}',
+                    Colors.grey,
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 32),
+
+              // Recent Transactions
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Recent Activities',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {},
+                    child: const Text(
+                      'View All',
+                      style: TextStyle(color: Colors.black),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (activities.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Text(
+                      'No recent activities',
+                      style: GoogleFonts.inter(color: Colors.grey),
+                    ),
+                  ),
+                )
+              else
+                ...activities.map((a) {
+                  return _buildTransactionItem(
+                    a['device'] ?? 'Repair Earnings',
+                    'ORD-#${a['orderId']}',
+                    '₹${a['amount'].toStringAsFixed(0)}',
+                    a['type'] == 'payout',
+                  );
+                }).toList(),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildBalanceCard() {
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      title: Text(
+        'Wallet',
+        style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 20),
+      ),
+      centerTitle: false,
+      backgroundColor: Colors.white,
+      foregroundColor: Colors.black,
+      elevation: 0,
+      actions: [
+        IconButton(
+          onPressed: _fetchWalletData,
+          icon: const Icon(LucideIcons.refreshCw),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBalanceCard(double balance) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(28),
@@ -136,7 +207,7 @@ class WalletScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '₹8,740.00',
+            '₹${balance.toStringAsFixed(2)}',
             style: GoogleFonts.poppins(
               color: Colors.white,
               fontSize: 36,

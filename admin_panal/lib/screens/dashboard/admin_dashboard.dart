@@ -12,168 +12,209 @@ import '../analytics/analytics_screen.dart';
 import '../promos/promos_screen.dart';
 import '../support/support_screen.dart';
 import 'approve_admins_screen.dart';
+import '../notifications/notifications_screen.dart';
 import '../auth/login_screen.dart';
 import '../profile/profile_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_colors.dart';
+import '../../services/api_service.dart';
 
-class AdminDashboard extends StatelessWidget {
+class AdminDashboard extends StatefulWidget {
   final Map<String, dynamic>? user;
   const AdminDashboard({super.key, this.user});
+
+  @override
+  State<AdminDashboard> createState() => _AdminDashboardState();
+}
+
+class _AdminDashboardState extends State<AdminDashboard> {
+  final ApiService _apiService = ApiService();
+  final PageController _pageController = PageController();
+  bool _isLoading = true;
+  Map<String, dynamic>? _data;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDashboardData();
+  }
+
+  Future<void> _fetchDashboardData() async {
+    try {
+      final data = await _apiService
+          .getAnalytics(); // Ensure this method exists and returns correct structure
+      if (mounted) {
+        setState(() {
+          _data = data;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading dashboard: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FA),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. Header / Profile Section
-              _buildHeader(context),
-              const SizedBox(height: 28),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SafeArea(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 1. Header / Profile Section
+                    _buildHeader(context),
+                    const SizedBox(height: 28),
 
-              // 2. Key Metrics / KPIs
-              _buildSectionHeader(
-                context,
-                'Overall Performance',
-                'Real-time KPIs',
+                    // Overall Performance
+                    _buildSectionHeader(
+                      context,
+                      'Overall Performance',
+                      'Financial Overview',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildOverallPerformanceCarousel(),
+                    const SizedBox(height: 28),
+
+
+                    // 3. Orders Overview
+                    _buildSectionHeader(
+                      context,
+                      'Orders Overview',
+                      'Growth & Volume',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildOrdersOverview(),
+                    const SizedBox(height: 28),
+
+                    // 6. Revenue Summary
+                    _buildSectionHeader(
+                      context,
+                      'Revenue Summary',
+                      'Financial Health',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildRevenueSummary(),
+                    const SizedBox(height: 28),
+
+                    // 11. Active Jobs
+                    _buildSectionHeader(
+                      context,
+                      'Ongoing Repairs',
+                      'Live Tracking',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildActiveJobsList(),
+                    const SizedBox(height: 28),
+
+                    // 4. Technicians Overview
+                    _buildSectionHeader(
+                      context,
+                      'Technicians Workforce',
+                      'Onboarding & Presence',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildTechniciansOverview(),
+                    const SizedBox(height: 28),
+
+                    // 5. Users Overview
+                    _buildSectionHeader(
+                      context,
+                      'Customer Base',
+                      'Growth & retention',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildUsersOverview(),
+                    const SizedBox(height: 28),
+
+                    // 8. Disputes Overview
+                    _buildSectionHeader(
+                      context,
+                      'Disputes & Resolutions',
+                      'Platform Quality',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildDisputesOverview(),
+                    const SizedBox(height: 28),
+
+                    // 9. Verification Status
+                    _buildSectionHeader(
+                      context,
+                      'Onboarding Pipeline',
+                      'Compliance Checks',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildVerificationStatus(),
+                    const SizedBox(height: 28),
+
+                    // 15. Announcements / Alerts
+                    _buildSectionHeader(
+                      context,
+                      'System Alerts',
+                      'Critical Notifications',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildAlertBanner(),
+                    const SizedBox(height: 28),
+
+                    // 20. Technician Leaderboard
+                    _buildSectionHeader(
+                      context,
+                      'Leaderboard',
+                      'Top Performers',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildLeaderboard(),
+                    const SizedBox(height: 28),
+
+                    // 16. Charts & Analytics
+                    _buildSectionHeader(
+                      context,
+                      'Business Analytics',
+                      'Trends & Data',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildChartsSection(),
+                    const SizedBox(height: 28),
+
+                    // 13. Recent Transactions
+                    _buildSectionHeader(
+                      context,
+                      'Recent Transactions',
+                      'Financial Ledger',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildTransactionList(),
+                    const SizedBox(height: 28),
+
+                    // 14. Recent Orders
+                    _buildSectionHeader(
+                      context,
+                      'Latest Orders',
+                      'Recent Activity',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildRecentOrders(),
+                    const SizedBox(height: 40),
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
-              _buildKpiMetrics(),
-              const SizedBox(height: 28),
-
-              // 3. Orders Overview
-              _buildSectionHeader(
-                context,
-                'Orders Overview',
-                'Growth & Volume',
-              ),
-              const SizedBox(height: 12),
-              _buildOrdersOverview(),
-              const SizedBox(height: 28),
-
-              // 6. Revenue Summary
-              _buildSectionHeader(
-                context,
-                'Revenue Summary',
-                'Financial Health',
-              ),
-              const SizedBox(height: 12),
-              _buildRevenueSummary(),
-              const SizedBox(height: 28),
-
-              // 17. Quick Actions
-              _buildSectionHeader(context, 'Quick Actions', 'Direct Controls'),
-              const SizedBox(height: 12),
-              _buildQuickActions(),
-              const SizedBox(height: 28),
-
-              // 11. Active Jobs
-              _buildSectionHeader(context, 'Ongoing Repairs', 'Live Tracking'),
-              const SizedBox(height: 12),
-              _buildActiveJobsList(),
-              const SizedBox(height: 28),
-
-              // 4. Technicians Overview
-              _buildSectionHeader(
-                context,
-                'Technicians Workforce',
-                'Onboarding & Presence',
-              ),
-              const SizedBox(height: 12),
-              _buildTechniciansOverview(),
-              const SizedBox(height: 28),
-
-              // 5. Users Overview
-              _buildSectionHeader(
-                context,
-                'Customer Base',
-                'Growth & retention',
-              ),
-              const SizedBox(height: 12),
-              _buildUsersOverview(),
-              const SizedBox(height: 28),
-
-              // 7. Payouts Summary
-              _buildSectionHeader(context, 'Payouts Health', 'System Flow'),
-              const SizedBox(height: 12),
-              _buildPayoutsSummary(),
-              const SizedBox(height: 28),
-
-              // 8. Disputes Overview
-              _buildSectionHeader(
-                context,
-                'Disputes & Resolutions',
-                'Platform Quality',
-              ),
-              const SizedBox(height: 12),
-              _buildDisputesOverview(),
-              const SizedBox(height: 28),
-
-              // 9. Verification Status
-              _buildSectionHeader(
-                context,
-                'Onboarding Pipeline',
-                'Compliance Checks',
-              ),
-              const SizedBox(height: 12),
-              _buildVerificationStatus(),
-              const SizedBox(height: 28),
-
-              // 15. Announcements / Alerts
-              _buildSectionHeader(
-                context,
-                'System Alerts',
-                'Critical Notifications',
-              ),
-              const SizedBox(height: 12),
-              _buildAlertBanner(),
-              const SizedBox(height: 28),
-
-              // 20. Technician Leaderboard
-              _buildSectionHeader(context, 'Leaderboard', 'Top Performers'),
-              const SizedBox(height: 12),
-              _buildLeaderboard(),
-              const SizedBox(height: 28),
-
-              // 16. Charts & Analytics
-              _buildSectionHeader(
-                context,
-                'Business Analytics',
-                'Trends & Data',
-              ),
-              const SizedBox(height: 12),
-              _buildChartsSection(),
-              const SizedBox(height: 28),
-
-              // 13. Recent Transactions
-              _buildSectionHeader(
-                context,
-                'Recent Transactions',
-                'Financial Ledger',
-              ),
-              const SizedBox(height: 12),
-              _buildTransactionList(),
-              const SizedBox(height: 28),
-
-              // 14. Recent Orders
-              _buildSectionHeader(context, 'Latest Orders', 'Recent Activity'),
-              const SizedBox(height: 12),
-              _buildRecentOrders(),
-              const SizedBox(height: 40),
-            ],
-          ),
-        ),
-      ),
+            ),
       bottomNavigationBar: _buildBottomNav(context),
     );
   }
 
   Widget _buildHeader(BuildContext context) {
+    final user = widget.user;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -182,7 +223,7 @@ class AdminDashboard extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => ProfileScreen(user: user),
+                builder: (context) => ProfileScreen(user: widget.user),
               ),
             );
           },
@@ -194,11 +235,13 @@ class AdminDashboard extends StatelessWidget {
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.black, width: 2),
                 ),
-                child: const CircleAvatar(
+                child: CircleAvatar(
                   radius: 24,
-                  backgroundImage: NetworkImage(
-                    'https://i.pravatar.cc/150?img=11',
-                  ),
+                  backgroundImage:
+                      (user?['profileImage'] != null &&
+                          user!['profileImage'].toString().isNotEmpty)
+                      ? NetworkImage(user!['profileImage'])
+                      : const NetworkImage('https://i.pravatar.cc/150?img=11'),
                 ),
               ),
               const SizedBox(width: 14),
@@ -230,9 +273,29 @@ class AdminDashboard extends StatelessWidget {
         ),
         Row(
           children: [
-            _buildIconButton(LucideIcons.bell),
+            _buildIconButton(
+              LucideIcons.bell,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AdminNotificationsScreen(),
+                  ),
+                );
+              },
+            ),
             const SizedBox(width: 8),
-            _buildIconButton(LucideIcons.settings),
+            _buildIconButton(
+              LucideIcons.settings,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProfileScreen(user: widget.user),
+                  ),
+                );
+              },
+            ),
             const SizedBox(width: 8),
             _buildIconButton(
               LucideIcons.logOut,
@@ -298,8 +361,14 @@ class AdminDashboard extends StatelessWidget {
                 context,
                 MaterialPageRoute(builder: (context) => const UsersScreen()),
               );
+            } else if (title == 'Orders Overview') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const OrdersScreen()),
+              );
             }
           },
+
           child: const Text(
             'View All',
             style: TextStyle(
@@ -312,93 +381,8 @@ class AdminDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildKpiMetrics() {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.5,
-      children: [
-        _buildStatCard(
-          'Total Orders',
-          '1,284',
-          LucideIcons.package,
-          Colors.blue,
-        ),
-        _buildStatCard(
-          'Completed',
-          '942',
-          LucideIcons.checkCircle,
-          Colors.green,
-        ),
-        _buildStatCard('Active Techs', '42', LucideIcons.users, Colors.orange),
-        _buildStatCard(
-          'Total Revenue',
-          '₹8.4L',
-          LucideIcons.banknote,
-          Colors.indigo,
-        ),
-        _buildStatCard(
-          'Pending Payouts',
-          '₹1.2L',
-          LucideIcons.clock,
-          Colors.red,
-        ),
-        _buildStatCard(
-          'Disputes',
-          '3',
-          LucideIcons.alertTriangle,
-          Colors.redAccent,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade100),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Icon(icon, color: color, size: 20),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                title,
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildOrdersOverview() {
+    final orders = _data?['ordersOverview'] ?? {};
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -410,18 +394,42 @@ class AdminDashboard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildOverviewItem('Today', '24', Colors.white),
-              _buildOverviewItem('Weekly', '156', Colors.white),
-              _buildOverviewItem('Monthly', '642', Colors.white),
+              _buildOverviewItem(
+                'Today',
+                '${orders['today'] ?? 0}',
+                Colors.white,
+              ),
+              _buildOverviewItem(
+                'Weekly',
+                '${orders['weekly'] ?? 0}',
+                Colors.white,
+              ),
+              _buildOverviewItem(
+                'Monthly',
+                '${orders['monthly'] ?? 0}',
+                Colors.white,
+              ),
             ],
           ),
           const Divider(color: Colors.white24, height: 32),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildOverviewItem('Ongoing', '12', Colors.blue),
-              _buildOverviewItem('Scheduled', '8', Colors.orange),
-              _buildOverviewItem('Cancelled', '4', Colors.red),
+              _buildOverviewItem(
+                'Ongoing',
+                '${orders['ongoing'] ?? 0}',
+                Colors.blue,
+              ),
+              _buildOverviewItem(
+                'Scheduled',
+                '${orders['scheduled'] ?? 0}',
+                Colors.orange,
+              ),
+              _buildOverviewItem(
+                'Cancelled',
+                '${orders['cancelled'] ?? 0}',
+                Colors.red,
+              ),
             ],
           ),
         ],
@@ -446,6 +454,7 @@ class AdminDashboard extends StatelessWidget {
   }
 
   Widget _buildRevenueSummary() {
+    final revenue = _data?['revenueSummary'] ?? {};
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -455,13 +464,33 @@ class AdminDashboard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _buildRevenueRow('Gross Revenue', '₹8,42,000', isLarge: true),
+          _buildRevenueRow(
+            'Gross Revenue',
+            '₹${revenue['gross'] ?? 0}',
+            isLarge: true,
+          ),
           const Divider(height: 32),
-          _buildRevenueRow('Net Earnings', '₹6,12,000', color: Colors.green),
-          _buildRevenueRow('Admin Commission', '₹2,30,000', color: Colors.blue),
+          _buildRevenueRow(
+            'Net Earnings',
+            '₹${revenue['net'] ?? 0}',
+            color: Colors.green,
+          ),
+          _buildRevenueRow(
+            'Admin Commission',
+            '₹${revenue['commission'] ?? 0}',
+            color: Colors.blue,
+          ),
           const SizedBox(height: 16),
-          _buildRevenueRow('Today Earnings', '₹12,400', isSmall: true),
-          _buildRevenueRow('Month-to-date', '₹4,12,000', isSmall: true),
+          _buildRevenueRow(
+            'Today Earnings',
+            '₹${revenue['today'] ?? 0}',
+            isSmall: true,
+          ),
+          _buildRevenueRow(
+            'Month-to-date',
+            '₹${revenue['month'] ?? 0}',
+            isSmall: true,
+          ),
         ],
       ),
     );
@@ -500,6 +529,7 @@ class AdminDashboard extends StatelessWidget {
   }
 
   Widget _buildTechniciansOverview() {
+    final techs = _data?['techs'] ?? {};
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -508,10 +538,22 @@ class AdminDashboard extends StatelessWidget {
       mainAxisSpacing: 10,
       childAspectRatio: 2.2,
       children: [
-        _buildTechStatusCard('Verified', '78', Colors.green),
-        _buildTechStatusCard('Pending', '12', Colors.orange),
-        _buildTechStatusCard('Online', '42', Colors.blue),
-        _buildTechStatusCard('Deactivated', '5', Colors.red),
+        _buildTechStatusCard(
+          'Verified',
+          '${techs['verified'] ?? 0}',
+          Colors.green,
+        ),
+        _buildTechStatusCard(
+          'Pending',
+          '${techs['pending'] ?? 0}',
+          Colors.orange,
+        ),
+        _buildTechStatusCard('Online', '${techs['online'] ?? 0}', Colors.blue),
+        _buildTechStatusCard(
+          'Deactivated',
+          '${techs['deactivated'] ?? 0}',
+          Colors.red,
+        ),
       ],
     );
   }
@@ -549,6 +591,7 @@ class AdminDashboard extends StatelessWidget {
   }
 
   Widget _buildUsersOverview() {
+    final users = _data?['users'] ?? {};
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -559,59 +602,20 @@ class AdminDashboard extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildOverviewItem('Total Users', '4.2k', Colors.black),
-          _buildOverviewItem('New Signups', '24', Colors.green),
-          _buildOverviewItem('Returning', '68%', Colors.blue),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPayoutsSummary() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.shade100),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildOverviewItem('Pending', '₹1.2L', Colors.red),
-              _buildOverviewItem('Completed', '₹4.5L', Colors.green),
-              _buildOverviewItem('Failed', '₹8.4k', Colors.grey),
-            ],
+          _buildOverviewItem(
+            'Total Users',
+            '${users['total'] ?? 0}',
+            Colors.black,
           ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  LucideIcons.alertCircle,
-                  color: Colors.orange,
-                  size: 16,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Next settlement in 12 hours',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: Colors.orange,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          _buildOverviewItem(
+            'New Signups',
+            '${users['new'] ?? 0}',
+            Colors.green,
+          ),
+          _buildOverviewItem(
+            'Returning',
+            '${users['returning'] ?? "N/A"}',
+            Colors.blue,
           ),
         ],
       ),
@@ -619,6 +623,7 @@ class AdminDashboard extends StatelessWidget {
   }
 
   Widget _buildDisputesOverview() {
+    final disputes = _data?['disputeStats'] ?? {};
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -629,9 +634,17 @@ class AdminDashboard extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildOverviewItem('Open', '3', Colors.red),
-          _buildOverviewItem('In-Review', '5', Colors.orange),
-          _buildOverviewItem('Resolved', '124', Colors.green),
+          _buildOverviewItem('Open', '${disputes['open'] ?? 0}', Colors.red),
+          _buildOverviewItem(
+            'In-Review',
+            '${disputes['investigation'] ?? 0}',
+            Colors.orange,
+          ),
+          _buildOverviewItem(
+            'Resolved',
+            '${disputes['resolved'] ?? 0}',
+            Colors.green,
+          ),
         ],
       ),
     );
@@ -736,13 +749,30 @@ class AdminDashboard extends StatelessWidget {
   }
 
   Widget _buildActiveJobsList() {
-    return Container(
+    final active = _data?['activeOrders'] as List? ?? [];
+
+    if (active.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Text("No active jobs right now"),
+      );
+    }
+
+    return SizedBox(
       height: 180,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
-        itemCount: 3,
+        itemCount: active.length,
         itemBuilder: (context, index) {
+          final order = active[index];
+          final id = order['_id']?.toString().substring(0, 8) ?? 'Unknown';
+
           return Container(
             width: 300,
             margin: const EdgeInsets.only(right: 16),
@@ -759,7 +789,7 @@ class AdminDashboard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'ORD-#827${index + 1}',
+                      'ORD-#$id',
                       style: GoogleFonts.inter(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
@@ -774,9 +804,9 @@ class AdminDashboard extends StatelessWidget {
                         color: Colors.blue.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Text(
-                        'ON THE WAY',
-                        style: TextStyle(
+                      child: Text(
+                        order['status'] ?? 'Active',
+                        style: const TextStyle(
                           color: Colors.blue,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -787,14 +817,14 @@ class AdminDashboard extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'iPhone 13 • Screen Repair',
+                  '${order['deviceBrand']} ${order['deviceModel']}',
                   style: GoogleFonts.inter(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
                   ),
                 ),
                 Text(
-                  'Tech: Rahul K. • User: Amit S.',
+                  'User: ${order['userId']?['name'] ?? 'Unknown'}',
                   style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
                 ),
                 const Spacer(),
@@ -802,7 +832,7 @@ class AdminDashboard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'ETA: 8 mins',
+                      'Price: ₹${order['totalPrice']}',
                       style: GoogleFonts.inter(
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
@@ -810,7 +840,7 @@ class AdminDashboard extends StatelessWidget {
                       ),
                     ),
                     const Text(
-                      'View Live',
+                      'View Details',
                       style: TextStyle(
                         fontSize: 12,
                         decoration: TextDecoration.underline,
@@ -826,45 +856,84 @@ class AdminDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickActions() {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 2.5,
+  Widget _buildOverallPerformanceCarousel() {
+    final revenue = _data?['revenueSummary'] ?? {};
+    final totalRevenue = revenue['gross'] ?? 0;
+    final platformRevenue = revenue['commission'] ?? 0;
+
+    return Column(
       children: [
-        _buildActionBtn(LucideIcons.ticket, 'Promo Code'),
-        _buildActionBtn(LucideIcons.userPlus, 'Assign Tech'),
-        _buildActionBtn(LucideIcons.shieldCheck, 'Review KYC'),
-        _buildActionBtn(LucideIcons.dollarSign, 'Payouts'),
+        SizedBox(
+          height: 220,
+          child: PageView(
+            controller: _pageController,
+            children: [
+              _buildPerformanceCard(
+                'Total Revenue',
+                '₹$totalRevenue',
+                Colors.blue,
+                LucideIcons.barChart3,
+              ),
+              _buildPerformanceCard(
+                'Platform Revenue',
+                '₹$platformRevenue',
+                Colors.indigo,
+                LucideIcons.wallet,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Indicator could go here
       ],
     );
   }
 
-  Widget _buildActionBtn(IconData icon, String label) {
+  Widget _buildPerformanceCard(
+    String title,
+    String value,
+    Color color,
+    IconData icon,
+  ) {
     return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 5),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade100),
-      ),
-      child: Center(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+        color: color,
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          colors: [color, color.withOpacity(0.8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: Colors.white, size: 32),
+          const Spacer(),
+          Text(
+            title,
+            style: GoogleFonts.inter(color: Colors.white70, fontSize: 14),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1144,7 +1213,8 @@ class AdminDashboard extends StatelessWidget {
               mainAxisSpacing: 24,
               crossAxisSpacing: 16,
               children: [
-                if (user != null && user!['role'] == 'master_admin')
+                if (widget.user != null &&
+                    widget.user!['role'] == 'master_admin')
                   _buildMenuIcon(
                     context,
                     LucideIcons.userCheck,
@@ -1237,7 +1307,12 @@ class AdminDashboard extends StatelessWidget {
                   context,
                   LucideIcons.settings,
                   'Settings',
-                  () {},
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProfileScreen(user: widget.user),
+                    ),
+                  ),
                 ),
               ],
             ),

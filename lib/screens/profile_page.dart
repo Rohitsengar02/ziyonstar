@@ -12,6 +12,7 @@ import 'repair_page.dart';
 import 'about_page.dart';
 import 'contact_page.dart';
 import '../widgets/mobile_bottom_nav.dart';
+import 'notifications_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'sign_in_screen.dart';
@@ -326,6 +327,13 @@ class _ProfilePageState extends State<ProfilePage> {
         'page': const AboutPage(),
       },
       {
+        'icon': LucideIcons.bell,
+        'title': 'Notifications',
+        'subtitle': 'Check updates and alerts',
+        'gradient': [const Color(0xFFf6d365), const Color(0xFFfda085)],
+        'page': const NotificationsPage(),
+      },
+      {
         'icon': LucideIcons.messageCircle,
         'title': 'Contact Us',
         'subtitle': 'Get in touch with support',
@@ -355,10 +363,10 @@ class _ProfilePageState extends State<ProfilePage> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: isDesktop ? 4 : 2,
+              crossAxisCount: isDesktop ? 5 : 2,
               mainAxisSpacing: 20,
               crossAxisSpacing: 20,
-              childAspectRatio: isDesktop ? 1 : 1.1,
+              childAspectRatio: isDesktop ? 0.9 : 1.1,
             ),
             itemCount: actions.length,
             itemBuilder: (context, index) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../theme/app_colors.dart';
+import '../../services/api_service.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -11,7 +12,163 @@ class AnalyticsScreen extends StatefulWidget {
 }
 
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
+  final ApiService _apiService = ApiService();
   String _selectedTimeframe = 'Weekly';
+  bool _isLoading = true;
+
+  // Analytics data
+  int _totalRevenue = 0;
+  int _platformCommission = 0;
+  int _technicianPayout = 0;
+  double _commissionRate = 0.15; // Default 15%
+  int _totalBookings = 0;
+  int _totalUsers = 0;
+  int _totalTechnicians = 0;
+  int _activeBookings = 0;
+  int _completedBookings = 0;
+  int _pendingBookings = 0;
+  int _cancelledBookings = 0;
+
+  Map<String, int> _bookingsByStatus = {};
+  Map<String, int> _revenueByWeekday = {};
+  List<Map<String, dynamic>> _topIssues = [];
+  List<Map<String, dynamic>> _recentBookings = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAnalyticsData();
+  }
+
+  Future<void> _fetchAnalyticsData() async {
+    setState(() => _isLoading = true);
+    try {
+      // Fetch all necessary data in parallel
+      final results = await Future.wait([
+        _apiService.getBookings(),
+        _apiService.getUsers(),
+        _apiService.getTechnicians(),
+        _apiService.getIssues(),
+        _apiService.getCommissions(),
+      ]);
+
+      final bookings = results[0] as List<dynamic>;
+      final users = results[1] as List<dynamic>;
+      final technicians = results[2] as List<dynamic>;
+      final issues = results[3] as List<dynamic>;
+      final commissions = results[4] as List<dynamic>;
+
+      // Get commission rate from first commission entry (if exists)
+      if (commissions.isNotEmpty) {
+        var val = commissions[0]['value'];
+        double percentage = 15.0; // Default
+
+        if (val is num) {
+          percentage = val.toDouble();
+        } else if (val is String) {
+          percentage = double.tryParse(val) ?? 15.0;
+        }
+
+        // If percentage is already a decimal (like 0.15), convert to percentage
+        if (percentage < 1.0) {
+          _commissionRate = percentage; // Already decimal
+        } else {
+          _commissionRate = percentage / 100.0; // Convert percentage to decimal
+        }
+      }
+
+      debugPrint('📊 Commission Rate used: $_commissionRate');
+
+      // Calculate statistics
+      _totalBookings = bookings.length;
+      _totalUsers = users.length;
+      _totalTechnicians = technicians.length;
+
+      // Calculate total revenue and commissions
+      _totalRevenue = bookings.fold<int>(
+        0,
+        (sum, booking) => sum + ((booking['totalPrice'] as num?)?.toInt() ?? 0),
+      );
+
+      // Calculate platform commission and technician payout
+      _platformCommission = (_totalRevenue * _commissionRate).toInt();
+      _technicianPayout = _totalRevenue - _platformCommission;
+
+      debugPrint(
+        '📊 Revenue: ₹$_totalRevenue, Commission: ₹$_platformCommission, Payout: ₹$_technicianPayout',
+      );
+      // Group bookings by status
+      _bookingsByStatus = {};
+      _activeBookings = 0;
+      _completedBookings = 0;
+      _pendingBookings = 0;
+      _cancelledBookings = 0;
+
+      for (var booking in bookings) {
+        final status = booking['status']?.toString() ?? 'Unknown';
+        _bookingsByStatus[status] = (_bookingsByStatus[status] ?? 0) + 1;
+
+        if (status == 'Completed')
+          _completedBookings++;
+        else if (status == 'Cancelled' || status == 'Rejected')
+          _cancelledBookings++;
+        else if (status == 'Pending_Acceptance')
+          _pendingBookings++;
+        else
+          _activeBookings++;
+      }
+
+      // Calculate revenue by weekday (mock for now, would need date parsing)
+      _revenueByWeekday = {
+        'Mon': 0,
+        'Tue': 0,
+        'Wed': 0,
+        'Thu': 0,
+        'Fri': 0,
+        'Sat': 0,
+        'Sun': 0,
+      };
+
+      // Get top issues
+      Map<String, Map<String, dynamic>> issueStats = {};
+      for (var booking in bookings) {
+        final bookingIssues = booking['issues'] as List?;
+        if (bookingIssues != null) {
+          for (var issue in bookingIssues) {
+            final issueName = issue['issueName']?.toString() ?? 'Unknown';
+            if (!issueStats.containsKey(issueName)) {
+              issueStats[issueName] = {
+                'name': issueName,
+                'count': 0,
+                'revenue': 0,
+              };
+            }
+            issueStats[issueName]!['count'] =
+                (issueStats[issueName]!['count'] as int) + 1;
+            issueStats[issueName]!['revenue'] =
+                (issueStats[issueName]!['revenue'] as int) +
+                ((issue['price'] as num?)?.toInt() ?? 0);
+          }
+        }
+      }
+
+      _topIssues = issueStats.values.toList()
+        ..sort((a, b) => (b['count'] as int).compareTo(a['count'] as int))
+        ..take(5).toList();
+
+      // Get recent bookings
+      _recentBookings = bookings.take(5).toList().cast<Map<String, dynamic>>();
+
+      setState(() => _isLoading = false);
+    } catch (e) {
+      debugPrint('Error fetching analytics: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  String _formatCurrency(int amount) {
+    return '₹${amount.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,85 +185,84 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         elevation: 0,
         actions: [
           IconButton(
-            onPressed: () {},
-            icon: const Icon(LucideIcons.share2, size: 20),
+            onPressed: _fetchAnalyticsData,
+            icon: const Icon(LucideIcons.refreshCw, size: 20),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildTimeframePicker(),
-            const SizedBox(height: 24),
-            _buildMainRevenueCard(),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildSmallStatCard(
-                    'Total Orders',
-                    '1,284',
-                    '+12%',
-                    Colors.blue,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildSmallStatCard(
-                    'New Users',
-                    '420',
-                    '+8%',
-                    Colors.green,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            _buildSectionHeader('Revenue Breakdown'),
-            const SizedBox(height: 16),
-            _buildChartPlaceholder(),
-            const SizedBox(height: 24),
-            _buildSectionHeader('Top Performing categories'),
-            const SizedBox(height: 16),
-            _buildCategoryPerformanceList(),
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
-    );
-  }
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _fetchAnalyticsData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildMainRevenueCard(),
+                    const SizedBox(height: 30),
 
-  Widget _buildTimeframePicker() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: ['Daily', 'Weekly', 'Monthly', 'Yearly'].map((time) {
-        bool isSelected = _selectedTimeframe == time;
-        return GestureDetector(
-          onTap: () => setState(() => _selectedTimeframe = time),
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: isSelected ? Colors.black : Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isSelected ? Colors.black : Colors.grey.shade200,
+                    // 4 stat cards in grid
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 26,
+                      childAspectRatio: 1.3,
+                      children: [
+                        _buildSmallStatCard(
+                          'Total Orders',
+                          _totalBookings.toString(),
+                          '',
+                          Colors.blue,
+                          LucideIcons.shoppingCart,
+                        ),
+                        _buildSmallStatCard(
+                          'Total Users',
+                          _totalUsers.toString(),
+                          '',
+                          Colors.green,
+                          LucideIcons.users,
+                        ),
+                        _buildSmallStatCard(
+                          'Active Orders',
+                          _activeBookings.toString(),
+                          '',
+                          Colors.orange,
+                          LucideIcons.clock,
+                        ),
+                        _buildSmallStatCard(
+                          'Technicians',
+                          _totalTechnicians.toString(),
+                          '',
+                          Colors.purple,
+                          LucideIcons.wrench,
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+                    _buildSectionHeader('Order Status Breakdown'),
+                    const SizedBox(height: 16),
+                    _buildOrderStatusBreakdown(),
+
+                    const SizedBox(height: 24),
+                    _buildSectionHeader('Top Repair Issues'),
+                    const SizedBox(height: 16),
+                    _buildTopIssuesList(),
+
+                    const SizedBox(height: 24),
+                    _buildSectionHeader('Quick Stats'),
+                    const SizedBox(height: 16),
+                    _buildQuickStatsGrid(),
+
+                    const SizedBox(height: 40),
+                  ],
+                ),
               ),
             ),
-            child: Text(
-              time,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : Colors.grey,
-              ),
-            ),
-          ),
-        );
-      }).toList(),
     );
   }
 
@@ -115,11 +271,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.black,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1A1A1A), Color(0xFF2D2D2D)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -131,43 +291,63 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Total Revenue',
-                style: GoogleFonts.inter(color: Colors.white60, fontSize: 14),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Total Revenue',
+                    style: GoogleFonts.inter(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _formatCurrency(_totalRevenue),
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Text(
-                  '+24.5%',
-                  style: GoogleFonts.inter(
-                    color: Colors.green,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: const Icon(
+                  LucideIcons.trendingUp,
+                  color: Colors.greenAccent,
+                  size: 28,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            '₹8,42,500',
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
           const SizedBox(height: 24),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildMiniRevenueStat('Commissions', '₹1,26,375'),
-              Container(width: 1, height: 30, color: Colors.white12),
-              _buildMiniRevenueStat('Payouts', '₹7,16,125'),
+              Expanded(
+                child: _buildMiniRevenueStat(
+                  "Platform (${(_commissionRate * 100).toStringAsFixed(0)}%)",
+                  _formatCurrency(_platformCommission),
+                  Colors.greenAccent,
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 40,
+                color: Colors.white.withValues(alpha: 0.1),
+              ),
+              Expanded(
+                child: _buildMiniRevenueStat(
+                  "Technicians",
+                  _formatCurrency(_technicianPayout),
+                  Colors.blueAccent,
+                ),
+              ),
             ],
           ),
         ],
@@ -175,19 +355,22 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  Widget _buildMiniRevenueStat(String label, String val) {
+  Widget _buildMiniRevenueStat(String label, String val, Color color) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: GoogleFonts.inter(color: Colors.white38, fontSize: 11),
+          style: GoogleFonts.inter(
+            color: Colors.white.withValues(alpha: 0.4),
+            fontSize: 11,
+          ),
         ),
+        const SizedBox(height: 4),
         Text(
           val,
           style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontSize: 16,
+            color: color,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -200,39 +383,61 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     String val,
     String trend,
     Color color,
+    IconData icon,
   ) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: GoogleFonts.inter(color: Colors.grey, fontSize: 12),
-          ),
-          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              if (trend.isNotEmpty)
+                Text(
+                  trend,
+                  style: GoogleFonts.inter(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+            ],
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 val,
                 style: GoogleFonts.poppins(
-                  fontSize: 20,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
-                trend,
-                style: GoogleFonts.inter(
-                  color: color,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                ),
+                label,
+                style: GoogleFonts.inter(color: Colors.grey, fontSize: 12),
               ),
             ],
           ),
@@ -248,66 +453,22 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  Widget _buildChartPlaceholder() {
-    return Container(
-      height: 200,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.shade100),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          _buildBar(0.4, 'Mon'),
-          _buildBar(0.6, 'Tue'),
-          _buildBar(0.8, 'Wed'),
-          _buildBar(0.5, 'Thu'),
-          _buildBar(0.9, 'Fri'),
-          _buildBar(0.3, 'Sat'),
-          _buildBar(0.7, 'Sun'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBar(double heightFactor, String label) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        Container(
-          width: 30,
-          height: 120 * heightFactor,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Colors.black, Colors.black.withOpacity(0.7)],
-            ),
-            borderRadius: BorderRadius.circular(8),
+  Widget _buildOrderStatusBreakdown() {
+    if (_bookingsByStatus.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(40),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Center(
+          child: Text(
+            'No booking data available',
+            style: GoogleFonts.inter(color: Colors.grey),
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 10,
-            color: Colors.grey,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCategoryPerformanceList() {
-    final categories = [
-      {'name': 'Smartphones', 'share': '65%', 'color': Colors.blue},
-      {'name': 'Laptops', 'share': '20%', 'color': Colors.orange},
-      {'name': 'Home Appliances', 'share': '15%', 'color': Colors.green},
-    ];
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -317,7 +478,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         border: Border.all(color: Colors.grey.shade100),
       ),
       child: Column(
-        children: categories.map((cat) {
+        children: _bookingsByStatus.entries.map((entry) {
+          final color = _getStatusColor(entry.key);
+          final percentage = (_totalBookings > 0
+              ? (entry.value / _totalBookings * 100).toStringAsFixed(1)
+              : '0.0');
+
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: Row(
@@ -326,21 +492,141 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   width: 12,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: cat['color'] as Color,
+                    color: color,
                     shape: BoxShape.circle,
                   ),
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  cat['name'] as String,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                Expanded(
+                  child: Text(
+                    entry.key.replaceAll('_', ' '),
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-                const Spacer(),
                 Text(
-                  cat['share'] as String,
+                  '${entry.value}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '($percentage%)',
+                  style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Completed':
+        return Colors.green;
+      case 'Accepted':
+      case 'In_Progress':
+        return Colors.blue;
+      case 'On_Way':
+      case 'Arrived':
+        return Colors.orange;
+      case 'Pending_Acceptance':
+        return Colors.amber;
+      case 'Cancelled':
+      case 'Rejected':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Widget _buildTopIssuesList() {
+    if (_topIssues.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(40),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Center(
+          child: Text(
+            'No issue data available',
+            style: GoogleFonts.inter(color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Column(
+        children: _topIssues.map((issue) {
+          final index = _topIssues.indexOf(issue);
+          final color = [
+            Colors.amber,
+            Colors.blue,
+            Colors.green,
+            Colors.orange,
+            Colors.purple,
+          ][index % 5];
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '#${index + 1}',
+                      style: GoogleFonts.poppins(
+                        color: color,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        issue['name'],
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        '${issue['count']} repairs',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  _formatCurrency(issue['revenue'] as int),
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -351,6 +637,74 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           );
         }).toList(),
       ),
+    );
+  }
+
+  Widget _buildQuickStatsGrid() {
+    final completionRate = _totalBookings > 0
+        ? (_completedBookings / _totalBookings * 100).toStringAsFixed(1)
+        : '0.0';
+    final cancellationRate = _totalBookings > 0
+        ? (_cancelledBookings / _totalBookings * 100).toStringAsFixed(1)
+        : '0.0';
+    final avgOrderValue = _totalBookings > 0
+        ? (_totalRevenue / _totalBookings).toStringAsFixed(0)
+        : '0';
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Column(
+        children: [
+          _buildQuickStatRow(
+            'Completion Rate',
+            '$completionRate%',
+            Colors.green,
+          ),
+          const Divider(height: 24),
+          _buildQuickStatRow(
+            'Cancellation Rate',
+            '$cancellationRate%',
+            Colors.red,
+          ),
+          const Divider(height: 24),
+          _buildQuickStatRow(
+            'Avg Order Value',
+            _formatCurrency(int.parse(avgOrderValue)),
+            Colors.blue,
+          ),
+          const Divider(height: 24),
+          _buildQuickStatRow(
+            'Total Bookings',
+            _totalBookings.toString(),
+            Colors.purple,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickStatRow(String label, String value, Color color) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade700),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
     );
   }
 }

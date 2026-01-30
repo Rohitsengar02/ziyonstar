@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../theme.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
 import 'contact_admin_page.dart';
 import 'login_screen.dart';
@@ -11,6 +11,9 @@ import 'profile/kyc_documents_screen.dart';
 import 'profile/skills_expertise_screen.dart';
 import 'profile/service_areas_screen.dart';
 import 'profile/bank_details_screen.dart';
+import 'profile/subscription_fees_screen.dart';
+import 'profile/notifications_prefs_screen.dart';
+import 'profile/terms_conditions_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -55,6 +58,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
         MaterialPageRoute(builder: (context) => const LoginScreen()),
         (route) => false,
       );
+    }
+  }
+
+  Future<void> _updatePhoto() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() => _isLoading = true);
+      try {
+        final url = await _apiService.uploadImage(image);
+        if (url != null) {
+          await _apiService.updateTechnicianProfile(
+            firebaseUid: _technician!['firebaseUid'],
+            data: {'photoUrl': url},
+          );
+          _fetchTechnicianData();
+        }
+      } catch (e) {
+        debugPrint('Error updating photo: $e');
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -157,25 +182,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   LucideIcons.briefcase,
                   'Skills & Expertise',
                   '${(_technician!['brandExpertise'] as List?)?.length ?? 0} Brands, ${(_technician!['repairExpertise'] as List?)?.length ?? 0} Repairs',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          SkillsExpertiseScreen(technicianData: _technician!),
-                    ),
-                  ),
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            SkillsExpertiseScreen(technicianData: _technician!),
+                      ),
+                    );
+                    _fetchTechnicianData(); // Always refresh to be safe
+                  },
                 ),
                 _buildMenuItem(
                   LucideIcons.mapPin,
                   'Service Areas',
                   '${(_technician!['coverageAreas'] as List?)?.length ?? 0} Areas covered',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          ServiceAreasScreen(technicianData: _technician!),
-                    ),
-                  ),
+                  onTap: () async {
+                    final updated = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            ServiceAreasScreen(technicianData: _technician!),
+                      ),
+                    );
+                    if (updated == true) _fetchTechnicianData();
+                  },
                 ),
               ]),
 
@@ -184,18 +215,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   LucideIcons.building,
                   'Bank Details',
                   _technician!['bankName'] ?? 'Payout bank account',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          BankDetailsScreen(technicianData: _technician!),
-                    ),
-                  ),
+                  onTap: () async {
+                    final updated = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            BankDetailsScreen(technicianData: _technician!),
+                      ),
+                    );
+                    if (updated == true) _fetchTechnicianData();
+                  },
                 ),
                 _buildMenuItem(
                   LucideIcons.creditCard,
                   'Subscription / Fees',
                   'Platform fee settings',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          SubscriptionFeesScreen(technicianData: _technician!),
+                    ),
+                  ),
                 ),
               ]),
 
@@ -204,6 +245,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   LucideIcons.bell,
                   'Notifications',
                   'Order and system alerts',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationsPrefsScreen(),
+                    ),
+                  ),
                 ),
                 _buildMenuItem(
                   LucideIcons.helpCircle,
@@ -231,6 +278,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   LucideIcons.fileText,
                   'Terms & Conditions',
                   'Legal agreements',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const TermsConditionsScreen(),
+                    ),
+                  ),
                 ),
               ]),
 
@@ -275,42 +328,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final photoUrl = _technician!['photoUrl'];
     return Column(
       children: [
-        Stack(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.black, width: 2),
-              ),
-              child: CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.grey[200],
-                backgroundImage: photoUrl != null && photoUrl.isNotEmpty
-                    ? NetworkImage(photoUrl)
-                    : null,
-                child: photoUrl == null || photoUrl.isEmpty
-                    ? const Icon(LucideIcons.user, size: 40, color: Colors.grey)
-                    : null,
-              ),
-            ),
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: const BoxDecoration(
-                  color: Colors.black,
+        GestureDetector(
+          onTap: _updatePhoto,
+          child: Stack(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
+                  border: Border.all(color: Colors.black, width: 2),
                 ),
-                child: const Icon(
-                  LucideIcons.camera,
-                  color: Colors.white,
-                  size: 18,
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundColor: Colors.grey[200],
+                  backgroundImage: photoUrl != null && photoUrl.isNotEmpty
+                      ? NetworkImage(photoUrl)
+                      : null,
+                  child: photoUrl == null || photoUrl.isEmpty
+                      ? const Icon(
+                          LucideIcons.user,
+                          size: 40,
+                          color: Colors.grey,
+                        )
+                      : null,
                 ),
               ),
-            ),
-          ],
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Colors.black,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    LucideIcons.camera,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 16),
         Text(

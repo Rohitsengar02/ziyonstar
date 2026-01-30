@@ -6,6 +6,8 @@ import '../screens/repair_page.dart';
 import '../screens/my_bookings_screen.dart';
 import '../screens/about_page.dart';
 import '../screens/contact_page.dart';
+import '../screens/notifications_page.dart';
+import '../screens/mobile_profile_page.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -110,6 +112,32 @@ class AppDrawer extends StatelessWidget {
                       },
                     ),
                     _buildDrawerItem(
+                      icon: LucideIcons.user,
+                      title: 'My Profile',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const MobileProfilePage(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildDrawerItem(
+                      icon: LucideIcons.bell,
+                      title: 'Notifications',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const NotificationsPage(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildDrawerItem(
                       icon: LucideIcons.info,
                       title: 'About Us',
                       onTap: () {
@@ -136,18 +164,6 @@ class AppDrawer extends StatelessWidget {
                       },
                     ),
                     const SizedBox(height: 16),
-                    const Divider(color: Colors.white24),
-                    const SizedBox(height: 16),
-                    _buildDrawerItem(
-                      icon: LucideIcons.info,
-                      title: 'About Us',
-                      onTap: () {},
-                    ),
-                    _buildDrawerItem(
-                      icon: LucideIcons.phone,
-                      title: 'Contact',
-                      onTap: () {},
-                    ),
                   ],
                 ),
               ),

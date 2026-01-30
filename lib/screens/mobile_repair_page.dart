@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme.dart';
-import 'thank_you_page.dart';
-import 'profile_page.dart';
+import 'mobile_profile_page.dart';
+import 'my_bookings_screen.dart';
+import 'location_picker_page.dart';
+import '../services/location_service.dart';
 
 import 'technician_profile_page.dart';
 import '../services/api_service.dart';
+import '../services/socket_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class MobileRepairPage extends StatefulWidget {
   final String? initialIssue;
@@ -28,6 +33,7 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
   final Set<String> _selectedIssues = {};
   String? _selectedBrand;
   String? _selectedModel;
+  Map<String, dynamic>? _selectedModelData;
 
   final ApiService _apiService = ApiService();
   List<dynamic> _apiIssues = [];
@@ -48,10 +54,65 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
     }
     if (widget.initialModel != null) {
       _selectedModel = widget.initialModel;
+      _currentStep = 2; // Jump directly to Issues step
     }
     _fetchIssues();
     _fetchBrands();
     _fetchTechnicians();
+    _fetchUserAddresses();
+    _initSocket();
+  }
+
+  @override
+  void dispose() {
+    // We don't necessarily want to dispose global socket service here
+    // but maybe stop listeners if we had specific ones.
+    super.dispose();
+  }
+
+  void _initSocket() {
+    SocketService().connect();
+    SocketService().onTechnicianStatusUpdate((data) {
+      if (!mounted) return;
+      final techId = data['technicianId'];
+      final isOnline = data['isOnline'];
+
+      setState(() {
+        // Update the status in our list
+        for (var i = 0; i < _apiTechnicians.length; i++) {
+          final t = _apiTechnicians[i];
+          if (t['_id'] == techId || t['id'] == techId) {
+            _apiTechnicians[i]['isOnline'] = isOnline;
+            break;
+          }
+        }
+        // Re-sort the list
+        _sortTechnicians();
+      });
+    });
+  }
+
+  void _sortTechnicians() {
+    _apiTechnicians.sort((a, b) {
+      // 1. ONLINE PRIORITY
+      bool onlineA = a['isOnline'] == true;
+      bool onlineB = b['isOnline'] == true;
+      if (onlineA != onlineB) {
+        return onlineB ? 1 : -1;
+      }
+
+      // 2. HIGHEST RATING FIRST
+      double ratingA = (a['averageRating'] ?? 0.0).toDouble();
+      double ratingB = (b['averageRating'] ?? 0.0).toDouble();
+      if (ratingA != ratingB) {
+        return ratingB.compareTo(ratingA);
+      }
+
+      // 3. MOST REPAIRS/JOBS FIRST
+      int jobsA = a['totalReviews'] ?? 0;
+      int jobsB = b['totalReviews'] ?? 0;
+      return jobsB.compareTo(jobsA);
+    });
   }
 
   Future<void> _fetchBrands() async {
@@ -88,6 +149,17 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
         setState(() {
           _apiModels = models;
           _isLoadingModels = false;
+
+          // If we had an initial model, find its full data
+          if (_selectedModel != null) {
+            final model = _apiModels.firstWhere(
+              (m) => m['name'] == _selectedModel,
+              orElse: () => null,
+            );
+            if (model != null) {
+              _selectedModelData = model;
+            }
+          }
         });
       }
     } catch (e) {
@@ -115,20 +187,55 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
     try {
       final techs = await _apiService.getTechnicians();
       if (mounted) {
-        setState(() {
-          // Filter only approved/active technicians
-          _apiTechnicians = techs
-              .where(
-                (t) => t['status'] == 'approved' || t['status'] == 'active',
-              )
-              .cast<Map<String, dynamic>>()
-              .toList();
-          _isLoadingTechs = false;
-        });
+        final filtered = techs
+            .where((t) => t['status'] == 'approved' || t['status'] == 'active')
+            .cast<Map<String, dynamic>>()
+            .toList();
+
+        _apiTechnicians = filtered;
+        _sortTechnicians();
+        _isLoadingTechs = false;
       }
     } catch (e) {
       debugPrint('Error fetching technicians: $e');
       if (mounted) setState(() => _isLoadingTechs = false);
+    }
+  }
+
+  Future<void> _fetchUserAddresses() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        if (mounted) setState(() => _isLoadingAddresses = false);
+        return;
+      }
+
+      final mongoUser = await _apiService.getUser(user.uid);
+      if (mongoUser != null) {
+        final addresses = await _apiService.getAddresses(mongoUser['_id']);
+        if (mounted) {
+          setState(() {
+            _userAddresses = List<Map<String, dynamic>>.from(addresses);
+            _isLoadingAddresses = false;
+
+            // Auto-select the first/most recent address
+            if (_userAddresses.isNotEmpty) {
+              final firstAddress = _userAddresses.first;
+              _selectedAddressId = firstAddress['_id'];
+              _address = firstAddress['fullAddress'] ?? '';
+              _addressLat = firstAddress['latitude']?.toDouble();
+              _addressLng = firstAddress['longitude']?.toDouble();
+
+              debugPrint('✅ Auto-selected address: $_address');
+            }
+          });
+        }
+      } else {
+        if (mounted) setState(() => _isLoadingAddresses = false);
+      }
+    } catch (e) {
+      debugPrint('Error fetching user addresses: $e');
+      if (mounted) setState(() => _isLoadingAddresses = false);
     }
   }
 
@@ -163,13 +270,45 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
 
   int _calculateTotal() {
     int total = 0;
-    for (var issueName in _selectedIssues) {
-      final item = _apiIssues.firstWhere(
-        (i) => i['name'] == issueName,
-        orElse: () => null,
-      );
-      if (item != null) {
-        total += int.tryParse(item['base_price'].toString()) ?? 0;
+    if (_selectedModelData != null &&
+        _selectedModelData!['repairPrices'] != null) {
+      final prices = _selectedModelData!['repairPrices'] as List<dynamic>;
+
+      // Map App Generic Issue Names to DB/Excel Part Names
+      final Map<String, String> issueMapping = {
+        'Charging': 'Charging Jack',
+        // 'Camera': 'Front Camera', // This was the issue
+        'Face/Touch ID': 'Fingerprint', // If available
+      };
+
+      for (var issueName in _selectedIssues) {
+        // 1. Try Direct Match (e.g. Screen, Battery, Mic, Speaker)
+        var searchKey = issueName;
+
+        // 2. If not found, try Mapping
+        if (issueMapping.containsKey(issueName)) {
+          searchKey = issueMapping[issueName]!;
+        }
+
+        final priceItem = prices.firstWhere(
+          (p) => p['issueName'] == searchKey,
+          orElse: () => null,
+        );
+
+        if (priceItem != null) {
+          total += (priceItem['price'] as num).toInt();
+        } else {
+          // Fallback logic...
+
+          // Fallback to generic base price if not found in model specific (optional)
+          final item = _apiIssues.firstWhere(
+            (i) => i['name'] == issueName,
+            orElse: () => null,
+          );
+          if (item != null) {
+            total += int.tryParse(item['base_price'].toString()) ?? 0;
+          }
+        }
       }
     }
     return total;
@@ -184,12 +323,13 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
   String? _selectedTimeSlot;
   int _paymentMethod = 0; // 0: UPI, 1: Card, 2: Cash
   String _address = '';
+  double? _addressLat;
+  double? _addressLng;
+  String? _selectedAddressId;
 
-  // Mock User Addresses
-  final List<String> _userAddresses = [
-    'Home: 12-A, Green Park, New Delhi',
-    'Office: 404, Cyber Hub, Gurugram',
-  ];
+  // User Addresses from API
+  List<Map<String, dynamic>> _userAddresses = [];
+  bool _isLoadingAddresses = true;
 
   List<Map<String, dynamic>> _apiTechnicians = [];
   bool _isLoadingTechs = true;
@@ -203,26 +343,43 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
     '06:00 PM - 07:00 PM',
   ];
 
+  bool _isBookingLoading = false;
+
   void _nextStep() {
-    // Validation
-    if (_currentStep == 0 && _selectedIssues.isEmpty) {
-      _showSnack('Please select at least one issue');
-      return;
-    }
-    if (_currentStep == 1 && _selectedBrand == null) {
+    // Updated Validation for Reordered Steps
+    // 0: Brand, 1: Model, 2: Issue
+
+    if (_currentStep == 0 && _selectedBrand == null) {
       _showSnack('Please select a brand');
       return;
     }
-    if (_currentStep == 2 && _selectedModel == null) {
+    if (_currentStep == 1 && _selectedModel == null) {
       _showSnack('Please select a model');
+      return;
+    }
+    if (_currentStep == 2 && _selectedIssues.isEmpty) {
+      _showSnack('Please select at least one issue');
       return;
     }
     if (_currentStep == 4 && _selectedTechIndex == -1) {
       _showSnack('Please select a technician');
       return;
     }
+    if (_currentStep == 4 && _selectedTechIndex != -1) {
+      final selectedTech = _apiTechnicians[_selectedTechIndex];
+      if (selectedTech['isOnline'] != true) {
+        _showSnack(
+          '⚠️ Selected technician is offline. Please choose an online specialist.',
+        );
+        return;
+      }
+    }
     if (_currentStep == 5 && _selectedTimeSlot == null) {
       _showSnack('Please select a time slot');
+      return;
+    }
+    if (_currentStep == 6 && _address.isEmpty) {
+      _showSnack('⚠️ Please select or add a delivery address');
       return;
     }
 
@@ -230,11 +387,95 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
       setState(() => _currentStep++);
     } else {
       // Confirm Booking
-      // Confirm Booking
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (c) => const ThankYouPage()),
+      _createBooking();
+    }
+  }
+
+  Future<void> _createBooking() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      _showSnack('Please login to book a repair');
+      return;
+    }
+
+    setState(() => _isBookingLoading = true);
+
+    try {
+      final api = ApiService();
+      // Log URL logic
+      debugPrint(
+        "User details - UID: ${user.uid}, Email: ${user.email}, Name: ${user.displayName}",
       );
+      var mongoUser = await api.getUser(user.uid);
+      if (mongoUser == null) {
+        // Auto-registration fallback if user record is missing in MongoDB
+        debugPrint(
+          "User not found in MongoDB. Attempting auto-registration...",
+        );
+        final registrationData = await api.registerUser({
+          'name': user.displayName ?? 'ZiyonStar User',
+          'email': user.email ?? '',
+          'firebaseUid': user.uid,
+          'photoUrl': user.photoURL ?? '',
+          'phone': user.phoneNumber ?? '',
+          'role': 'user',
+        });
+
+        if (registrationData != null && registrationData.containsKey('user')) {
+          mongoUser = registrationData['user'];
+        } else {
+          // If registerUser returns the user object directly or fallback
+          mongoUser = registrationData;
+        }
+
+        if (mongoUser == null) {
+          throw "Registration failed. RegistrationData was null. Check browser console logs for ApiService prints.";
+        }
+      }
+
+      final bookingData = {
+        'userId': mongoUser['_id'],
+        'deviceBrand': _selectedBrand ?? 'Unknown',
+        'deviceModel': _selectedModel ?? 'Unknown',
+        'issues': _selectedIssues
+            .map((i) => {'issueName': i, 'price': 0})
+            .toList(),
+        'totalPrice': _calculateTotal(),
+        'scheduledDate': _selectedDate.toIso8601String(),
+        'timeSlot': _selectedTimeSlot ?? 'Morning',
+        'addressId': _selectedAddressId, // Use saved address ID if available
+        'addressDetails': _address,
+        'addressLat': _addressLat,
+        'addressLng': _addressLng,
+        'technicianId': _apiTechnicians[_selectedTechIndex]['_id'],
+      };
+
+      await api.createBooking(bookingData);
+
+      if (mounted) {
+        setState(() => _isBookingLoading = false);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (c) => const MyBookingsScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isBookingLoading = false);
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text("Booking Failed"),
+            content: Text(e.toString()),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text("OK"),
+              ),
+            ],
+          ),
+        );
+      }
     }
   }
 
@@ -277,7 +518,7 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
           GestureDetector(
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (c) => const ProfilePage()),
+              MaterialPageRoute(builder: (c) => const MobileProfilePage()),
             ),
             child: const Padding(
               padding: EdgeInsets.only(right: 16.0),
@@ -391,7 +632,16 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
                 Expanded(
                   flex: 2,
                   child: ElevatedButton(
-                    onPressed: _nextStep,
+                    onPressed: _isBookingLoading
+                        ? null
+                        : (_currentStep == 4 &&
+                              _selectedTechIndex != -1 &&
+                              _apiTechnicians[_selectedTechIndex]['isOnline'] !=
+                                  true)
+                        ? null
+                        : (_currentStep == 6 && _address.isEmpty)
+                        ? null
+                        : _nextStep,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryButton,
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -399,16 +649,39 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      disabledBackgroundColor: Colors.grey.shade300,
                     ),
-                    child: Text(
-                      _currentStep == _totalSteps - 1
-                          ? 'Confirm Booking'
-                          : 'Next',
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: _isBookingLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            _currentStep == _totalSteps - 1
+                                ? _address.isEmpty
+                                      ? 'Select Address First'
+                                      : 'Confirm Booking'
+                                : (_currentStep == 4 &&
+                                      _selectedTechIndex != -1 &&
+                                      _apiTechnicians[_selectedTechIndex]['isOnline'] !=
+                                          true)
+                                ? 'Technician Offline'
+                                : 'Next',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  (_currentStep == 4 &&
+                                      _selectedTechIndex != -1 &&
+                                      _apiTechnicians[_selectedTechIndex]['isOnline'] !=
+                                          true)
+                                  ? Colors.grey.shade600
+                                  : Colors.white,
+                            ),
+                          ),
                   ),
                 ),
               ],
@@ -422,11 +695,11 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
   Widget _buildCurrentStep() {
     switch (_currentStep) {
       case 0:
-        return _buildIssueSelectionStep();
-      case 1:
         return _buildBrandSelectionStep();
-      case 2:
+      case 1:
         return _buildModelSelectionStep();
+      case 2:
+        return _buildIssueSelectionStep();
       case 3:
         return _buildSummaryStep();
       case 4:
@@ -457,10 +730,12 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
             style: GoogleFonts.inter(fontSize: 14, color: Colors.grey),
           ),
           const SizedBox(height: 24),
-          _isLoadingIssues
-              ? const Center(child: CircularProgressIndicator())
-              : _apiIssues.isEmpty
-              ? const Center(child: Text('No repair issues found'))
+          _selectedModelData == null ||
+                  _selectedModelData!['repairPrices'] == null ||
+                  (_selectedModelData!['repairPrices'] as List).isEmpty
+              ? const Center(
+                  child: Text('Please select a model to see repair options.'),
+                )
               : GridView.builder(
                   shrinkWrap: true,
                   primary: false,
@@ -471,45 +746,63 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
                     crossAxisSpacing: 12,
                     childAspectRatio: 0.85,
                   ),
-                  itemCount: _apiIssues.length,
+                  itemCount: _selectedModelData!['repairPrices'].length,
                   itemBuilder: (context, index) {
-                    final item = _apiIssues[index];
-                    final key = (item['name'] ?? '') as String;
+                    final priceItem =
+                        _selectedModelData!['repairPrices'][index];
+                    // The priceItem from the model only contains pricing info.
+                    // We must look up the corresponding 'Issue' object from _apiIssues
+                    // to get the correct image URL/asset path.
+                    final key = (priceItem['issueName'] ?? '') as String;
                     if (key.isEmpty) return const SizedBox.shrink();
+
+                    final matchingIssue = _apiIssues.firstWhere(
+                      (issue) => issue['name'] == key,
+                      orElse: () => null,
+                    );
+                    final imageUrl = matchingIssue != null
+                        ? matchingIssue['imageUrl']
+                        : null;
+
                     final isSelected = _selectedIssues.contains(key);
 
                     return GestureDetector(
-                      onTap: () => setState(() {
-                        if (isSelected) {
-                          _selectedIssues.remove(key);
-                        } else {
-                          _selectedIssues.add(key);
-                        }
-                      }),
+                      onTap: () {
+                        setState(() {
+                          if (_selectedIssues.contains(key)) {
+                            _selectedIssues.remove(key);
+                          } else {
+                            _selectedIssues.add(key);
+                          }
+                        });
+                      },
                       child: Container(
-                        key: ValueKey(key),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primaryButton.withOpacity(0.1)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.primaryButton
+                                : Colors.grey.shade200,
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
                         child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Expanded(
                               child: Container(
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(20),
-                                  color: Colors.white,
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? AppColors.primaryButton
-                                        : Colors.grey.shade200,
-                                    width: isSelected ? 2 : 1,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.05,
-                                      ),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
                                 ),
                                 child: Stack(
                                   fit: StackFit.expand,
@@ -517,20 +810,42 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(20),
                                       child:
-                                          (item['imageUrl'] != null &&
-                                              item['imageUrl'].isNotEmpty)
-                                          ? Image.network(
-                                              item['imageUrl'],
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (c, e, s) =>
-                                                  const Center(
-                                                    child: Icon(
-                                                      LucideIcons.image,
-                                                    ),
-                                                  ),
-                                            )
+                                          (imageUrl != null &&
+                                              imageUrl.isNotEmpty)
+                                          ? (imageUrl.startsWith('http')
+                                                ? Image.network(
+                                                    imageUrl,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (c, e, s) =>
+                                                        const Center(
+                                                          child: Icon(
+                                                            LucideIcons.image,
+                                                          ),
+                                                        ),
+                                                  )
+                                                : Image.asset(
+                                                    imageUrl,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder:
+                                                        (
+                                                          context,
+                                                          error,
+                                                          stackTrace,
+                                                        ) {
+                                                          debugPrint(
+                                                            'Error loading asset: $imageUrl -> $error',
+                                                          );
+                                                          return const Center(
+                                                            child: Icon(
+                                                              LucideIcons.image,
+                                                            ),
+                                                          );
+                                                        },
+                                                  ))
                                           : Icon(
-                                              _getIcon(item['icon']),
+                                              _getIcon(
+                                                key,
+                                              ), // Fallback to icon if no imageUrl
                                               size: 60,
                                             ),
                                     ),
@@ -557,13 +872,36 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
                               textAlign: TextAlign.center,
                               maxLines: 1,
                             ),
-                            Text(
-                              '₹${item['base_price']}',
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                                color: AppColors.primaryButton,
-                              ),
+                            // Pricing Column
+                            Column(
+                              children: [
+                                if (priceItem['originalPrice'] != null)
+                                  Text(
+                                    '₹${priceItem['originalPrice']}',
+                                    style: GoogleFonts.inter(
+                                      decoration: TextDecoration.lineThrough,
+                                      color: Colors.grey,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                if (priceItem['discount'] != null)
+                                  Text(
+                                    '${priceItem['discount']} OFF',
+                                    style: GoogleFonts.inter(
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                Text(
+                                  '₹${priceItem['price']}',
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                    color: AppColors.primaryButton,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -614,6 +952,7 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
                         setState(() {
                           _selectedBrand = brandName;
                           _selectedModel = null;
+                          _selectedModelData = null; // Reset model data
                           _apiModels = [];
                         });
                         _fetchModels(brand['_id']);
@@ -715,7 +1054,25 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
 
                     final isSelected = _selectedModel == modelName;
                     return GestureDetector(
-                      onTap: () => setState(() => _selectedModel = modelName),
+                      onTap: () => setState(() {
+                        _selectedModel = modelName;
+                        _selectedModelData =
+                            _apiModels[index]; // Store full object
+
+                        // Clear selected issues that are not available for this model
+                        if (_selectedModelData != null &&
+                            _selectedModelData!['repairPrices'] != null) {
+                          final availableIssues =
+                              (_selectedModelData!['repairPrices'] as List)
+                                  .map((p) => p['issueName'] as String)
+                                  .toSet();
+                          _selectedIssues.retainWhere(
+                            (issue) => availableIssues.contains(issue),
+                          );
+                        } else {
+                          _selectedIssues.clear();
+                        }
+                      }),
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -775,6 +1132,21 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
           const SizedBox(height: 24),
           ..._selectedIssues.map((issue) {
             final item = _apiIssues.firstWhere((i) => i['name'] == issue);
+
+            // Fetch model-specific price
+            var displayPrice = '0';
+            if (_selectedModelData != null &&
+                _selectedModelData!['repairPrices'] != null) {
+              final priceData = (_selectedModelData!['repairPrices'] as List)
+                  .firstWhere(
+                    (p) => p['issueName'] == issue,
+                    orElse: () => null,
+                  );
+              if (priceData != null) {
+                displayPrice = priceData['price'].toString();
+              }
+            }
+
             return Container(
               margin: const EdgeInsets.only(bottom: 16),
               padding: const EdgeInsets.all(12),
@@ -797,14 +1169,23 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
                     child:
                         (item['imageUrl'] != null &&
                             item['imageUrl'].isNotEmpty)
-                        ? Image.network(
-                            item['imageUrl'],
-                            width: 70,
-                            height: 70,
-                            fit: BoxFit.cover,
-                            errorBuilder: (c, e, s) =>
-                                const Icon(LucideIcons.image),
-                          )
+                        ? (item['imageUrl'].toString().startsWith('assets')
+                              ? Image.asset(
+                                  item['imageUrl'],
+                                  width: 70,
+                                  height: 70,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (c, e, s) =>
+                                      const Icon(LucideIcons.image),
+                                )
+                              : Image.network(
+                                  item['imageUrl'],
+                                  width: 70,
+                                  height: 70,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (c, e, s) =>
+                                      const Icon(LucideIcons.image),
+                                ))
                         : Icon(_getIcon(item['icon']), size: 50),
                   ),
                   const SizedBox(width: 16),
@@ -830,7 +1211,7 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
                     ),
                   ),
                   Text(
-                    '₹${item['base_price']}',
+                    '₹$displayPrice',
                     style: GoogleFonts.inter(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -850,19 +1231,29 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
   // STEP 4: TECHNICIAN
   Widget _buildTechnicianStep() {
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const SizedBox(height: 10),
           Text(
-            'Select Technician',
-            style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
+            'Choose Specialist',
+            style: GoogleFonts.poppins(
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textHeading,
+              letterSpacing: -0.5,
+            ),
+          ).animate().fadeIn().slideX(begin: -0.1),
+          Text(
+            'Select an expert technician for your device',
+            style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600]),
+          ).animate().fadeIn(delay: 200.ms),
           const SizedBox(height: 24),
           _isLoadingTechs
               ? const Center(child: CircularProgressIndicator())
               : _apiTechnicians.isEmpty
-              ? const Center(child: Text('No technicians available'))
+              ? _buildNoTechs()
               : ListView.builder(
                   shrinkWrap: true,
                   primary: false,
@@ -871,201 +1262,368 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
                   itemBuilder: (context, index) {
                     final tech = _apiTechnicians[index];
                     final isSelected = _selectedTechIndex == index;
+                    final isOnline = tech['isOnline'] == true;
+
                     return GestureDetector(
                       onTap: () => setState(() => _selectedTechIndex = index),
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: isSelected
-                                ? AppColors.primaryButton
-                                : Colors.grey.shade200,
-                            width: isSelected ? 2 : 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 15,
-                              offset: const Offset(0, 5),
+                      child: Opacity(
+                        opacity: isOnline ? 1.0 : 0.5,
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppColors.primaryButton
+                                  : isOnline
+                                  ? Colors.grey.shade100
+                                  : Colors.grey.shade300,
+                              width: isSelected ? 2 : 1,
                             ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 35,
-                                    backgroundColor: Colors.grey.shade200,
-                                    backgroundImage:
-                                        tech['photoUrl'] != null &&
-                                            tech['photoUrl']
-                                                .toString()
-                                                .isNotEmpty
-                                        ? NetworkImage(tech['photoUrl'])
-                                        : const AssetImage(
-                                                'assets/images/tech_avatar_1.png',
-                                              )
-                                              as ImageProvider,
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          tech['name'] ?? 'Technician',
-                                          style: GoogleFonts.inter(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 18,
+                            boxShadow: [
+                              BoxShadow(
+                                color: isSelected
+                                    ? AppColors.primaryButton.withOpacity(0.1)
+                                    : Colors.black.withOpacity(0.04),
+                                blurRadius: 20,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: Column(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Row(
+                                    children: [
+                                      Stack(
+                                        children: [
+                                          Hero(
+                                            tag: 'tech_p_${tech['_id']}',
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: isSelected
+                                                      ? AppColors.primaryButton
+                                                            .withOpacity(0.2)
+                                                      : Colors.grey.shade100,
+                                                  width: 3,
+                                                ),
+                                              ),
+                                              child: CircleAvatar(
+                                                radius: 35,
+                                                backgroundColor:
+                                                    Colors.grey.shade50,
+                                                backgroundImage:
+                                                    tech['photoUrl'] != null &&
+                                                        tech['photoUrl']
+                                                            .toString()
+                                                            .isNotEmpty
+                                                    ? NetworkImage(
+                                                        tech['photoUrl'],
+                                                      )
+                                                    : const AssetImage(
+                                                            'assets/images/tech_avatar_1.png',
+                                                          )
+                                                          as ImageProvider,
+                                              ),
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          children: [
-                                            const Icon(
-                                              LucideIcons.star,
-                                              size: 16,
-                                              color: Colors.amber,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              '${tech['rating'] ?? '4.9'}',
-                                              style: GoogleFonts.inter(
-                                                fontWeight: FontWeight.bold,
+                                          Positioned(
+                                            right: 2,
+                                            bottom: 2,
+                                            child: Container(
+                                              width: 14,
+                                              height: 14,
+                                              decoration: BoxDecoration(
+                                                color: isOnline
+                                                    ? Colors.green
+                                                    : Colors.grey,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: Colors.white,
+                                                  width: 2,
+                                                ),
                                               ),
                                             ),
-                                            Text(
-                                              ' (${tech['completedJobs'] ?? '50+'} repairs)',
-                                              style: GoogleFonts.inter(
-                                                color: Colors.grey,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        if ((tech['repairExpertise'] as List?)
-                                                ?.isNotEmpty ??
-                                            false) ...[
-                                          const SizedBox(height: 8),
-                                          Wrap(
-                                            spacing: 4,
-                                            runSpacing: 4,
-                                            children: (tech['repairExpertise'] as List)
-                                                .take(3)
-                                                .map<Widget>(
-                                                  (r) => Container(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          horizontal: 8,
-                                                          vertical: 4,
-                                                        ),
-                                                    decoration: BoxDecoration(
-                                                      color:
-                                                          Colors.grey.shade100,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            12,
-                                                          ),
-                                                    ),
-                                                    child: Text(
-                                                      r['name'] ?? '',
-                                                      style: GoogleFonts.inter(
-                                                        fontSize: 10,
-                                                        color: Colors
-                                                            .grey
-                                                            .shade700,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                )
-                                                .toList(),
                                           ),
                                         ],
-                                      ],
-                                    ),
-                                  ),
-                                  if (isSelected)
-                                    const Icon(
-                                      LucideIcons.checkCircle,
-                                      color: AppColors.primaryButton,
-                                      size: 28,
-                                    ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
-                                borderRadius: const BorderRadius.vertical(
-                                  bottom: Radius.circular(20),
-                                ),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 12,
-                                horizontal: 16,
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        tech['isOnline'] == true
-                                            ? LucideIcons.zap
-                                            : LucideIcons.clock,
-                                        size: 14,
-                                        color: tech['isOnline'] == true
-                                            ? Colors.green
-                                            : Colors.grey,
                                       ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        tech['isOnline'] == true
-                                            ? 'Online Now'
-                                            : 'Available Today',
-                                        style: GoogleFonts.inter(
-                                          color: tech['isOnline'] == true
-                                              ? Colors.green
-                                              : Colors.grey.shade600,
-                                          fontWeight: FontWeight.w500,
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                Flexible(
+                                                  child: Text(
+                                                    tech['name'] ??
+                                                        'Technician',
+                                                    style: GoogleFonts.poppins(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 18,
+                                                      color:
+                                                          AppColors.textHeading,
+                                                    ),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                if (isSelected)
+                                                  const Icon(
+                                                    LucideIcons.checkCircle2,
+                                                    color:
+                                                        AppColors.primaryButton,
+                                                    size: 20,
+                                                  ).animate().scale(),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Row(
+                                              children: [
+                                                const Icon(
+                                                  LucideIcons.star,
+                                                  size: 14,
+                                                  color: Colors.amber,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  '${tech['averageRating']?.toString() ?? '0.0'}',
+                                                  style: GoogleFonts.inter(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  '•',
+                                                  style: TextStyle(
+                                                    color: Colors.grey[400],
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  '${tech['totalReviews'] ?? 0} reviews',
+                                                  style: GoogleFonts.inter(
+                                                    color: Colors.grey[500],
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 10),
+                                            if ((tech['repairExpertise']
+                                                        as List?)
+                                                    ?.isNotEmpty ??
+                                                false)
+                                              Wrap(
+                                                spacing: 6,
+                                                runSpacing: 4,
+                                                children: (tech['repairExpertise'] as List)
+                                                    .take(2)
+                                                    .map<Widget>(
+                                                      (r) => Container(
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 10,
+                                                              vertical: 4,
+                                                            ),
+                                                        decoration: BoxDecoration(
+                                                          color: AppColors
+                                                              .primaryButton
+                                                              .withOpacity(
+                                                                0.05,
+                                                              ),
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                10,
+                                                              ),
+                                                        ),
+                                                        child: Text(
+                                                          r['name'] ?? '',
+                                                          style: GoogleFonts.inter(
+                                                            fontSize: 10,
+                                                            color: AppColors
+                                                                .primaryButton,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    )
+                                                    .toList(),
+                                              ),
+                                          ],
                                         ),
                                       ),
                                     ],
                                   ),
-                                  GestureDetector(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (c) => TechnicianProfilePage(
-                                            technician: tech,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    child: Text(
-                                      'See Profile',
-                                      style: GoogleFonts.inter(
-                                        color: AppColors.primaryButton,
-                                        fontWeight: FontWeight.bold,
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                    horizontal: 20,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? AppColors.primaryButton.withOpacity(
+                                            0.03,
+                                          )
+                                        : Colors.grey.shade50,
+                                    border: Border(
+                                      top: BorderSide(
+                                        color: Colors.grey.shade100,
                                       ),
                                     ),
                                   ),
-                                ],
-                              ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Container(
+                                                width: 8,
+                                                height: 8,
+                                                decoration: BoxDecoration(
+                                                  color: isOnline
+                                                      ? Colors.green
+                                                      : Colors.grey,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              )
+                                              .animate(
+                                                onPlay: (c) => isOnline
+                                                    ? c.repeat()
+                                                    : c.stop(),
+                                              )
+                                              .scale(
+                                                end: const Offset(1.5, 1.5),
+                                              )
+                                              .fade(),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            isOnline
+                                                ? 'ONLINE NOW'
+                                                : 'OFFLINE NOW',
+                                            style: GoogleFonts.inter(
+                                              color: isOnline
+                                                  ? Colors.green
+                                                  : Colors.grey[600],
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 11,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      GestureDetector(
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (c) =>
+                                                  TechnicianProfilePage(
+                                                    technician: tech,
+                                                  ),
+                                            ),
+                                          );
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 14,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.grey.shade200,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withOpacity(
+                                                  0.05,
+                                                ),
+                                                blurRadius: 5,
+                                              ),
+                                            ],
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Text(
+                                                'View Profile',
+                                                style: GoogleFonts.inter(
+                                                  color: AppColors.textHeading,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              const Icon(
+                                                LucideIcons.chevronRight,
+                                                size: 14,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
+                      ).animate().fadeIn(delay: (index * 150).ms).slideY(begin: 0.1),
                     );
                   },
                 ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoTechs() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(40),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Column(
+        children: [
+          Icon(LucideIcons.userX, size: 60, color: Colors.grey[300]),
+          const SizedBox(height: 16),
+          Text(
+            'No Technicians Found',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'We couldn\'t find any specialists for this service in your area right now.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(color: Colors.grey[500]),
+          ),
         ],
       ),
     );
@@ -1245,9 +1803,25 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
           const SizedBox(height: 24),
 
           // Address Selector
-          Text(
-            'Delivery Address',
-            style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              Text(
+                'Delivery Address',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '*',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           GestureDetector(
@@ -1255,21 +1829,30 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: _address.isEmpty ? Colors.red.shade50 : Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.shade200),
+                border: Border.all(
+                  color: _address.isEmpty
+                      ? Colors.red.shade300
+                      : Colors.grey.shade200,
+                  width: _address.isEmpty ? 2 : 1,
+                ),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
+                      color: _address.isEmpty
+                          ? Colors.red.shade100
+                          : Colors.grey.shade50,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       LucideIcons.mapPin,
-                      color: AppColors.primaryButton,
+                      color: _address.isEmpty
+                          ? Colors.red
+                          : AppColors.primaryButton,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -1281,7 +1864,12 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
                           _address.isEmpty
                               ? 'Select Address'
                               : _address.split(',')[0],
-                          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold,
+                            color: _address.isEmpty
+                                ? Colors.red.shade700
+                                : Colors.black,
+                          ),
                         ),
                         if (_address.isNotEmpty)
                           Text(
@@ -1325,6 +1913,7 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
   void _showAddressBottomSheet() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1343,36 +1932,130 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
                 ),
               ),
               const SizedBox(height: 20),
-              ..._userAddresses.map(
-                (addr) => ListTile(
-                  leading: const Icon(LucideIcons.mapPin),
-                  title: Text(
-                    addr.split(':')[0],
-                    style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(addr.split(':')[1].trim()),
-                  onTap: () {
-                    setState(() => _address = addr);
-                    Navigator.pop(context);
-                  },
+
+              // Saved addresses title
+              Text(
+                'Select Saved Address',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
+
               const SizedBox(height: 16),
+
+              // Saved addresses
+              if (_isLoadingAddresses)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else if (_userAddresses.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Text(
+                      'No saved addresses yet',
+                      style: GoogleFonts.inter(
+                        color: Colors.grey,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                )
+              else
+                ..._userAddresses.map(
+                  (addr) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: _selectedAddressId == addr['_id']
+                              ? AppColors.primaryButton.withOpacity(0.1)
+                              : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          LucideIcons.mapPin,
+                          size: 20,
+                          color: _selectedAddressId == addr['_id']
+                              ? AppColors.primaryButton
+                              : Colors.grey.shade600,
+                        ),
+                      ),
+                      title: Text(
+                        addr['label'] ?? 'Address',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      subtitle: Text(
+                        addr['fullAddress'] ?? '',
+                        style: GoogleFonts.inter(fontSize: 12),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: _selectedAddressId == addr['_id']
+                          ? const Icon(
+                              LucideIcons.checkCircle2,
+                              color: AppColors.primaryButton,
+                              size: 20,
+                            )
+                          : const Icon(LucideIcons.chevronRight, size: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: _selectedAddressId == addr['_id']
+                              ? AppColors.primaryButton
+                              : Colors.grey.shade200,
+                          width: _selectedAddressId == addr['_id'] ? 2 : 1,
+                        ),
+                      ),
+                      onTap: () {
+                        setState(() {
+                          _selectedAddressId = addr['_id'];
+                          _address = addr['fullAddress'] ?? '';
+                          _addressLat = addr['latitude']?.toDouble();
+                          _addressLng = addr['longitude']?.toDouble();
+                        });
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '✅ Address selected: ${addr['label']}',
+                            ),
+                            backgroundColor: Colors.green,
+                            duration: const Duration(seconds: 2),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+
+              const SizedBox(height: 16),
+
+              // Add New Address
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    // Logic to add new address
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('COMING SOON')),
-                    );
+                    _openLocationPicker();
                   },
                   icon: const Icon(LucideIcons.plus),
                   label: const Text('Add New Address'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     side: const BorderSide(color: AppColors.primaryButton),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
@@ -1381,6 +2064,38 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
         );
       },
     );
+  }
+
+  /// Open Location Picker to get current GPS location
+  Future<void> _openLocationPicker() async {
+    final result = await Navigator.push<LocationData>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LocationPickerPage(
+          initialLat: _addressLat,
+          initialLng: _addressLng,
+        ),
+      ),
+    );
+
+    if (result != null && result.address != null) {
+      setState(() {
+        _address = result.address!;
+        _addressLat = result.latitude;
+        _addressLng = result.longitude;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '✅ Address selected: ${result.address!.split(',').first}',
+          ),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Widget _buildPaymentOption(String label, IconData icon, int value) {

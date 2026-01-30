@@ -1,6 +1,6 @@
 const Admin = require('../models/Admin');
 // Note: In production, use bcrypt for password hashing
-// const bcrypt = require('bcryptjs'); 
+const bcrypt = require('bcryptjs');
 
 exports.register = async (req, res) => {
     try {
@@ -9,10 +9,14 @@ exports.register = async (req, res) => {
         let admin = await Admin.findOne({ email });
         if (admin) return res.status(400).json({ msg: 'Admin already exists' });
 
+        // Hash password for new registrations
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
         admin = new Admin({
             name,
             email,
-            password, // TODO: Hash this password
+            password: hashedPassword,
             role: role || 'admin',
             isApproved: false // Requires Master Admin approval
         });
@@ -33,7 +37,16 @@ exports.login = async (req, res) => {
         const admin = await Admin.findOne({ email });
         if (!admin) return res.status(400).json({ msg: 'Invalid credentials' });
 
-        if (admin.password !== password) { // TODO: Use bcrypt.compare
+        // Check if password is hashed (starts with $2a$)
+        let isMatch = false;
+        if (admin.password.startsWith('$2a$')) {
+            isMatch = await bcrypt.compare(password, admin.password);
+        } else {
+            // Legacy plain text fallback
+            isMatch = admin.password === password;
+        }
+
+        if (!isMatch) {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
 
@@ -45,7 +58,8 @@ exports.login = async (req, res) => {
             id: admin._id,
             name: admin.name,
             email: admin.email,
-            role: admin.role
+            role: admin.role,
+            profileImage: admin.profileImage
         };
 
         // If you want to use JWT: (leaving simpler response for now to match flutter expectation)

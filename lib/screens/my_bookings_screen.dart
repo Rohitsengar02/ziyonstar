@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ziyonstar/theme.dart';
@@ -6,10 +8,16 @@ import 'package:ziyonstar/responsive.dart';
 import '../widgets/navbar.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/mobile_bottom_nav.dart';
-import 'chat_page.dart';
+// Removed ChatPage import
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/api_service.dart';
+// Unused import removed
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MyBookingsScreen extends StatefulWidget {
-  const MyBookingsScreen({super.key});
+  final String? initialBookingId;
+  const MyBookingsScreen({super.key, this.initialBookingId});
 
   @override
   State<MyBookingsScreen> createState() => _MyBookingsScreenState();
@@ -22,62 +30,20 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   String? _hoveredBookingId;
   Map<String, dynamic>? _selectedBooking; // For Detail Sidebar
   late AnimationController _controller;
+  bool _isLoading = true;
+  bool _isFirstLoad = true; // Track first load to prevent false positives
 
-  final List<String> _filters = ['All', 'Upcoming', 'Completed', 'Cancelled'];
-
-  // Mock data needs to include all fields for details
-  final List<Map<String, dynamic>> _allBookings = [
-    {
-      'id': 'BK-19283',
-      'device': 'iPhone 13 Pro',
-      'status': 'Upcoming',
-      'date': 'Today, 4:00 PM',
-      'technician': 'Rahul Sharma',
-      'techImage': 'assets/images/tech_avatar_1.png',
-      'issues': ['Screen', 'Battery'],
-      'price': 4498,
-      'address': 'B-403, Galaxy Heights, Mumbai',
-      'payment': 'UPI',
-    },
-    {
-      'id': 'BK-10293',
-      'device': 'MacBook Air M2',
-      'status': 'Completed',
-      'date': '12 Jan, 11:00 AM',
-      'technician': 'Vikram Singh',
-      'techImage': 'assets/images/tech_avatar_2.png',
-      'issues': ['Software'],
-      'price': 1499,
-      'address': 'Startups Hub, Bangalore',
-      'payment': 'Credit Card',
-      'reviewed': false, // Not reviewed yet
-    },
-    {
-      'id': 'BK-99281',
-      'device': 'Samsung S23 Ultra',
-      'status': 'Completed',
-      'date': '10 Dec, 02:00 PM',
-      'technician': 'Amit Verma',
-      'techImage': 'assets/images/tech_avatar_3.png',
-      'issues': ['Camera', 'Mic'],
-      'price': 1999,
-      'address': 'Sector 18, Noida',
-      'payment': 'Cash',
-      'reviewed': true, // Already reviewed
-    },
-    {
-      'id': 'BK-55102',
-      'device': 'OnePlus 11',
-      'status': 'Cancelled',
-      'date': '05 Nov, 10:00 AM',
-      'technician': 'Rahul Sharma',
-      'techImage': 'assets/images/tech_avatar_1.png',
-      'issues': ['Charging Port'],
-      'price': 899,
-      'address': 'B-403, Galaxy Heights, Mumbai',
-      'payment': 'UPI',
-    },
+  final List<String> _filters = [
+    'All',
+    'Upcoming',
+    'Completed',
+    'Cancelled',
+    'Rejected',
   ];
+
+  List<Map<String, dynamic>> _allBookings = [];
+
+  Timer? _timer;
 
   @override
   void initState() {
@@ -87,16 +53,370 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       vsync: this,
     );
     _controller.forward();
+    _fetchBookings();
+
+    // Simulate Notification/Real-time updates via Polling
+    _timer = Timer.periodic(
+      const Duration(seconds: 5),
+      (timer) => _fetchBookings(),
+    );
   }
+
+  Future<void> _fetchBookings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      String? uid;
+
+      // 1. Try Firebase Auth
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        uid = user.uid;
+      } else {
+        // 2. Try Guest ID (consistent with booking screen)
+        uid = prefs.getString('user_uid') ?? prefs.getString('user_id');
+      }
+
+      if (uid != null) {
+        final api = ApiService();
+        // Get Mongo User ID from our UID (firebase or guest)
+        final mongoUser = await api.getUser(uid);
+
+        if (mongoUser != null) {
+          final bookings = await api.getUserBookings(
+            mongoUser['_id'].toString(),
+          );
+
+          final newBookings = bookings.map<Map<String, dynamic>>((b) {
+            // Safe Date Parsing
+            String dateStr = 'Date Unknown';
+            try {
+              final dt = DateTime.parse(b['scheduledDate']).toLocal();
+              // Manual formatting: MMM d, y
+              const months = [
+                'Jan',
+                'Feb',
+                'Mar',
+                'Apr',
+                'May',
+                'Jun',
+                'Jul',
+                'Aug',
+                'Sep',
+                'Oct',
+                'Nov',
+                'Dec',
+              ];
+              dateStr = '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+            } catch (e) {
+              dateStr = b['scheduledDate'].toString().substring(0, 10);
+            }
+
+            // Address Fallback
+            String addressStr = 'Address Details';
+            if (b['address'] is Map) {
+              addressStr = b['address']['fullAddress'];
+            } else if (b['addressDetails'] != null) {
+              addressStr = b['addressDetails'];
+            }
+
+            List<Map<String, dynamic>> issuesData = [];
+            if (b['issues'] is List) {
+              issuesData = (b['issues'] as List).map((i) {
+                if (i is Map) {
+                  return {
+                    'issueName': i['issueName']?.toString() ?? '',
+                    'issueImage': i['issueImage']?.toString() ?? '',
+                  };
+                }
+                return {'issueName': i.toString(), 'issueImage': ''};
+              }).toList();
+            }
+
+            // Technician Details
+            Map<String, dynamic>? tech = b['technicianId'] is Map
+                ? b['technicianId']
+                : null;
+            String techName = tech?['name'] ?? 'Pending Assignment';
+            String techPhoto =
+                tech?['photoUrl'] ?? 'assets/images/tech_avatar_1.png';
+            String? techPhone = tech?['phone'];
+
+            return {
+              'id': b['_id']?.toString() ?? 'Unknown',
+              'device':
+                  '${b['deviceBrand'] ?? ''} ${b['deviceModel'] ?? 'Device'}'
+                      .trim(),
+              'status': _mapStatus(b['status']?.toString() ?? ''),
+              'rawStatus': b['status']?.toString() ?? '',
+              'date': dateStr, // Formatted Date
+              'timeSlot':
+                  (b['timeSlot'] != null && b['timeSlot'].toString().isNotEmpty)
+                  ? b['timeSlot'].toString()
+                  : 'Time Not Scheduled', // Explicit fallback
+              'technician': techName,
+              'techImage': techPhoto,
+              'techPhone': techPhone,
+              'issues': issuesData,
+              'price': b['totalPrice']?.toString() ?? '0',
+              'address': addressStr,
+              'payment': b['paymentStatus']?.toString() ?? 'Pending',
+            };
+          }).toList();
+
+          // Notification Logic (Only after first load)
+          if (!_isFirstLoad) {
+            for (var newB in newBookings) {
+              final oldB = _allBookings.firstWhere(
+                (old) => old['id'] == newB['id'],
+                orElse: () => {},
+              );
+              if (oldB.isNotEmpty && oldB['rawStatus'] != newB['rawStatus']) {
+                // Simple notification trigger for status changes
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      "Update: ${newB['device']} is now ${newB['status']}",
+                    ),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+            }
+          }
+
+          // Sort by date (newest first)
+          newBookings.sort(
+            (a, b) => (b['id'] as String).compareTo(a['id'] as String),
+          );
+
+          _isFirstLoad = false;
+          if (mounted) {
+            setState(() {
+              _allBookings = newBookings;
+              _isLoading = false;
+
+              // Auto-select booking if initialBookingId is provided
+              if (widget.initialBookingId != null && _selectedBooking == null) {
+                final target = _allBookings.firstWhere(
+                  (b) => b['id'] == widget.initialBookingId,
+                  orElse: () => {},
+                );
+                if (target.isNotEmpty) {
+                  _selectedBooking = target;
+                }
+              }
+            });
+          }
+        } else {
+          if (mounted) setState(() => _isLoading = false);
+        }
+      } else {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      debugPrint("Error fetching bookings: $e");
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  String _mapStatus(String status) {
+    if (status == 'Pending_Assignment' ||
+        status == 'Pending_Acceptance' ||
+        status == 'On_Way' ||
+        status == 'Arrived')
+      return 'Upcoming';
+    if (status == 'In_Progress') return 'Upcoming';
+    return status; // Completed, Cancelled, Rejected
+  }
+
+  Future<void> _handleReassign(String bookingId) async {
+    try {
+      await ApiService().reassignBooking(bookingId);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Reassignment Requested')));
+      _fetchBookings();
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  final _player = AudioPlayer();
 
   @override
   void dispose() {
+    _timer?.cancel();
     _controller.dispose();
+    _player.dispose();
     super.dispose();
+  }
+
+  // _playSound removed as it was unused
+  Future<void> _callTechnician(String? phone) async {
+    if (phone == null || phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Technician phone number not available')),
+      );
+      return;
+    }
+    final Uri url = Uri.parse('tel:$phone');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch dialer')),
+        );
+      }
+    }
+  }
+
+  Future<void> _showComplaintDialog(Map<String, dynamic> booking) async {
+    final List<String> reasons = [
+      'Technician didn\'t arrive',
+      'High pricing',
+      'Poor service quality',
+      'Rude behavior',
+      'Parts not replaced correctly',
+      'Other',
+    ];
+    String selectedReason = reasons[0];
+    final TextEditingController descriptionController = TextEditingController();
+    bool isSubmitting = false;
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(
+            'Raise a Complaint',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Select Reason',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: selectedReason,
+                  items: reasons
+                      .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                      .toList(),
+                  onChanged: (val) => setState(() => selectedReason = val!),
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Description',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: descriptionController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Tell us more...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      setState(() => isSubmitting = true);
+                      try {
+                        final prefs = await SharedPreferences.getInstance();
+                        final String? uid = prefs.getString('user_uid');
+                        if (uid == null) throw 'User not logged in';
+
+                        final mongoUser = await ApiService().getUser(uid);
+                        if (mongoUser == null) throw 'User record not found';
+
+                        final success = await ApiService().createDispute(
+                          bookingId: booking['id'],
+                          userId: mongoUser['_id'],
+                          reason: selectedReason,
+                          description: descriptionController.text,
+                        );
+
+                        if (success != null) {
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Complaint submitted successfully',
+                                ),
+                              ),
+                            );
+                          }
+                        } else {
+                          throw 'Failed to submit complaint';
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      } finally {
+                        if (mounted) setState(() => isSubmitting = false);
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryButton,
+              ),
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Submit'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   List<Map<String, dynamic>> get _filteredBookings {
     if (_selectedFilter == 'All') return _allBookings;
+    if (_selectedFilter == 'Upcoming') {
+      return _allBookings.where((b) => b['status'] == 'Upcoming').toList();
+    }
     return _allBookings.where((b) => b['status'] == _selectedFilter).toList();
   }
 
@@ -124,6 +444,15 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                 ),
               ),
               centerTitle: true,
+              actions: [
+                IconButton(
+                  icon: const Icon(LucideIcons.refreshCw, color: Colors.black),
+                  onPressed: () {
+                    setState(() => _isLoading = true);
+                    _fetchBookings();
+                  },
+                ),
+              ],
             ),
       drawer: const AppDrawer(),
       bottomNavigationBar: isDesktop
@@ -238,7 +567,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                       _buildDetailRow(
                         LucideIcons.calendar,
                         'Date & Time',
-                        _selectedBooking!['date'],
+                        '${_selectedBooking!['date']}${_selectedBooking!['timeSlot'].toString().isNotEmpty ? ' at ${_selectedBooking!['timeSlot']}' : ''}',
                       ),
                       const SizedBox(height: 16),
                       _buildDetailRow(
@@ -267,10 +596,13 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                         children: [
                           CircleAvatar(
                             radius: isDesktop ? 25 : 20,
-                            backgroundImage: AssetImage(
-                              _selectedBooking!['techImage'] ??
-                                  'assets/images/tech_avatar_1.png',
-                            ),
+                            backgroundImage:
+                                _selectedBooking!['techImage']
+                                    .toString()
+                                    .startsWith('http')
+                                ? NetworkImage(_selectedBooking!['techImage'])
+                                : AssetImage(_selectedBooking!['techImage'])
+                                      as ImageProvider,
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -313,7 +645,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                         children: (_selectedBooking!['issues'] as List).map((
                           issue,
                         ) {
+                          final img = issue['issueImage'];
                           return Container(
+                            width: isDesktop ? 100 : 80,
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
                               border: Border.all(color: Colors.grey.shade200),
@@ -321,13 +655,34 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                             ),
                             child: Column(
                               children: [
-                                Icon(
-                                  LucideIcons.wrench,
-                                  size: isDesktop ? 40 : 35,
+                                Container(
+                                  width: double.infinity,
+                                  height: isDesktop ? 60 : 50,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[50],
+                                    borderRadius: BorderRadius.circular(8),
+                                    image: (img != null && img.isNotEmpty)
+                                        ? DecorationImage(
+                                            image: NetworkImage(img),
+                                            fit: BoxFit.cover,
+                                          )
+                                        : null,
+                                  ),
+                                  child: (img == null || img.isEmpty)
+                                      ? const Center(
+                                          child: Icon(
+                                            LucideIcons.wrench,
+                                            size: 24,
+                                          ),
+                                        )
+                                      : null,
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 8),
                                 Text(
-                                  issue,
+                                  issue['issueName'] ?? '',
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.inter(fontSize: 10),
                                 ),
                               ],
@@ -336,6 +691,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                         }).toList(),
                       ),
 
+                      const SizedBox(height: 40),
                       const SizedBox(height: 40),
                       if (_selectedBooking!['status'] == 'Upcoming')
                         SizedBox(
@@ -364,6 +720,52 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                             ),
                           ),
                         ),
+                      if (_selectedBooking!['rawStatus'] == 'Rejected' ||
+                          _selectedBooking!['status'] == 'Rejected')
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.orange),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Technician Declined",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                "The technician could not accept this job. Please reassign to find another expert.",
+                                style: TextStyle(fontSize: 12),
+                              ),
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () =>
+                                      _handleReassign(_selectedBooking!['id']),
+                                  icon: const Icon(
+                                    LucideIcons.refreshCw,
+                                    color: Colors.white,
+                                  ),
+                                  label: const Text('Find Another Technician'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.black,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -375,38 +777,10 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, size: 20, color: Colors.grey[600]),
-        ),
-        const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
-            ),
-            Text(value, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ],
-    );
-  }
-
-  // Mobile and Desktop Layouts similar to previous, but updated grid settings
-
   Widget _buildMobileLayout() {
     return Column(
       children: [
-        // Filter Chips Row (Same as before)
+        // Filter Chips Row
         Container(
           color: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
@@ -471,6 +845,66 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                 isMobile: true,
               );
             },
+          ),
+        ),
+        if (!_isLoading && _filteredBookings.isEmpty)
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    LucideIcons.calendarX,
+                    size: 64,
+                    color: Colors.grey[300],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "No bookings found",
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      color: Colors.grey[500],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 20, color: Colors.grey[600]),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                softWrap: true,
+                overflow:
+                    TextOverflow.visible, // Ensure it wraps and doesn't clip
+              ),
+            ],
           ),
         ),
       ],
@@ -565,19 +999,23 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(32),
-            child: GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3, // 3 Columns
-                mainAxisSpacing: 20,
-                crossAxisSpacing: 20,
-                childAspectRatio: 2.2, // Compact height
-              ),
-              itemCount: _filteredBookings.length,
-              itemBuilder: (context, index) {
-                return _buildAnimatedCard(index, _filteredBookings[index]);
-              },
+            child: Wrap(
+              spacing: 20,
+              runSpacing: 20,
+              children: _filteredBookings.asMap().entries.map((entry) {
+                final index = entry.key;
+                final booking = entry.value;
+                // Use a constrained container to mimic the 'card' look but allow flexibility
+                return SizedBox(
+                  width: 350, // Fixed width for consistency, height flexible
+                  child: _buildAnimatedCard(
+                    index,
+                    booking,
+                    isMobile:
+                        true, // FORCE MOBILE LOGIC: Use the exact same layout logic as the app
+                  ),
+                );
+              }).toList(),
             ),
           ),
         ),
@@ -702,10 +1140,11 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                         tag: 'tech_${booking['id']}',
                         child: CircleAvatar(
                           radius: isMobile ? 24 : 18,
-                          backgroundImage: AssetImage(
-                            booking['techImage'] ??
-                                'assets/images/tech_avatar_1.png',
-                          ),
+                          backgroundImage:
+                              booking['techImage'].toString().startsWith('http')
+                              ? NetworkImage(booking['techImage'])
+                              : AssetImage(booking['techImage'])
+                                    as ImageProvider,
                         ),
                       ),
                       SizedBox(width: isMobile ? 16 : 12),
@@ -731,6 +1170,17 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                                 color: Colors.grey[600],
                               ),
                             ),
+                            // ADDED: Time and Address display for replica feel (Safe wrap)
+                            const SizedBox(height: 4),
+                            Text(
+                              '${booking['date']}${booking['timeSlot'].toString().isNotEmpty ? ' • ${booking['timeSlot']}' : ''}',
+                              // Removed maxLines to allow full detail display if space permits
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                fontSize: isMobile ? 12 : 10,
+                                color: Colors.blueGrey,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -740,23 +1190,16 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                           children: [
                             _buildActionButton(
                               context,
-                              LucideIcons.messageCircle,
-                              AppColors.primaryButton,
-                              () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const ChatPage(),
-                                  ),
-                                );
-                              },
+                              LucideIcons.phone,
+                              Colors.green,
+                              () => _callTechnician(booking['techPhone']),
                             ),
                             const SizedBox(width: 8),
                             _buildActionButton(
                               context,
-                              LucideIcons.phone,
-                              Colors.green,
-                              () {},
+                              LucideIcons.alertTriangle,
+                              Colors.orange,
+                              () => _showComplaintDialog(booking),
                             ),
                           ],
                         ),
@@ -776,15 +1219,26 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                           width: isMobile ? 60 : 50,
                           height: isMobile ? 60 : 50,
                           margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: const Color(0xFFF9FAFB),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.grey.shade100),
+                            image:
+                                (issue['issueImage'] != null &&
+                                    issue['issueImage'].toString().isNotEmpty)
+                                ? DecorationImage(
+                                    image: NetworkImage(issue['issueImage']),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
                           ),
-                          child: const Center(
-                            child: Icon(LucideIcons.wrench, size: 24),
-                          ),
+                          child:
+                              (issue['issueImage'] == null ||
+                                  issue['issueImage'].toString().isEmpty)
+                              ? const Center(
+                                  child: Icon(LucideIcons.wrench, size: 24),
+                                )
+                              : null,
                         );
                       }),
                     ],
@@ -797,23 +1251,14 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                       children: [
                         Expanded(
                           child: OutlinedButton.icon(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const ChatPage(),
-                                ),
-                              );
-                            },
-                            icon: const Icon(
-                              LucideIcons.messageCircle,
-                              size: 16,
-                            ),
-                            label: const Text('Chat'),
+                            onPressed: () =>
+                                _callTechnician(booking['techPhone']),
+                            icon: const Icon(LucideIcons.phone, size: 16),
+                            label: const Text('Call'),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.primaryButton,
+                              foregroundColor: Colors.green,
                               side: BorderSide(
-                                color: AppColors.primaryButton.withOpacity(0.5),
+                                color: Colors.green.withOpacity(0.5),
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
@@ -822,16 +1267,19 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: OutlinedButton.icon(
-                            onPressed: () {},
-                            icon: const Icon(LucideIcons.phone, size: 16),
-                            label: const Text('Call'),
+                            onPressed: () => _showComplaintDialog(booking),
+                            icon: const Icon(
+                              LucideIcons.alertTriangle,
+                              size: 16,
+                            ),
+                            label: const Text('Complaint'),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.green,
+                              foregroundColor: Colors.orange,
                               side: BorderSide(
-                                color: Colors.green.withOpacity(0.5),
+                                color: Colors.orange.withOpacity(0.5),
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
@@ -1111,22 +1559,43 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: selectedRating > 0
-                            ? () {
-                                setState(() {
-                                  booking['reviewed'] = true;
-                                  booking['rating'] = selectedRating;
-                                  booking['reviewText'] = reviewController.text;
-                                });
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Thank you for your review!',
-                                      style: GoogleFonts.inter(),
-                                    ),
-                                    backgroundColor: Colors.green,
-                                  ),
+                            ? () async {
+                                final success = await ApiService().submitReview(
+                                  bookingId: booking['id'],
+                                  rating: selectedRating,
+                                  reviewText: reviewController.text,
                                 );
+                                if (success) {
+                                  setState(() {
+                                    booking['reviewed'] = true;
+                                    booking['rating'] = selectedRating;
+                                    booking['reviewText'] =
+                                        reviewController.text;
+                                  });
+                                  if (context.mounted) Navigator.pop(context);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Thank you for your review!',
+                                          style: GoogleFonts.inter(),
+                                        ),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  }
+                                } else {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Failed to submit review',
+                                        ),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                }
                               }
                             : null,
                         style: ElevatedButton.styleFrom(

@@ -12,11 +12,13 @@ import '../services/api_service.dart';
 class RepairPage extends StatefulWidget {
   final String deviceBrand;
   final String deviceModel;
+  final Map<String, dynamic>? modelData;
 
   const RepairPage({
     super.key,
     this.deviceBrand = 'Apple',
     this.deviceModel = 'iPhone 13 Pro',
+    this.modelData,
   });
 
   @override
@@ -28,6 +30,7 @@ class _RepairPageState extends State<RepairPage> {
 
   late String _currentBrand;
   late String _currentModel;
+  Map<String, dynamic>? _modelData;
   final Set<String> _selectedIssues = {};
   final ApiService _apiService = ApiService();
   List<dynamic> _apiIssues = [];
@@ -39,8 +42,37 @@ class _RepairPageState extends State<RepairPage> {
     super.initState();
     _currentBrand = widget.deviceBrand;
     _currentModel = widget.deviceModel;
+    _modelData = widget.modelData;
     _fetchIssues();
     _fetchBrands();
+    if (_modelData == null) {
+      _fetchModelData();
+    }
+  }
+
+  Future<void> _fetchModelData() async {
+    try {
+      // Get brand to find its ID
+      final brands = await _apiService.getBrands();
+      final brand = brands.firstWhere(
+        (b) => b['title'] == _currentBrand,
+        orElse: () => null,
+      );
+      if (brand != null) {
+        final models = await _apiService.getModels(brand['_id']);
+        final model = models.firstWhere(
+          (m) => m['name'] == _currentModel,
+          orElse: () => null,
+        );
+        if (mounted && model != null) {
+          setState(() {
+            _modelData = model;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching model data: $e');
+    }
   }
 
   Future<void> _fetchBrands() async {
@@ -98,6 +130,19 @@ class _RepairPageState extends State<RepairPage> {
       default:
         return LucideIcons.wrench;
     }
+  }
+
+  // Helper function to safely parse API values to int
+  int _parseToInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) {
+      // Remove % sign if present and parse
+      final cleanValue = value.replaceAll('%', '').trim();
+      return int.tryParse(cleanValue) ?? 0;
+    }
+    return 0;
   }
 
   String _repairOption = 'Doorstep';
@@ -556,6 +601,48 @@ class _RepairPageState extends State<RepairPage> {
       return const Center(child: Text('No repair issues found in database'));
     }
 
+    // Filter issues to only show ones with price > 0
+    final List<Map<String, dynamic>> filteredIssues = [];
+    for (final item in _apiIssues) {
+      final key = (item['name'] ?? '') as String;
+      if (key.isEmpty) continue;
+
+      // Get model-specific price from repairPrices array
+      int price = 0;
+      int originalPrice = 0;
+      int discount = 0;
+      if (_modelData != null && _modelData!['repairPrices'] != null) {
+        final repairPricesList = _modelData!['repairPrices'];
+        if (repairPricesList is List) {
+          final priceItem = repairPricesList.firstWhere(
+            (p) => p['issueName'] == key,
+            orElse: () => null,
+          );
+          if (priceItem != null) {
+            // Handle various types from API (int, double, String)
+            price = _parseToInt(priceItem['price']);
+            originalPrice = _parseToInt(priceItem['originalPrice'] ?? priceItem['price']);
+            discount = _parseToInt(priceItem['discount']);
+          }
+        }
+      }
+
+      // Only include issues with price > 0
+      if (price > 0) {
+        filteredIssues.add({
+          'item': item,
+          'key': key,
+          'price': price,
+          'originalPrice': originalPrice,
+          'discount': discount,
+        });
+      }
+    }
+
+    if (filteredIssues.isEmpty) {
+      return const Center(child: Text('No repair services available for this model'));
+    }
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -563,21 +650,28 @@ class _RepairPageState extends State<RepairPage> {
         crossAxisCount: isDesktop ? 4 : 2,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 1.0,
+        childAspectRatio: 0.85, // Adjusted for more content
       ),
-      itemCount: _apiIssues.length,
+      itemCount: filteredIssues.length,
       itemBuilder: (context, index) {
-        final item = _apiIssues[index];
-        final key = item['name'] as String;
+        final issueData = filteredIssues[index];
+        final item = issueData['item'];
+        final key = issueData['key'] as String;
+        final price = issueData['price'] as int;
+        final originalPrice = issueData['originalPrice'] as int;
+        final discount = issueData['discount'] as int;
         final isSelected = _selectedIssues.contains(key);
 
-        // Map API data to what _IssueCard expects (wrapped in a map for legacy compatibility if needed)
+        // Map API data to what _IssueCard expects
         final data = {
           'icon': _getIcon(item['icon']),
           'imageUrl': item['imageUrl'],
-          'price': item['base_price'],
-          'warranty': '6 Months', // Default
-          'time': '45 mins', // Default
+          'price': price,
+          'originalPrice': originalPrice,
+          'discount': discount,
+          'warranty': '6 Months',
+          'time': '45 mins',
+          'symptoms': item['symptoms'] is List ? item['symptoms'] : ['Diagnosis', 'Repair', 'Quality Check'],
         };
 
         return _IssueCard(
@@ -638,10 +732,33 @@ class _RepairPageState extends State<RepairPage> {
                 )
               else
                 ..._selectedIssues.map((issue) {
-                  final item = _apiIssues.firstWhere((i) => i['name'] == issue);
+                  final item = _apiIssues.firstWhere(
+                    (i) => i['name'] == issue,
+                    orElse: () => <String, dynamic>{},
+                  );
+                  
+                  // Get model-specific price
+                  int price = 0;
+                  int originalPrice = 0;
+                  int discount = 0;
+                  if (_modelData != null && _modelData!['repairPrices'] != null) {
+                    final repairPricesList = _modelData!['repairPrices'];
+                    if (repairPricesList is List) {
+                      final priceItem = repairPricesList.firstWhere(
+                        (p) => p['issueName'] == issue,
+                        orElse: () => null,
+                      );
+                      if (priceItem != null) {
+                        price = _parseToInt(priceItem['price']);
+                        originalPrice = _parseToInt(priceItem['originalPrice'] ?? priceItem['price']);
+                        discount = _parseToInt(priceItem['discount']);
+                      }
+                    }
+                  }
+                  
                   final data = {
                     'imageUrl': item['imageUrl'],
-                    'price': item['base_price'],
+                    'price': price,
                     'warranty': '6 Months',
                     'time': '45 mins',
                   };
@@ -1285,13 +1402,20 @@ class _RepairPageState extends State<RepairPage> {
   int _calculateTotal() {
     int total = 0;
     for (var issueName in _selectedIssues) {
-      final item = _apiIssues.firstWhere(
-        (i) => i['name'] == issueName,
-        orElse: () => null,
-      );
-      if (item != null) {
-        total += int.tryParse(item['base_price'].toString()) ?? 0;
+      int price = 0;
+      if (_modelData != null && _modelData!['repairPrices'] != null) {
+        final repairPricesList = _modelData!['repairPrices'];
+        if (repairPricesList is List) {
+          final priceItem = repairPricesList.firstWhere(
+            (p) => p['issueName'] == issueName,
+            orElse: () => null,
+          );
+          if (priceItem != null) {
+            price = _parseToInt(priceItem['price']);
+          }
+        }
       }
+      total += price;
     }
     return total;
   }
@@ -1353,23 +1477,41 @@ class _IssueCardState extends State<_IssueCard> {
                 offset: const Offset(0, 8),
               ),
             ],
-            image: DecorationImage(
-              image: AssetImage(widget.data['image']),
-              fit: BoxFit.contain, // Show full 3D icon
-              alignment: const Alignment(
-                0,
-                -0.3,
-              ), // Shift up slightly to leave room for text
-              opacity: 1.0,
-            ),
           ),
           child: Stack(
             children: [
+              // Background Image
+              if (widget.data['imageUrl'] != null && (widget.data['imageUrl'] as String).isNotEmpty)
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: Image.network(
+                      widget.data['imageUrl'],
+                      fit: BoxFit.contain,
+                      alignment: const Alignment(0, -0.3),
+                      errorBuilder: (context, error, stackTrace) => Center(
+                        child: Icon(
+                          widget.data['icon'] ?? LucideIcons.wrench,
+                          size: 48,
+                          color: Colors.grey[400],
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                Center(
+                  child: Icon(
+                    widget.data['icon'] ?? LucideIcons.wrench,
+                    size: 48,
+                    color: Colors.grey[400],
+                  ),
+                ),
               // Gradient overly at bottom to ensure text readability
               Align(
                 alignment: Alignment.bottomCenter,
                 child: Container(
-                  height: 80,
+                  height: 110,
                   decoration: BoxDecoration(
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(18),
@@ -1391,7 +1533,7 @@ class _IssueCardState extends State<_IssueCard> {
               Align(
                 alignment: Alignment.bottomCenter,
                 child: Padding(
-                  padding: const EdgeInsets.all(12.0),
+                  padding: const EdgeInsets.all(10.0),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -1399,15 +1541,40 @@ class _IssueCardState extends State<_IssueCard> {
                         widget.title,
                         style: GoogleFonts.inter(
                           fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                          fontSize: 13,
                           color: AppColors.textHeading,
                         ),
                         textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                      const SizedBox(height: 4),
+                      // Original price (strikethrough) if discount exists
+                      if ((widget.data['discount'] ?? 0) > 0 && 
+                          (widget.data['originalPrice'] ?? 0) > (widget.data['price'] ?? 0))
+                        Text(
+                          '₹${widget.data['originalPrice']}',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: Colors.grey,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                      // Discount percentage
+                      if ((widget.data['discount'] ?? 0) > 0)
+                        Text(
+                          '${widget.data['discount']}% OFF',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: Colors.green,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      // Final price
                       Text(
                         '₹${widget.data['price']}',
                         style: GoogleFonts.inter(
-                          fontSize: 12,
+                          fontSize: 14,
                           color: AppColors.primaryButton,
                           fontWeight: FontWeight.w700,
                         ),

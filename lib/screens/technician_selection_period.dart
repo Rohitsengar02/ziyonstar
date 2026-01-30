@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:ziyonstar/screens/booking_success_screen.dart';
+import 'package:ziyonstar/screens/my_bookings_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme.dart';
 import '../responsive.dart';
@@ -75,7 +75,9 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
     _initAndFetchAddresses();
   }
 
-  String _userId = 'guest_user'; // Will be loaded from SharedPreferences
+  String _userId = 'guest_user';
+  String _userName = 'App User';
+  String _userEmail = '';
 
   Future<void> _initAndFetchAddresses() async {
     // Get or create a persistent user ID
@@ -93,6 +95,8 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
       }
     }
     _userId = storedId!;
+    _userName = prefs.getString('user_name') ?? 'App User';
+    _userEmail = prefs.getString('user_email') ?? 'user_$_userId@ziyon.com';
     _fetchAddresses();
   }
 
@@ -136,6 +140,195 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
     } catch (e) {
       debugPrint('Error fetching technicians: $e');
       if (mounted) setState(() => _isLoadingTechs = false);
+    }
+  }
+
+  bool _isBookingLoading = false;
+
+  void _showNotification() {
+    // Simulate a push notification using a custom top Overlay
+    final overlay = Overlay.of(context);
+    final overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: 50,
+        left: 20,
+        right: 20,
+        child: Material(
+          color: Colors.transparent,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: -100, end: 0),
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.elasticOut,
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(0, value),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          LucideIcons.checkCircle,
+                          color: Color(0xFF10B981),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Booking Confirmed',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: AppColors.textHeading,
+                              ),
+                            ),
+                            Text(
+                              'Your technician is on the way!',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(overlayEntry);
+
+    // Remove notification after 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      overlayEntry.remove();
+    });
+  }
+
+  Future<void> _confirmBooking() async {
+    setState(() => _isBookingLoading = true);
+
+    try {
+      final technician = _apiTechnicians[_selectedTechIndex!];
+
+      // 1. Ensure User Exists/Get Valid DB ID
+      String dbUserId;
+      try {
+        final userData = {
+          'name': _userName,
+          'email': _userEmail,
+          'firebaseUid': _userId,
+          'phone': '',
+        };
+        // Update local address info if available
+        if (_selectedAddress != null && _selectedAddress!['phone'] != null) {
+          userData['phone'] = _selectedAddress!['phone'];
+        }
+
+        final userResult = await _apiService.registerUser(userData);
+        if (userResult != null && userResult['user'] != null) {
+          dbUserId = userResult['user']['_id'];
+        } else {
+          throw 'User registration returned invalid data';
+        }
+      } catch (e) {
+        debugPrint('User Reg Error: $e');
+        // If reg fails, we can't create booking as userId is required Ref
+        throw 'Failed to verify user identity for booking.';
+      }
+
+      // 2. Prepare Data Schema Matching Backend
+      final nameParts = widget.deviceName.split(' ');
+      final brand = nameParts.isNotEmpty ? nameParts[0] : 'Unknown';
+      final model = nameParts.length > 1
+          ? nameParts.sublist(1).join(' ')
+          : 'Unknown';
+
+      final bookingData = {
+        'userId': dbUserId, // Must be valid ObjectId
+        'technicianId': technician['_id'],
+        'deviceBrand': brand,
+        'deviceModel': model,
+        'issues': widget.selectedIssues
+            .map(
+              (i) => {
+                'issueName': i,
+                'price':
+                    0, // Price per issue typically fetched from backend, using 0 as fallback
+              },
+            )
+            .toList(),
+        'totalPrice': widget.totalPrice, // Matches schema 'totalPrice'
+        'scheduledDate': _selectedDate.toIso8601String(), // 'scheduledDate'
+        'timeSlot': _selectedTimeSlot,
+        'addressDetails':
+            _selectedAddress?['fullAddress'] ?? 'No address provided',
+        // Optional: pass address ObjectId if we have it
+        // 'address': _selectedAddress['_id']
+        'paymentStatus': 'Pending',
+        'status': 'Pending_Assignment',
+      };
+
+      if (_selectedAddress != null && _selectedAddress!['_id'] != null) {
+        bookingData['address'] = _selectedAddress!['_id'];
+      }
+
+      // Call API
+      final newBooking = await _apiService.createBooking(bookingData);
+
+      // Show In-App Notification
+      _showNotification();
+
+      await Future.delayed(const Duration(seconds: 1));
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              MyBookingsScreen(initialBookingId: newBooking?['_id']),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Booking failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to book: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(20),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isBookingLoading = false);
     }
   }
 
@@ -382,7 +575,8 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
                         ),
                       ),
                       Text(
-                        _apiTechnicians[_selectedTechIndex!]['name'],
+                        _apiTechnicians[_selectedTechIndex!]['name'] ??
+                            'Technician',
                         style: GoogleFonts.poppins(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -700,7 +894,7 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              tech['specialty'],
+                              (tech['specialty'] ?? 'General Repair') as String,
                               style: GoogleFonts.inter(
                                 color: AppColors.primaryButton,
                                 fontSize: 12,
@@ -721,13 +915,16 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
                   children: [
                     _buildTechStat(
                       LucideIcons.briefcase,
-                      '${tech['jobs']}+ Repairs',
+                      '${tech['jobs'] ?? 0}+ Repairs',
                     ),
                     _buildTechStat(
                       LucideIcons.award,
-                      '${tech['experience']} Exp.',
+                      '${tech['experience'] ?? '1 Year'} Exp.',
                     ),
-                    _buildTechStat(LucideIcons.mapPin, tech['distance']),
+                    _buildTechStat(
+                      LucideIcons.mapPin,
+                      tech['distance']?.toString() ?? 'Unknown location',
+                    ),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -906,27 +1103,7 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
             : [],
       ),
       child: ElevatedButton(
-        onPressed: isReady
-            ? () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => BookingSuccessScreen(
-                      deviceName: widget.deviceName,
-                      technicianName:
-                          _apiTechnicians[_selectedTechIndex!]['name'],
-                      technicianImage:
-                          _apiTechnicians[_selectedTechIndex!]['photoUrl'] ??
-                          '',
-                      selectedIssues: widget.selectedIssues,
-                      timeSlot: _selectedTimeSlot!,
-                      date: _selectedDate,
-                      amount: widget.totalPrice,
-                    ),
-                  ),
-                );
-              }
-            : null,
+        onPressed: isReady && !_isBookingLoading ? _confirmBooking : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
@@ -937,17 +1114,28 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              'Confirm Booking',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: isReady ? Colors.white : Colors.grey[500],
+            if (_isBookingLoading)
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            else ...[
+              Text(
+                'Confirm Booking',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isReady ? Colors.white : Colors.grey[500],
+                ),
               ),
-            ),
-            if (isReady) ...[
-              const SizedBox(width: 12),
-              const Icon(LucideIcons.arrowRight, color: Colors.white),
+              if (isReady) ...[
+                const SizedBox(width: 12),
+                const Icon(LucideIcons.arrowRight, color: Colors.white),
+              ],
             ],
           ],
         ),
@@ -994,27 +1182,7 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
                 : [],
           ),
           child: ElevatedButton(
-            onPressed: isReady
-                ? () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => BookingSuccessScreen(
-                          deviceName: widget.deviceName,
-                          technicianName:
-                              _apiTechnicians[_selectedTechIndex!]['name'],
-                          technicianImage:
-                              _apiTechnicians[_selectedTechIndex!]['photoUrl'] ??
-                              '',
-                          selectedIssues: widget.selectedIssues,
-                          timeSlot: _selectedTimeSlot!,
-                          date: _selectedDate,
-                          amount: widget.totalPrice,
-                        ),
-                      ),
-                    );
-                  }
-                : null,
+            onPressed: isReady && !_isBookingLoading ? _confirmBooking : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.transparent,
               shadowColor: Colors.transparent,
@@ -1026,21 +1194,32 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  'Confirm Booking',
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: isReady ? Colors.white : Colors.grey[400],
+                if (_isBookingLoading)
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                else ...[
+                  Text(
+                    'Confirm Booking',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: isReady ? Colors.white : Colors.grey[400],
+                    ),
                   ),
-                ),
-                if (isReady) ...[
-                  const SizedBox(width: 8),
-                  const Icon(
-                    LucideIcons.checkCircle,
-                    color: Colors.white,
-                    size: 20,
-                  ),
+                  if (isReady) ...[
+                    const SizedBox(width: 8),
+                    const Icon(
+                      LucideIcons.checkCircle,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ],
                 ],
               ],
             ),

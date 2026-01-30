@@ -8,7 +8,7 @@ import 'onboarding_wrapper.dart';
 import 'register_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import '../services/api_service.dart';
+// Duplicate import removed
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -41,7 +41,9 @@ class _LoginScreenState extends State<LoginScreen> {
         if (techData != null && techData['status'] == 'approved') {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const DashboardScreen()),
+            MaterialPageRoute(
+              builder: (context) => DashboardScreen(technicianData: techData),
+            ),
           );
         } else if (techData != null &&
             techData['status'] == 'pending' &&

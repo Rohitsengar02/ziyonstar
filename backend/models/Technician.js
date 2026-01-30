@@ -67,6 +67,11 @@ const technicianSchema = new mongoose.Schema({
     agreedToTerms: { type: Boolean, default: false },
     agreementDate: { type: Date },
 
+    // Ratings
+    averageRating: { type: Number, default: 0 },
+    totalReviews: { type: Number, default: 0 },
+    completedJobs: { type: Number, default: 0 },
+
 }, { timestamps: true });
 
 module.exports = mongoose.model('Technician', technicianSchema);

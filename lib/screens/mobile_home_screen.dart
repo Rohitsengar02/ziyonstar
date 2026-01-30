@@ -3,10 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme.dart';
-import 'profile_page.dart';
+import 'mobile_profile_page.dart';
 import 'mobile_repair_page.dart';
 import '../widgets/mobile_bottom_nav.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
+import 'notifications_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'address_page.dart';
 
 class MobileHomeScreen extends StatefulWidget {
   const MobileHomeScreen({super.key});
@@ -28,6 +33,9 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
   bool _isLoadingIssues = true;
   bool _isLoadingBrands = true;
   bool _isLoadingModels = false;
+  int _notificationCount = 0; // Track unread notifications
+  Map<String, dynamic>? _userData;
+  Map<String, dynamic>? _defaultAddress;
 
   final List<Map<String, String>> _banners = [
     {
@@ -67,6 +75,50 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
     });
     _fetchIssues();
     _fetchBrands();
+    _loadNotificationCount();
+    _fetchUserData();
+  }
+
+  Future<void> _fetchUserData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      String? uid;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        uid = user.uid;
+      } else {
+        uid = prefs.getString('user_uid') ?? prefs.getString('user_id');
+      }
+
+      if (uid != null) {
+        final userData = await _apiService.getUser(uid);
+        if (userData != null) {
+          final addresses = await _apiService.getAddresses(userData['_id']);
+          Map<String, dynamic>? defaultAddr;
+          if (addresses.isNotEmpty) {
+            defaultAddr = addresses.firstWhere(
+              (a) => a['isDefault'] == true,
+              orElse: () => addresses.first,
+            );
+          }
+          if (mounted) {
+            setState(() {
+              _userData = userData;
+              _defaultAddress = defaultAddr;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching user data: $e');
+    }
+  }
+
+  Future<void> _loadNotificationCount() async {
+    final count = await NotificationService.getUnseenCount();
+    if (mounted) {
+      setState(() => _notificationCount = count);
+    }
   }
 
   Future<void> _fetchBrands() async {
@@ -229,53 +281,68 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
     return AppBar(
       backgroundColor: Colors.white,
       elevation: 0,
-      toolbarHeight: 80,
+      toolbarHeight: 90,
       leadingWidth: 0,
       titleSpacing: 0,
-      title: Padding(
+      title: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
-            Expanded(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        LucideIcons.mapPin,
-                        size: 14,
-                        color: AppColors.primaryButton,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'NYC',
+            // Left: Address Pill
+            GestureDetector(
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (c) => const AddressPage()),
+                );
+                if (result == true) {
+                  _fetchUserData();
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      LucideIcons.mapPin,
+                      size: 14,
+                      color: Colors.black,
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        _defaultAddress != null
+                            ? (_defaultAddress!['label'] ?? 'Home')
+                            : 'Home',
                         style: GoogleFonts.inter(
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                           color: Colors.black,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const Icon(
-                        LucideIcons.chevronDown,
-                        size: 12,
-                        color: Colors.black54,
-                      ),
-                    ],
-                  ),
+                    ),
+                    const Icon(
+                      LucideIcons.chevronDown,
+                      size: 12,
+                      color: Colors.black,
+                    ),
+                  ],
                 ),
               ),
             ),
+            const Spacer(),
+            // Center: Title
             Text(
               'ZiyonStar',
               style: GoogleFonts.poppins(
@@ -285,37 +352,68 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                 letterSpacing: -0.5,
               ),
             ),
-            Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+            const Spacer(),
+            // Right: Icons
+            GestureDetector(
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (c) => const NotificationsPage()),
+                );
+                _loadNotificationCount();
+              },
+              child: Stack(
+                clipBehavior: Clip.none,
                 children: [
-                  IconButton(
-                    icon: const Icon(
-                      LucideIcons.bell,
-                      color: Colors.black,
-                      size: 24,
-                    ),
-                    onPressed: () {},
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  const SizedBox(width: 16),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (c) => const ProfilePage()),
-                      );
-                    },
-                    child: const CircleAvatar(
-                      radius: 16,
-                      backgroundColor: Colors.grey,
-                      backgroundImage: AssetImage(
-                        'assets/images/tech_avatar_1.png',
+                  const Icon(LucideIcons.bell, color: Colors.black, size: 24),
+                  if (_notificationCount > 0)
+                    Positioned(
+                      right: -2,
+                      top: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 12,
+                          minHeight: 12,
+                        ),
+                        child: Text(
+                          _notificationCount > 9
+                              ? '9+'
+                              : _notificationCount.toString(),
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 7,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ),
-                  ),
                 ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (c) => const MobileProfilePage()),
+                ).then((_) => _fetchUserData());
+              },
+              child: CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.grey[200],
+                backgroundImage:
+                    _userData != null &&
+                        _userData!['photoUrl'] != null &&
+                        _userData!['photoUrl'].toString().isNotEmpty
+                    ? NetworkImage(_userData!['photoUrl'])
+                    : const AssetImage('assets/images/tech_avatar_1.png')
+                          as ImageProvider,
               ),
             ),
           ],

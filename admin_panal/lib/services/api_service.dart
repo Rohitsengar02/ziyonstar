@@ -429,4 +429,187 @@ class ApiService {
     if (response.statusCode != 200)
       throw Exception('Failed to update request status');
   }
+
+  // Dispute APIs
+  Future<List<dynamic>> getDisputes() async {
+    final response = await http.get(Uri.parse('$baseUrl/disputes'));
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed to load disputes');
+  }
+
+  Future<void> updateDisputeStatus(
+    String id,
+    String status, {
+    String? adminNotes,
+  }) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/disputes/$id/status'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'status': status,
+        if (adminNotes != null) 'adminNotes': adminNotes,
+      }),
+    );
+    if (response.statusCode != 200)
+      throw Exception('Failed to update dispute status');
+  }
+
+  // Admin Notification APIs
+  Future<List<dynamic>> getAdminNotifications() async {
+    final response = await http.get(Uri.parse('$baseUrl/admin-notifications'));
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed to load admin notifications');
+  }
+
+  Future<void> markAdminNotificationAsSeen(String id) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/admin-notifications/$id/seen'),
+    );
+    if (response.statusCode != 200)
+      throw Exception('Failed to mark notification as seen');
+  }
+
+  // Booking/Order APIs
+  Future<List<dynamic>> getBookings() async {
+    final response = await http.get(Uri.parse('$baseUrl/bookings'));
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed to load bookings');
+  }
+
+  Future<Map<String, dynamic>> getBooking(String id) async {
+    final response = await http.get(Uri.parse('$baseUrl/bookings/$id'));
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed to load booking details');
+  }
+
+  Future<void> updateBookingStatus(String id, String status) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/bookings/$id/status'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'status': status}),
+    );
+    if (response.statusCode != 200)
+      throw Exception('Failed to update booking status');
+  }
+
+  // Analytics APIs
+  Future<Map<String, dynamic>> getAnalytics() async {
+    final response = await http.get(Uri.parse('$baseUrl/analytics'));
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed to load analytics');
+  }
+
+  // Users API
+  Future<List<dynamic>> getUsers() async {
+    final response = await http.get(Uri.parse('$baseUrl/users'));
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed to load users');
+  }
+
+  // Support/Contact APIs
+  Future<List<dynamic>> getContacts() async {
+    final response = await http.get(Uri.parse('$baseUrl/contact'));
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed to load contact messages');
+  }
+
+  Future<void> updateContactReply(
+    String id,
+    String reply,
+    String status,
+  ) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/contact/$id'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'adminReply': reply, 'status': status}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update contact message');
+    }
+  }
+
+  // Settings/Company Info APIs
+  Future<Map<String, dynamic>> getCompanyInfo() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/settings/contact-info'),
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed to load company info');
+  }
+
+  Future<void> updateCompanyInfo(Map<String, dynamic> data) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/settings/contact-info'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(data),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update company info');
+    }
+  }
+
+  // ===== ADMIN PROFILE APIs =====
+  Future<Map<String, dynamic>> getAdminProfile(String id) async {
+    final response = await http.get(Uri.parse('$baseUrl/admin/$id'));
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Failed to load profile');
+  }
+
+  Future<Map<String, dynamic>> updateAdminProfile(
+    String id,
+    String name,
+    XFile? imageFile,
+  ) async {
+    var request = http.MultipartRequest('PUT', Uri.parse('$baseUrl/admin/$id'));
+
+    request.fields['name'] = name;
+
+    if (imageFile != null) {
+      final bytes = await imageFile.readAsBytes();
+      final mimeTypeData = lookupMimeType(
+        imageFile.path,
+        headerBytes: bytes,
+      )?.split('/');
+
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'image',
+          bytes,
+          filename: imageFile.name,
+          contentType: mimeTypeData != null
+              ? MediaType(mimeTypeData[0], mimeTypeData[1])
+              : null,
+        ),
+      );
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to update profile: ${response.body}');
+    }
+  }
+
+  Future<void> changeAdminPassword(
+    String id,
+    String currentPassword,
+    String newPassword,
+  ) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/admin/$id/password'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['msg'] ?? 'Failed to update password');
+    }
+  }
 }

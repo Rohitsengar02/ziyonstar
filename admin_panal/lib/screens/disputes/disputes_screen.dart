@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'dispute_detail_screen.dart';
 import '../../theme/app_colors.dart';
+import '../../services/api_service.dart';
 
 class DisputesScreen extends StatefulWidget {
   const DisputesScreen({super.key});
@@ -12,38 +13,27 @@ class DisputesScreen extends StatefulWidget {
 }
 
 class _DisputesScreenState extends State<DisputesScreen> {
-  final List<Map<String, dynamic>> _disputes = [
-    {
-      'id': '#DISP-102',
-      'order_id': '#ORD-8750',
-      'user': 'Karan Mehta',
-      'tech': 'Rahul Kumar',
-      'reason': 'Screen flickering after repair',
-      'status': 'Open',
-      'priority': 'High',
-      'date': '2 hours ago',
-    },
-    {
-      'id': '#DISP-98',
-      'order_id': '#ORD-8690',
-      'user': 'Ananya Singh',
-      'tech': 'Arjun Malhotra',
-      'reason': 'Excessive delay in return',
-      'status': 'Under Review',
-      'priority': 'Medium',
-      'date': 'Yesterday',
-    },
-    {
-      'id': '#DISP-95',
-      'order_id': '#ORD-8600',
-      'user': 'Mohit Jha',
-      'tech': 'Suresh Raina',
-      'reason': 'Rude behavior by technician',
-      'status': 'Resolved',
-      'priority': 'Low',
-      'date': '3 days ago',
-    },
-  ];
+  List<dynamic> _disputes = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDisputes();
+  }
+
+  Future<void> _fetchDisputes() async {
+    try {
+      final disputes = await ApiService().getDisputes();
+      setState(() {
+        _disputes = disputes;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error fetching disputes: $e');
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,23 +48,60 @@ class _DisputesScreenState extends State<DisputesScreen> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(LucideIcons.refreshCw),
+            onPressed: () {
+              setState(() => _isLoading = true);
+              _fetchDisputes();
+            },
+          ),
+        ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(20),
-        itemCount: _disputes.length,
-        itemBuilder: (context, index) {
-          return _buildDisputeCard(_disputes[index]);
-        },
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _disputes.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    LucideIcons.alertCircle,
+                    size: 64,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No disputes found',
+                    style: GoogleFonts.poppins(color: Colors.grey),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(20),
+              itemCount: _disputes.length,
+              itemBuilder: (context, index) {
+                return _buildDisputeCard(_disputes[index]);
+              },
+            ),
     );
   }
 
-  Widget _buildDisputeCard(Map<String, dynamic> dispute) {
-    Color priorityColor = dispute['priority'] == 'High'
-        ? Colors.red
-        : dispute['priority'] == 'Medium'
-        ? Colors.orange
-        : Colors.blue;
+  Widget _buildDisputeCard(dynamic dispute) {
+    String status = dispute['status'] ?? 'Pending';
+    String reason = dispute['reason'] ?? 'N/A';
+    String id = (dispute['_id'] as String)
+        .substring(dispute['_id'].length - 8)
+        .toUpperCase();
+    String bookingId = (dispute['bookingId']?['_id'] ?? 'N/A').toString();
+    if (bookingId.length > 10)
+      bookingId = bookingId.substring(bookingId.length - 8).toUpperCase();
+
+    String userName = dispute['userId']?['name'] ?? 'User';
+    String techName = dispute['technicianId']?['name'] ?? 'Not Assigned';
+
+    Color priorityColor = Colors.orange; // Default
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -91,7 +118,7 @@ class _DisputesScreenState extends State<DisputesScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                dispute['id'],
+                '#DISP-$id',
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
@@ -107,7 +134,7 @@ class _DisputesScreenState extends State<DisputesScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '${dispute['priority']} Priority',
+                  status,
                   style: GoogleFonts.inter(
                     fontSize: 10,
                     color: priorityColor,
@@ -119,7 +146,7 @@ class _DisputesScreenState extends State<DisputesScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            dispute['reason'],
+            reason,
             style: GoogleFonts.poppins(
               fontWeight: FontWeight.bold,
               fontSize: 16,
@@ -127,15 +154,15 @@ class _DisputesScreenState extends State<DisputesScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Order ID: ${dispute['order_id']}',
+            'Booking ID: #BK-$bookingId',
             style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
           ),
           const Divider(height: 24),
           Row(
             children: [
-              _buildActorInfo('User', dispute['user'], LucideIcons.user),
+              _buildActorInfo('User', userName, LucideIcons.user),
               const Spacer(),
-              _buildActorInfo('Tech', dispute['tech'], LucideIcons.hardHat),
+              _buildActorInfo('Tech', techName, LucideIcons.hardHat),
             ],
           ),
           const SizedBox(height: 16),
@@ -143,20 +170,24 @@ class _DisputesScreenState extends State<DisputesScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                dispute['status'],
+                status,
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: Colors.blue,
+                  color: status == 'Resolved' ? Colors.green : Colors.blue,
                 ),
               ),
               ElevatedButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => DisputeDetailScreen(dispute: dispute),
-                  ),
-                ),
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          DisputeDetailScreen(dispute: dispute),
+                    ),
+                  );
+                  _fetchDisputes();
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.black,
                   padding: const EdgeInsets.symmetric(
