@@ -1,5 +1,4 @@
 # Ignore build script - we're deploying pre-built files
-build.sh
 flutter/
 .dart_tool/
 .flutter-plugins
