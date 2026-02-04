@@ -22,16 +22,13 @@ export PATH="$PATH:`pwd`/flutter/bin"
 echo "🔧 Flutter Configuration..."
 flutter config --enable-web --no-analytics
 
-echo "📋 Flutter Doctor..."
-flutter doctor
-
-echo "📦 Installing Dependencies..."
+echo " Installing Dependencies..."
 flutter pub get
 
 echo "🧹 Cleaning Previous Builds..."
 flutter clean
 
 echo "🏗️  Building Web App..."
-flutter build web --release --web-renderer canvaskit
+flutter build web --release
 
 echo "✅ Build Complete!"
