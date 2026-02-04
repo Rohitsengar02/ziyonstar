@@ -1,14 +1,37 @@
 #!/bin/bash
 
-echo "Downloading Flutter..."
+set -e  # Exit on error
+
+echo "🚀 Starting Flutter Web Build..."
+
+# Download Flutter SDK
+echo "📦 Downloading Flutter SDK..."
 if [ -d "flutter" ]; then
+  echo "✅ Flutter directory exists, updating..."
   cd flutter
-  git pull
+  git pull origin stable
   cd ..
 else
+  echo "⬇️  Cloning Flutter SDK (stable branch)..."
   git clone https://github.com/flutter/flutter.git -b stable --depth 1
 fi
 
-echo "Building Web App..."
-./flutter/bin/flutter config --enable-web
-./flutter/bin/flutter build web --release
+# Set Flutter path
+export PATH="$PATH:`pwd`/flutter/bin"
+
+echo "🔧 Flutter Configuration..."
+flutter config --enable-web --no-analytics
+
+echo "📋 Flutter Doctor..."
+flutter doctor
+
+echo "📦 Installing Dependencies..."
+flutter pub get
+
+echo "🧹 Cleaning Previous Builds..."
+flutter clean
+
+echo "🏗️  Building Web App..."
+flutter build web --release --web-renderer canvaskit
+
+echo "✅ Build Complete!"
