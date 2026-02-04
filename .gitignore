@@ -30,8 +30,9 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-# Commented out to commit web build for Vercel deployment
-# /build/
+# Exclude all build files except build/web for Vercel
+/build/*
+!/build/web/
 /coverage/
 
 # Symbolication related
