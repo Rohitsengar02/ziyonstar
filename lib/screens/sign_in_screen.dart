@@ -170,213 +170,269 @@ class _SignInScreenState extends State<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isDesktop = size.width > 900;
+
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 40),
-              // Logo
-              Center(
-                child: Container(
-                  height: 100,
-                  width: 100,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
+      body: isDesktop
+          ? Row(
+              children: [
+                // Left Side - Hero Image (Desktop only)
+                Expanded(
+                  flex: 1,
+                  child: Container(
                     color: Colors.blue.shade50,
-                  ),
-                  child: const Icon(
-                    LucideIcons.smartphone,
-                    size: 50,
-                    color: Colors.blue,
-                  ),
-                ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
-              ),
-
-              const SizedBox(height: 40),
-
-              Text(
-                'Welcome Back',
-                style: GoogleFonts.outfit(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-                textAlign: TextAlign.center,
-              ).animate().fadeIn().slideY(begin: 0.3),
-
-              const SizedBox(height: 12),
-
-              Text(
-                'Sign in to continue using ZiyonStar',
-                style: GoogleFonts.inter(fontSize: 16, color: Colors.grey),
-                textAlign: TextAlign.center,
-              ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.3),
-
-              const SizedBox(height: 40),
-
-              // Fields
-              _buildTextField(
-                label: 'Email',
-                controller: _emailController,
-                icon: LucideIcons.mail,
-                type: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                label: 'Password',
-                controller: _passwordController,
-                icon: LucideIcons.lock,
-                isPassword: true,
-              ),
-
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {},
-                  child: Text(
-                    'Forgot Password?',
-                    style: GoogleFonts.inter(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Sign In Button
-              ElevatedButton(
-                onPressed: (_isSigningIn || _isGoogleLoading)
-                    ? null
-                    : _handleEmailSignIn,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFACC15), // Yellow
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                child: _isSigningIn
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(
-                        'Sign In',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-              ).animate().fadeIn(delay: 400.ms),
-
-              const SizedBox(height: 24),
-
-              Row(
-                children: [
-                  const Expanded(child: Divider()),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'OR',
-                      style: GoogleFonts.inter(
-                        color: Colors.grey,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                  const Expanded(child: Divider()),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // Google Button
-              ElevatedButton(
-                onPressed: (_isSigningIn || _isGoogleLoading)
-                    ? null
-                    : _handleGoogleSignIn,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black87,
-                  elevation: 2,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.grey.shade200),
-                  ),
-                ),
-                child: _isGoogleLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Row(
+                    child: Center(
+                      child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Image.asset(
-                            'assets/images/brand_google.png',
-                            height: 24,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(
-                                  LucideIcons.chrome,
-                                  color: Colors.blue,
-                                  size: 24,
-                                ),
+                            'assets/images/hero_user.png', // Ensure this asset exists or use a network placeholder
+                            height: 400,
+                            errorBuilder: (c, e, s) => Icon(
+                              LucideIcons.smartphone,
+                              size: 100,
+                              color: Colors.blue,
+                            ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(height: 32),
                           Text(
-                            'Sign in with Google',
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                            'Welcome Back!',
+                            style: GoogleFonts.outfit(
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade900,
                             ),
                           ),
                         ],
                       ),
-              ).animate().fadeIn(delay: 500.ms),
-
-              const SizedBox(height: 40),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Don\'t have an account? ',
-                    style: GoogleFonts.inter(color: Colors.grey[600]),
+                    ),
                   ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (c) => const SignUpScreen()),
-                      );
-                    },
-                    child: Text(
-                      'Sign Up',
-                      style: GoogleFonts.inter(
-                        color: Colors.blue[600],
-                        fontWeight: FontWeight.bold,
+                ),
+                // Right Side - Form
+                Expanded(
+                  flex: 1,
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 450),
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(40),
+                        child: _buildSignInForm(context),
                       ),
                     ),
                   ),
-                ],
+                ),
+              ],
+            )
+          : SafeArea(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 450),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24.0),
+                    child: _buildSignInForm(context),
+                  ),
+                ),
               ),
-              const SizedBox(height: 20),
-            ],
+            ),
+    );
+  }
+
+  Widget _buildSignInForm(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Logo (Mobile usually, or small on desktop form side?)
+        // Let's keep it clean
+        Center(
+          child: Container(
+            height: 80,
+            width: 80,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.blue.shade50,
+            ),
+            child: const Icon(
+              LucideIcons.smartphone,
+              size: 40,
+              color: Colors.blue,
+            ),
+          ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
+        ),
+
+        const SizedBox(height: 32),
+
+        Text(
+          'Sign In',
+          style: GoogleFonts.outfit(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+          textAlign: TextAlign.center,
+        ).animate().fadeIn().slideY(begin: 0.3),
+
+        const SizedBox(height: 8),
+
+        Text(
+          'Welcome back to ZiyonStar',
+          style: GoogleFonts.inter(fontSize: 16, color: Colors.grey),
+          textAlign: TextAlign.center,
+        ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.3),
+
+        const SizedBox(height: 40),
+
+        // Fields
+        _buildTextField(
+          label: 'Email',
+          controller: _emailController,
+          icon: LucideIcons.mail,
+          type: TextInputType.emailAddress,
+        ),
+        const SizedBox(height: 16),
+        _buildTextField(
+          label: 'Password',
+          controller: _passwordController,
+          icon: LucideIcons.lock,
+          isPassword: true,
+        ),
+
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: () {},
+            child: Text(
+              'Forgot Password?',
+              style: GoogleFonts.inter(color: Colors.grey[600], fontSize: 12),
+            ),
           ),
         ),
-      ),
+
+        const SizedBox(height: 20),
+
+        // Sign In Button
+        ElevatedButton(
+          onPressed: (_isSigningIn || _isGoogleLoading)
+              ? null
+              : _handleEmailSignIn,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFFACC15), // Yellow
+            foregroundColor: Colors.black,
+            padding: const EdgeInsets.symmetric(vertical: 20), // Taller button
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 0,
+          ),
+          child: _isSigningIn
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(
+                  'Sign In',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+        ).animate().fadeIn(delay: 400.ms),
+
+        const SizedBox(height: 24),
+
+        Row(
+          children: [
+            const Expanded(child: Divider()),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'OR',
+                style: GoogleFonts.inter(color: Colors.grey, fontSize: 12),
+              ),
+            ),
+            const Expanded(child: Divider()),
+          ],
+        ),
+
+        const SizedBox(height: 24),
+
+        // Google Button
+        ElevatedButton(
+          onPressed: (_isSigningIn || _isGoogleLoading)
+              ? null
+              : _handleGoogleSignIn,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black87,
+            elevation: 1,
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.grey.shade200),
+            ),
+          ),
+          child: _isGoogleLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      'assets/images/brand_google.png',
+                      height: 24,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        LucideIcons.chrome,
+                        color: Colors.blue,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Sign in with Google',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+        ).animate().fadeIn(delay: 500.ms),
+
+        const SizedBox(height: 40),
+
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Don\'t have an account? ',
+              style: GoogleFonts.inter(color: Colors.grey[600]),
+            ),
+            GestureDetector(
+              onTap: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (c) => const SignUpScreen()),
+                );
+              },
+              child: Text(
+                'Sign Up',
+                style: GoogleFonts.inter(
+                  color: Colors.blue[600],
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+      ],
     );
   }
 

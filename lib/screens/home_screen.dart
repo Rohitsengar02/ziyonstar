@@ -147,7 +147,9 @@ class _HeroSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isDesktop = ResponsiveLayout.isDesktop(context);
     final screenWidth = MediaQuery.of(context).size.width;
-    final double horizontalPadding = isDesktop ? (screenWidth - 1400 > 0 ? (screenWidth - 1400) / 2 : 20) : 20;
+    final double horizontalPadding = isDesktop
+        ? (screenWidth - 1400 > 0 ? (screenWidth - 1400) / 2 : 20)
+        : 20;
 
     return Container(
       decoration: BoxDecoration(
@@ -263,8 +265,8 @@ class _TextContent extends StatelessWidget {
                     padding: EdgeInsets.only(right: 12),
                     child: CircleAvatar(
                       radius: 24,
-                      backgroundImage: NetworkImage(
-                        'https://i.pravatar.cc/150?u=a042581f4e29026024d',
+                      backgroundImage: AssetImage(
+                        'assets/images/tech_avatar_1.png',
                       ),
                     ),
                   ),
@@ -312,7 +314,12 @@ class _TextContent extends StatelessWidget {
               : MainAxisAlignment.center,
           children: [
             ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const RepairPage()),
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryButton,
                 padding: EdgeInsets.symmetric(
@@ -337,7 +344,12 @@ class _TextContent extends StatelessWidget {
             ),
             SizedBox(width: isDesktop ? 32 : 16),
             TextButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const RepairPage()),
+                );
+              },
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -498,10 +510,20 @@ class _VisualContent extends StatelessWidget {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: Image.network(
-                              'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=100',
+                              'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=100', // Unsplash usually works fine, if inconsistent we can change later
                               width: 40,
                               height: 40,
                               fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey[200],
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    size: 20,
+                                    color: Colors.grey,
+                                  ),
+                                );
+                              },
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -718,7 +740,9 @@ class _HorizontalSearchSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isDesktop = ResponsiveLayout.isDesktop(context);
     final screenWidth = MediaQuery.of(context).size.width;
-    final double horizontalPadding = isDesktop ? (screenWidth - 1400 > 0 ? (screenWidth - 1400) / 2 : 20) : 20;
+    final double horizontalPadding = isDesktop
+        ? (screenWidth - 1400 > 0 ? (screenWidth - 1400) / 2 : 20)
+        : 20;
 
     return Container(
       color: Colors.white,
@@ -745,7 +769,9 @@ class _StatsBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isDesktop = ResponsiveLayout.isDesktop(context);
     final screenWidth = MediaQuery.of(context).size.width;
-    final double padding = isDesktop ? (screenWidth - 1400 > 0 ? (screenWidth - 1400) / 2 : 20) : 20;
+    final double padding = isDesktop
+        ? (screenWidth - 1400 > 0 ? (screenWidth - 1400) / 2 : 20)
+        : 20;
 
     final stats = [
       {
@@ -1016,7 +1042,10 @@ class _RepairCategoriesSectionState extends State<_RepairCategoriesSection> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Professional repairs for every issue',
-                    style: GoogleFonts.inter(fontSize: 16, color: AppColors.textBody),
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      color: AppColors.textBody,
+                    ),
                   ),
                 ),
               ),
@@ -1049,23 +1078,27 @@ class _RepairCategoriesSectionState extends State<_RepairCategoriesSection> {
                             physics: const BouncingScrollPhysics(),
                             itemCount: 1000000,
                             itemBuilder: (context, index) {
-                          final item =
-                              _apiCategories[index % _apiCategories.length];
-                          final cat = {
-                            'icon': _getIcon(item['icon']),
-                            'label': item['name'] ?? '',
-                            'desc': item['category'] ?? '',
-                            'color': _getColor(index % _apiCategories.length),
-                          };
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: _buildCategoryCard(cat),
-                          );
-                        },
+                              final item =
+                                  _apiCategories[index % _apiCategories.length];
+                              final cat = {
+                                'icon': _getIcon(item['icon']),
+                                'label': item['name'] ?? '',
+                                'desc': item['category'] ?? '',
+                                'color': _getColor(
+                                  index % _apiCategories.length,
+                                ),
+                              };
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
+                                child: _buildCategoryCard(cat),
+                              );
+                            },
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
             ],
           ),
         ),
@@ -1205,8 +1238,80 @@ class _RepairCategoriesSectionState extends State<_RepairCategoriesSection> {
   }
 }
 
-class _InstantQuoteSection extends StatelessWidget {
-  const _InstantQuoteSection();
+class _InstantQuoteSection extends StatefulWidget {
+  const _InstantQuoteSection({super.key});
+
+  @override
+  State<_InstantQuoteSection> createState() => _InstantQuoteSectionState();
+}
+
+class _InstantQuoteSectionState extends State<_InstantQuoteSection> {
+  final ApiService _apiService = ApiService();
+  String? selectedBrand;
+  String? selectedModel;
+  dynamic selectedModelData;
+  String? selectedIssue;
+
+  List<dynamic> _apiBrands = [];
+  List<dynamic> _apiModels = [];
+  List<dynamic> _apiIssues = [];
+
+  bool _isLoadingBrands = true;
+  bool _isLoadingModels = false;
+  bool _isLoadingIssues = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBrands();
+    _fetchIssues();
+  }
+
+  Future<void> _fetchBrands() async {
+    try {
+      final brands = await _apiService.getBrands();
+      if (mounted) {
+        setState(() {
+          _apiBrands = brands;
+          _isLoadingBrands = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching brands: $e');
+      if (mounted) setState(() => _isLoadingBrands = false);
+    }
+  }
+
+  Future<void> _fetchModels(String brandId) async {
+    setState(() => _isLoadingModels = true);
+    try {
+      final models = await _apiService.getModels(brandId);
+      if (mounted) {
+        setState(() {
+          _apiModels = models;
+          _isLoadingModels = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching models: $e');
+      if (mounted) setState(() => _isLoadingModels = false);
+    }
+  }
+
+  Future<void> _fetchIssues() async {
+    try {
+      final issues = await _apiService.getIssues();
+      if (mounted) {
+        setState(() {
+          _apiIssues = issues;
+          _isLoadingIssues = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching issues: $e');
+      if (mounted) setState(() => _isLoadingIssues = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1218,9 +1323,9 @@ class _InstantQuoteSection extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF667eea).withAlpha(15),
-            Color(0xFF764ba2).withAlpha(15),
-            Color(0xFF667eea).withAlpha(10),
+            const Color(0xFF667eea).withAlpha(15),
+            const Color(0xFF764ba2).withAlpha(15),
+            const Color(0xFF667eea).withAlpha(10),
           ],
         ),
       ),
@@ -1242,14 +1347,13 @@ class _InstantQuoteSection extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             children: [
-              // Left side - Beautiful gradient card with content
               Expanded(
                 flex: 5,
                 child: Container(
                   height: 650,
                   padding: const EdgeInsets.all(50),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
+                    gradient: const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [Color(0xFF667eea), Color(0xFF764ba2)],
@@ -1257,7 +1361,7 @@ class _InstantQuoteSection extends StatelessWidget {
                     borderRadius: BorderRadius.circular(32),
                     boxShadow: [
                       BoxShadow(
-                        color: Color(0xFF667eea).withAlpha(60),
+                        color: const Color(0xFF667eea).withAlpha(60),
                         blurRadius: 40,
                         offset: const Offset(-10, 20),
                       ),
@@ -1310,7 +1414,6 @@ class _InstantQuoteSection extends StatelessWidget {
                           ),
                         ],
                       ),
-                      // Stats
                       Column(
                         children: [
                           Row(
@@ -1331,7 +1434,7 @@ class _InstantQuoteSection extends StatelessWidget {
                             ),
                             child: Row(
                               children: [
-                                Icon(
+                                const Icon(
                                   LucideIcons.checkCircle,
                                   color: Colors.white,
                                   size: 24,
@@ -1357,7 +1460,6 @@ class _InstantQuoteSection extends StatelessWidget {
                 ).animate().fadeIn(delay: 300.ms).slideX(begin: -0.2, end: 0),
               ),
               const SizedBox(width: 40),
-              // Right side - Form
               Expanded(flex: 5, child: _buildForm(context)),
             ],
           ),
@@ -1375,7 +1477,10 @@ class _InstantQuoteSection extends StatelessWidget {
           child: Column(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFF667eea), Color(0xFF764ba2)],
@@ -1454,7 +1559,7 @@ class _InstantQuoteSection extends StatelessWidget {
         borderRadius: BorderRadius.circular(isDesktop ? 32 : 24),
         boxShadow: [
           BoxShadow(
-            color: Color(0xFF667eea).withAlpha(40),
+            color: const Color(0xFF667eea).withAlpha(40),
             blurRadius: 40,
             offset: const Offset(0, 20),
           ),
@@ -1467,60 +1572,106 @@ class _InstantQuoteSection extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _buildInput(
-            'Device Model',
-            'e.g. iPhone 13 Pro',
+          // Brand Dropdown
+          _buildDynamicDropdown(
+            'Select Brand',
+            _apiBrands.map((b) => b['title'] as String).toList(),
             LucideIcons.smartphone,
-            Color(0xFF667eea),
+            const Color(0xFF667eea),
+            value: selectedBrand,
+            isLoading: _isLoadingBrands,
+            onChanged: (val) {
+              if (val != null) {
+                final brand = _apiBrands.firstWhere((b) => b['title'] == val);
+                setState(() {
+                  selectedBrand = val;
+                  selectedModel = null;
+                  selectedModelData = null;
+                  _apiModels = [];
+                });
+                _fetchModels(brand['_id']);
+              }
+            },
           ),
           const SizedBox(height: 24),
-          _buildInput(
-            'Issue Description',
-            'e.g. Cracked Screen',
+
+          // Model Dropdown
+          _buildDynamicDropdown(
+            'Select Model',
+            _apiModels.map((m) => m['name'] as String).toList(),
+            LucideIcons.tablet,
+            const Color(0xFFf093fb),
+            value: selectedModel,
+            isLoading: _isLoadingModels,
+            hint: selectedBrand == null ? 'Select brand first' : 'Choose model',
+            onChanged: selectedBrand == null
+                ? null
+                : (val) {
+                    if (val != null) {
+                      final model = _apiModels.firstWhere(
+                        (m) => m['name'] == val,
+                      );
+                      setState(() {
+                        selectedModel = val;
+                        selectedModelData = model;
+                      });
+                    }
+                  },
+          ),
+          const SizedBox(height: 24),
+
+          // Issue Dropdown
+          _buildDynamicDropdown(
+            'Select Issue',
+            _apiIssues
+                .map((i) => (i['name'] ?? i['category']) as String)
+                .toList(),
             LucideIcons.alertCircle,
-            Color(0xFFf093fb),
+            const Color(0xFF43e97b),
+            value: selectedIssue,
+            isLoading: _isLoadingIssues,
+            onChanged: (val) {
+              setState(() => selectedIssue = val);
+            },
           ),
-          const SizedBox(height: 24),
-          _buildInput(
-            'City / Zip Code',
-            'e.g. New York, 10001',
-            LucideIcons.mapPin,
-            Color(0xFF43e97b),
-          ),
-          const SizedBox(height: 24),
-          _buildDropdown(
-            'Service Type',
-            ['Pickup Service', 'Walk-in'],
-            LucideIcons.truck,
-            Color(0xFF4facfe),
-          ),
+
           const SizedBox(height: 40),
           Container(
             width: double.infinity,
             height: 64,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
+              gradient: const LinearGradient(
                 colors: [Color(0xFF667eea), Color(0xFF764ba2)],
               ),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Color(0xFF667eea).withAlpha(100),
+                  color: const Color(0xFF667eea).withAlpha(100),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
               ],
             ),
             child: ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const RepairPage()),
-                );
-              },
+              onPressed: (selectedBrand != null && selectedModel != null)
+                  ? () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RepairPage(
+                            deviceBrand: selectedBrand!,
+                            deviceModel: selectedModel!,
+                            modelData: selectedModelData,
+                            initialIssue: selectedIssue,
+                          ),
+                        ),
+                      );
+                    }
+                  : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,
+                disabledBackgroundColor: Colors.grey.withAlpha(50),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -1528,7 +1679,7 @@ class _InstantQuoteSection extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(LucideIcons.zap, size: 24, color: Colors.white),
+                  const Icon(LucideIcons.zap, size: 24, color: Colors.white),
                   const SizedBox(width: 12),
                   Text(
                     'Get Instant Quote',
@@ -1547,7 +1698,11 @@ class _InstantQuoteSection extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(LucideIcons.shieldCheck, size: 16, color: Color(0xFF10B981)),
+              const Icon(
+                LucideIcons.shieldCheck,
+                size: 16,
+                color: Color(0xFF10B981),
+              ),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
@@ -1566,12 +1721,16 @@ class _InstantQuoteSection extends StatelessWidget {
     ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.2, end: 0);
   }
 
-  Widget _buildInput(
+  Widget _buildDynamicDropdown(
     String label,
-    String hint,
+    List<String> items,
     IconData icon,
-    Color accentColor,
-  ) {
+    Color accentColor, {
+    String? value,
+    bool isLoading = false,
+    String? hint,
+    void Function(String?)? onChanged,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1594,33 +1753,48 @@ class _InstantQuoteSection extends StatelessWidget {
                 color: AppColors.textHeading,
               ),
             ),
+            if (isLoading) ...[
+              const SizedBox(width: 10),
+              const SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ],
           ],
         ),
         const SizedBox(height: 12),
-        TextField(
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: GoogleFonts.inter(
-              color: Colors.grey.withAlpha(150),
-              fontSize: 15,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.grey.withAlpha(50)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.grey.withAlpha(50)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: accentColor, width: 2),
-            ),
-            filled: true,
-            fillColor: const Color(0xFFF9FAFB),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 18,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.withAlpha(50)),
+            color: const Color(0xFFF9FAFB),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              isExpanded: true,
+              value: value,
+              hint: Text(
+                hint ?? 'Select option',
+                style: GoogleFonts.inter(
+                  color: Colors.grey.withAlpha(150),
+                  fontSize: 15,
+                ),
+              ),
+              items: items.map((String item) {
+                return DropdownMenuItem<String>(
+                  value: item,
+                  child: Text(
+                    item,
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      color: AppColors.textHeading,
+                    ),
+                  ),
+                );
+              }).toList(),
+              onChanged: onChanged,
             ),
           ),
         ),
@@ -1704,49 +1878,37 @@ class _CarouselSectionState extends State<_CarouselSection> {
   final ScrollController _scrollController = ScrollController();
   Timer? _timer;
 
-  final List<Map<String, String>> _items = [
-    {
-      'image': 'assets/images/card_1.png',
-      'title': 'Screen Replacement',
-      'subtitle': 'Cracked screen repair from \$49',
-    },
-    {
-      'image': 'assets/images/card_2.png',
-      'title': 'Battery Replacement',
-      'subtitle': 'New battery installation from \$29',
-    },
-    {
-      'image': 'assets/images/card_3.png',
-      'title': 'Water Damage',
-      'subtitle': 'Diagnostic & cleaning from \$0',
-    },
-    {
-      'image': 'assets/images/card_4.png',
-      'title': 'Charging Port',
-      'subtitle': 'Fix charging issues from \$35',
-    },
-    {
-      'image': 'assets/images/card_5.png',
-      'title': 'Camera Repair',
-      'subtitle': 'Lens & sensor fix from \$59',
-    },
-    {
-      'image': 'assets/images/card_6.png',
-      'title': 'Software Issues',
-      'subtitle': 'System recovery from \$25',
-    },
-  ];
+  final ApiService _apiService = ApiService();
+  List<dynamic> _items = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _fetchIssues();
     WidgetsBinding.instance.addPostFrameCallback((_) => _startAutoScroll());
+  }
+
+  Future<void> _fetchIssues() async {
+    try {
+      final issues = await _apiService.getIssues();
+      if (mounted) {
+        setState(() {
+          _items = issues;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching issues for carousel: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   void _startAutoScroll() {
     _timer = Timer.periodic(const Duration(milliseconds: 20), (timer) {
       if (!_scrollController.hasClients) return;
-      double newOffset = _scrollController.offset + 1.0;
+      double newOffset =
+          _scrollController.offset + 1.5; // Slightly faster scroll for issues
       _scrollController.jumpTo(newOffset);
     });
   }
@@ -1784,19 +1946,24 @@ class _CarouselSectionState extends State<_CarouselSection> {
               ),
               const SizedBox(height: 40),
               Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  scrollDirection: Axis.horizontal,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: 1000000,
-                  itemBuilder: (context, index) {
-                    final item = _items[index % _items.length];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: _carouselCard(item),
-                    );
-                  },
-                ),
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : ListView.builder(
+                        controller: _scrollController,
+                        scrollDirection: Axis.horizontal,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount:
+                            _items.length *
+                            100, // Reduced loop count slightly but enough for infinite feel
+                        itemBuilder: (context, index) {
+                          if (_items.isEmpty) return const SizedBox.shrink();
+                          final item = _items[index % _items.length];
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: _carouselCard(item),
+                          );
+                        },
+                      ),
               ),
             ],
           ),
@@ -1805,15 +1972,65 @@ class _CarouselSectionState extends State<_CarouselSection> {
     );
   }
 
-  Widget _carouselCard(Map<String, String> item) {
+  String _getIssueImagePath(String issueName) {
+    // Normalize the issue name to match with image file names
+    final String normalized = issueName.toLowerCase().trim();
+
+    // Map issue names to their corresponding image files
+    if (normalized.contains('screen') || normalized.contains('display')) {
+      return 'assets/images/issues/issue_screen.png';
+    } else if (normalized.contains('battery')) {
+      return 'assets/images/issues/issue_battery.png';
+    } else if (normalized.contains('charging') ||
+        normalized.contains('charge') ||
+        normalized.contains('port')) {
+      return 'assets/images/issues/issue_charging.png';
+    } else if (normalized.contains('camera')) {
+      if (normalized.contains('front')) {
+        return 'assets/images/issues/issue_frontcamera.png';
+      }
+      return 'assets/images/issues/issue_camera.png';
+    } else if (normalized.contains('speaker')) {
+      if (normalized.contains('back')) {
+        return 'assets/images/issues/issue_speakerback.png';
+      }
+      return 'assets/images/issues/issue_speaker.png';
+    } else if (normalized.contains('mic') ||
+        normalized.contains('microphone')) {
+      return 'assets/images/issues/issue_mic.png';
+    } else if (normalized.contains('sensor')) {
+      return 'assets/images/issues/issue_sensors.png';
+    } else if (normalized.contains('face') || normalized.contains('faceid')) {
+      return 'assets/images/issues/issue_faceid.png';
+    } else if (normalized.contains('water') || normalized.contains('liquid')) {
+      return 'assets/images/issues/issue_water.png';
+    } else if (normalized.contains('software') ||
+        normalized.contains('system')) {
+      return 'assets/images/issues/issue_software.png';
+    } else if (normalized.contains('motherboard') ||
+        normalized.contains('logic')) {
+      return 'assets/images/issues/issue_motherboard.png';
+    } else if (normalized.contains('back') && normalized.contains('glass')) {
+      return 'assets/images/issues/issue_backglass.png';
+    }
+
+    // Default fallback
+    return 'assets/images/issues/issue_screen.png';
+  }
+
+  Widget _carouselCard(dynamic item) {
+    // Dynamic data mapping
+    final String title = item['name'] ?? item['category'] ?? 'Issue';
+    final String subtitle = item['description'] ?? 'Expert repair service';
+    final String? networkImage = item['image'];
+
+    // Get the appropriate issue image based on the title
+    final String issueImagePath = _getIssueImagePath(title);
+
     return Container(
-      width: 400,
+      width: 420, // Slightly wider for better content
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        image: DecorationImage(
-          image: AssetImage(item['image']!),
-          fit: BoxFit.cover,
-        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(20),
@@ -1822,65 +2039,83 @@ class _CarouselSectionState extends State<_CarouselSection> {
           ),
         ],
       ),
-      child: Stack(
-        children: [
-          // Gradient Overlay
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: LinearGradient(
-                colors: [Colors.black.withAlpha(200), Colors.transparent],
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                stops: const [0.0, 0.6],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          children: [
+            // Background Image (Network with Asset Fallback)
+            Positioned.fill(
+              child: networkImage != null && networkImage.startsWith('http')
+                  ? Image.network(
+                      networkImage,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          Image.asset(issueImagePath, fit: BoxFit.cover),
+                    )
+                  : Image.asset(issueImagePath, fit: BoxFit.cover),
+            ),
+            // Gradient Overlay
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                gradient: LinearGradient(
+                  colors: [Colors.black.withAlpha(200), Colors.transparent],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  stops: const [0.0, 0.6],
+                ),
               ),
             ),
-          ),
-          // Content
-          Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item['title']!,
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: AppColors.accentYellow,
-                        shape: BoxShape.circle,
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: AppColors.accentYellow,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          LucideIcons.wrench,
+                          size: 16,
+                          color: Colors.black,
+                        ),
                       ),
-                      child: const Icon(
-                        LucideIcons.wrench,
-                        size: 16,
-                        color: Colors.black,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            color: Colors.white.withAlpha(230),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      item['subtitle']!,
-                      style: GoogleFonts.inter(
-                        color: Colors.white.withAlpha(230),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1897,28 +2132,41 @@ class _BrandSelectionSectionState extends State<_BrandSelectionSection> {
   final ScrollController _scrollController = ScrollController();
   Timer? _timer;
   bool _isUserScrolling = false;
-
-  final List<Map<String, String>> _brands = [
-    {'image': 'assets/images/brand_apple.png', 'name': 'Apple'},
-    {'image': 'assets/images/brand_samsung.png', 'name': 'Samsung'},
-    {'image': 'assets/images/brand_google.png', 'name': 'Google'},
-    {'image': 'assets/images/brand_oneplus.png', 'name': 'OnePlus'},
-    {'image': 'assets/images/brand_xiaomi.png', 'name': 'Xiaomi'},
-    {'image': 'assets/images/brand_oppo.png', 'name': 'Oppo'},
-    {'image': 'assets/images/brand_vivo.png', 'name': 'Vivo'},
-    {'image': 'assets/images/brand_realme.png', 'name': 'Realme'},
-  ];
+  final ApiService _apiService = ApiService();
+  List<dynamic> _brands = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _fetchBrands();
     WidgetsBinding.instance.addPostFrameCallback((_) => _startAutoScroll());
+  }
+
+  Future<void> _fetchBrands() async {
+    try {
+      final brands = await _apiService.getBrands();
+      if (mounted) {
+        setState(() {
+          _brands = brands;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching brands: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   void _startAutoScroll() {
     _timer = Timer.periodic(const Duration(milliseconds: 30), (timer) {
-      if (!_scrollController.hasClients || _isUserScrolling) return;
-      double newOffset = _scrollController.offset + 0.5;
+      // Only scroll if we have content and enough items to scroll
+      if (!_scrollController.hasClients || _isUserScrolling || _brands.isEmpty)
+        return;
+      double newOffset =
+          _scrollController.offset + 1.5; // Increased speed from 0.5 to 1.5
+      // Simple infinite scroll reset logic could be added here if needed,
+      // for now relying on large item count loop
       _scrollController.jumpTo(newOffset);
     });
   }
@@ -1947,8 +2195,8 @@ class _BrandSelectionSectionState extends State<_BrandSelectionSection> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Align(
-                       alignment: Alignment.centerLeft, // Keep title left-aligned within content area
-                       child: Text(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
                         'Repair by Brand',
                         style: GoogleFonts.inter(
                           fontSize: isDesktop ? 32 : 24,
@@ -1961,39 +2209,45 @@ class _BrandSelectionSectionState extends State<_BrandSelectionSection> {
                   SizedBox(height: isDesktop ? 40 : 24),
                   SizedBox(
                     height: isDesktop ? 180 : 140,
-                    child: NotificationListener<UserScrollNotification>(
-                      onNotification: (notification) {
-                        if (notification.direction == ScrollDirection.idle) {
-                          _isUserScrolling = false;
-                        } else {
-                          _isUserScrolling = true;
-                        }
-                        return false;
-                      },
-                      child: ScrollConfiguration(
-                        behavior: ScrollConfiguration.of(context).copyWith(
-                          dragDevices: {
-                            PointerDeviceKind.touch,
-                            PointerDeviceKind.mouse,
-                          },
-                        ),
-                        child: ListView.builder(
-                          controller: _scrollController,
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: 1000000,
-                          itemBuilder: (context, index) {
-                            final brand = _brands[index % _brands.length];
-                            return Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: isDesktop ? 16 : 10,
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _brands.isEmpty
+                        ? const Center(child: Text('No brands available'))
+                        : NotificationListener<UserScrollNotification>(
+                            onNotification: (notification) {
+                              if (notification.direction ==
+                                  ScrollDirection.idle) {
+                                _isUserScrolling = false;
+                              } else {
+                                _isUserScrolling = true;
+                              }
+                              return false;
+                            },
+                            child: ScrollConfiguration(
+                              behavior: ScrollConfiguration.of(context)
+                                  .copyWith(
+                                    dragDevices: {
+                                      PointerDeviceKind.touch,
+                                      PointerDeviceKind.mouse,
+                                    },
+                                  ),
+                              child: ListView.builder(
+                                controller: _scrollController,
+                                scrollDirection: Axis.horizontal,
+                                physics: const BouncingScrollPhysics(),
+                                itemCount: 1000000,
+                                itemBuilder: (context, index) {
+                                  final brand = _brands[index % _brands.length];
+                                  return Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: isDesktop ? 16 : 10,
+                                    ),
+                                    child: _brandCard(brand, index, isDesktop),
+                                  );
+                                },
                               ),
-                              child: _brandCard(brand, isDesktop),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
+                            ),
+                          ),
                   ),
                 ],
               ),
@@ -2004,64 +2258,108 @@ class _BrandSelectionSectionState extends State<_BrandSelectionSection> {
     );
   }
 
-  Widget _brandCard(Map<String, String> brand, bool isDesktop) {
+  Color _getColor(int index) {
+    List<Color> colors = [
+      const Color(0xFF8B5CF6), // Violet
+      const Color(0xFFEC4899), // Pink
+      const Color(0xFF3B82F6), // Blue
+      const Color(0xFF10B981), // Emerald
+      const Color(0xFFF59E0B), // Amber
+      const Color(0xFF06B6D4), // Cyan
+      const Color(0xFF6366F1), // Indigo
+      const Color(0xFF38BDF8), // Sky
+    ];
+    // Hash the index or name to get color
+    return colors[index % colors.length];
+  }
+
+  Widget _brandCard(dynamic brand, int index, bool isDesktop) {
+    final String name = brand['title'] ?? brand['name'] ?? '';
+    final String firstLetter = name.isNotEmpty
+        ? name.substring(0, 1).toUpperCase()
+        : '?';
+    final Color color = _getColor(index);
+
     return Container(
-      width: isDesktop ? 280 : 240,
+      width: isDesktop ? 220 : 180,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
         color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(20),
+            color: Colors.black.withAlpha(15),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
         ],
+        border: Border.all(color: Colors.grey.withAlpha(20)),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Stack(
-          children: [
-            Image.asset(
-              brand['image']!,
+      child: Column(
+        children: [
+          Expanded(
+            flex: 3,
+            child: Container(
               width: double.infinity,
-              height: double.infinity,
-              fit: BoxFit.cover,
-            ),
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black.withAlpha(200)],
-                    stops: const [0.6, 1.0],
-                  ),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F6),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
                 ),
               ),
-            ),
-            Positioned(
-              bottom: 16,
-              left: 16,
-              right: 16,
-              child: Text(
-                brand['title'] ?? '',
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  shadows: [
-                    Shadow(
-                      blurRadius: 4,
-                      color: Colors.black.withAlpha(128),
-                      offset: const Offset(0, 2),
+              child: Center(
+                child: Container(
+                  width: isDesktop ? 80 : 60,
+                  height: isDesktop ? 80 : 60,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [color, color.withOpacity(0.7)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                  ],
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      firstLetter,
+                      style: GoogleFonts.inter(
+                        fontSize: isDesktop ? 32 : 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack),
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  name,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    fontSize: isDesktop ? 18 : 16,
+                    color: AppColors.textHeading,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     ).animate().scale(
       delay: 100.ms,
@@ -2125,7 +2423,10 @@ class _RepairProcessSection extends StatelessWidget {
           child: Column(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.primaryButton.withAlpha(20),
                   borderRadius: BorderRadius.circular(20),
@@ -2152,7 +2453,10 @@ class _RepairProcessSection extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 'Your device repaired in 5 easy steps',
-                style: GoogleFonts.inter(fontSize: 16, color: AppColors.textBody),
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  color: AppColors.textBody,
+                ),
               ).animate().fadeIn(delay: 300.ms),
               const SizedBox(height: 40),
               isDesktop
@@ -2349,7 +2653,10 @@ class _WarrantySection extends StatelessWidget {
           child: Column(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF8B5CF6).withAlpha(20),
                   borderRadius: BorderRadius.circular(20),
@@ -2375,7 +2682,10 @@ class _WarrantySection extends StatelessWidget {
                 textAlign: TextAlign.center,
               ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2, end: 0),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 child: Text(
                   'Premium service standards you can trust',
                   style: GoogleFonts.inter(
@@ -2648,13 +2958,16 @@ class _TestimonialsSectionState extends State<_TestimonialsSection> {
                     ).animate().fadeIn(),
                     const SizedBox(height: 16),
                     Text(
-                      'Customer Love',
-                      style: GoogleFonts.inter(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textHeading,
-                      ),
-                    ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2, end: 0),
+                          'Customer Love',
+                          style: GoogleFonts.inter(
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textHeading,
+                          ),
+                        )
+                        .animate()
+                        .fadeIn(delay: 200.ms)
+                        .slideY(begin: 0.2, end: 0),
                     const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -2920,13 +3233,16 @@ class _DeliveryOptionsSectionState extends State<_DeliveryOptionsSection> {
                     ).animate().fadeIn(),
                     const SizedBox(height: 16),
                     Text(
-                      'Convenient Repair Solutions',
-                      style: GoogleFonts.inter(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textHeading,
-                      ),
-                    ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2, end: 0),
+                          'Convenient Repair Solutions',
+                          style: GoogleFonts.inter(
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textHeading,
+                          ),
+                        )
+                        .animate()
+                        .fadeIn(delay: 200.ms)
+                        .slideY(begin: 0.2, end: 0),
                     const SizedBox(height: 8),
                     Text(
                       'Choose the repair method that suits you best',
@@ -3192,33 +3508,39 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
                   ),
                   items: _isLoadingBrands
                       ? []
-                      : _apiBrands.map((brand) {
-                          final brandName = (brand['title'] ?? '') as String;
-                          if (brandName.isEmpty) return null;
-                          return DropdownMenuItem<String>(
-                            value: brandName,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    LucideIcons.smartphone,
-                                    size: 18,
-                                    color: AppColors.primaryButton,
+                      : _apiBrands
+                            .map((brand) {
+                              final brandName =
+                                  (brand['title'] ?? '') as String;
+                              if (brandName.isEmpty) return null;
+                              return DropdownMenuItem<String>(
+                                value: brandName,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
                                   ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    brandName,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        LucideIcons.smartphone,
+                                        size: 18,
+                                        color: AppColors.primaryButton,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        brandName,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }).whereType<DropdownMenuItem<String>>().toList(),
+                                ),
+                              );
+                            })
+                            .whereType<DropdownMenuItem<String>>()
+                            .toList(),
                   onChanged: (String? newValue) {
                     if (newValue != null) {
                       final brand = _apiBrands.firstWhere(
@@ -3299,25 +3621,28 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
                   ),
                   items: _isLoadingModels || selectedBrand == null
                       ? []
-                      : _apiModels.map((model) {
-                          final modelName = (model['name'] ?? '') as String;
-                          if (modelName.isEmpty) return null;
-                          return DropdownMenuItem<String>(
-                            value: modelName,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              child: Text(
-                                modelName,
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
+                      : _apiModels
+                            .map((model) {
+                              final modelName = (model['name'] ?? '') as String;
+                              if (modelName.isEmpty) return null;
+                              return DropdownMenuItem<String>(
+                                value: modelName,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
+                                  child: Text(
+                                    modelName,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                          );
-                        }).whereType<DropdownMenuItem<String>>().toList(),
+                              );
+                            })
+                            .whereType<DropdownMenuItem<String>>()
+                            .toList(),
                   onChanged: selectedBrand == null || _isLoadingModels
                       ? null
                       : (String? newValue) {
@@ -3589,24 +3914,42 @@ class _TrustSignalsSection extends StatelessWidget {
                 ? Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildSignal(LucideIcons.shieldCheck, 'Certified Technicians',
-                          'Expert professionals you can trust'),
-                      _buildSignal(LucideIcons.clock, 'Fast Turnaround',
-                          'Most repairs done in under 30 mins'),
-                      _buildSignal(LucideIcons.creditCard, 'Secure Payment',
-                          '100% safe and encrypted transactions'),
+                      _buildSignal(
+                        LucideIcons.shieldCheck,
+                        'Certified Technicians',
+                        'Expert professionals you can trust',
+                      ),
+                      _buildSignal(
+                        LucideIcons.clock,
+                        'Fast Turnaround',
+                        'Most repairs done in under 30 mins',
+                      ),
+                      _buildSignal(
+                        LucideIcons.creditCard,
+                        'Secure Payment',
+                        '100% safe and encrypted transactions',
+                      ),
                     ],
                   )
                 : Column(
                     children: [
-                      _buildSignal(LucideIcons.shieldCheck, 'Certified Technicians',
-                          'Expert professionals you can trust'),
+                      _buildSignal(
+                        LucideIcons.shieldCheck,
+                        'Certified Technicians',
+                        'Expert professionals you can trust',
+                      ),
                       const SizedBox(height: 24),
-                      _buildSignal(LucideIcons.clock, 'Fast Turnaround',
-                          'Most repairs done in under 30 mins'),
+                      _buildSignal(
+                        LucideIcons.clock,
+                        'Fast Turnaround',
+                        'Most repairs done in under 30 mins',
+                      ),
                       const SizedBox(height: 24),
-                      _buildSignal(LucideIcons.creditCard, 'Secure Payment',
-                          '100% safe and encrypted transactions'),
+                      _buildSignal(
+                        LucideIcons.creditCard,
+                        'Secure Payment',
+                        '100% safe and encrypted transactions',
+                      ),
                     ],
                   ),
           ),
@@ -3641,10 +3984,7 @@ class _TrustSignalsSection extends StatelessWidget {
             ),
             Text(
               subtitle,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: AppColors.textBody,
-              ),
+              style: GoogleFonts.inter(fontSize: 12, color: AppColors.textBody),
             ),
           ],
         ),

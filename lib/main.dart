@@ -77,12 +77,22 @@ class AuthWrapper extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
         if (snapshot.hasData) {
           return const HomeScreen();
         }
-        return hasOnboarded ? const SignInScreen() : const OnboardingScreen();
+        if (kIsWeb) {
+          // On Web, show HomeScreen initially regardless of auth status
+          // The HomeScreen will handle guest vs user state if needed, or user will login from there
+          return const HomeScreen();
+        }
+        if (hasOnboarded) {
+          return const SignInScreen();
+        }
+        return const OnboardingScreen();
       },
     );
   }

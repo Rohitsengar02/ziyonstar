@@ -153,136 +153,195 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isDesktop = size.width > 900;
+
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Spacer(),
-              Center(
-                child: Container(
-                  height: 100,
-                  width: 100,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.yellow.shade100,
-                  ),
-                  child: const Icon(
-                    LucideIcons.userPlus,
-                    size: 50,
-                    color: Color(0xFFFACC15),
-                  ),
-                ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
+      appBar: isDesktop
+          ? null
+          : AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(LucideIcons.arrowLeft, color: Colors.black),
+                onPressed: () => Navigator.pop(context),
               ),
-              const SizedBox(height: 32),
-
-              Text(
-                'Create Account',
-                style: GoogleFonts.outfit(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-                textAlign: TextAlign.center,
-              ).animate().fadeIn().slideY(begin: 0.2),
-
-              const SizedBox(height: 8),
-
-              Text(
-                'Join ZiyonStar for fast mobile repairs.',
-                style: GoogleFonts.inter(fontSize: 16, color: Colors.grey),
-                textAlign: TextAlign.center,
-              ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.2),
-
-              const Spacer(),
-
-              // Google Button
-              ElevatedButton(
-                onPressed: (_isGoogleLoading) ? null : _handleGoogleSignUp,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black87,
-                  elevation: 2,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.grey.shade200),
-                  ),
-                ),
-                child: _isGoogleLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Row(
+            ),
+      body: isDesktop
+          ? Row(
+              children: [
+                // Left Side - Hero Image (Desktop only)
+                Expanded(
+                  flex: 1,
+                  child: Container(
+                    color: Colors.yellow.shade50,
+                    child: Center(
+                      child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Image.asset(
-                            'assets/images/brand_google.png',
-                            height: 24,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(
-                                  LucideIcons.chrome,
-                                  color: Colors.blue,
-                                  size: 24,
-                                ),
+                            'assets/images/signup_hero.png', // Ensure this asset exists or use a network placeholder
+                            height: 400,
+                            errorBuilder: (c, e, s) => Icon(
+                              LucideIcons.userPlus,
+                              size: 100,
+                              color: Colors.orange,
+                            ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(height: 32),
                           Text(
-                            'Sign up with Google',
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                            'Join Us Today!',
+                            style: GoogleFonts.outfit(
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange.shade800,
                             ),
                           ),
                         ],
                       ),
-              ).animate().fadeIn(delay: 400.ms),
-
-              const SizedBox(height: 32),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Already have an account? ',
-                    style: GoogleFonts.inter(color: Colors.grey[600]),
+                    ),
                   ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (c) => const SignInScreen()),
-                      );
-                    },
-                    child: Text(
-                      'Sign In',
-                      style: GoogleFonts.inter(
-                        color: Colors.blue[600],
-                        fontWeight: FontWeight.bold,
+                ),
+                // Right Side - Form
+                Expanded(
+                  flex: 1,
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 450),
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(40),
+                        child: _buildSignUpForm(context, isDesktop),
                       ),
                     ),
                   ),
-                ],
+                ),
+              ],
+            )
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: _buildSignUpForm(context, isDesktop),
               ),
-              const SizedBox(height: 20),
-            ],
-          ),
+            ),
+    );
+  }
+
+  Widget _buildSignUpForm(BuildContext context, bool isDesktop) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (!isDesktop) ...[const Spacer()],
+        Center(
+          child: Container(
+            height: 100,
+            width: 100,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.yellow.shade100,
+            ),
+            child: const Icon(
+              LucideIcons.userPlus,
+              size: 50,
+              color: Color(0xFFFACC15),
+            ),
+          ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
         ),
-      ),
+        const SizedBox(height: 32),
+
+        Text(
+          'Create Account',
+          style: GoogleFonts.outfit(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+          textAlign: TextAlign.center,
+        ).animate().fadeIn().slideY(begin: 0.2),
+
+        const SizedBox(height: 8),
+
+        Text(
+          'Join ZiyonStar for fast mobile repairs.',
+          style: GoogleFonts.inter(fontSize: 16, color: Colors.grey),
+          textAlign: TextAlign.center,
+        ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.2),
+
+        if (!isDesktop) const Spacer(),
+        if (isDesktop) const SizedBox(height: 40),
+
+        // Google Button
+        ElevatedButton(
+          onPressed: (_isGoogleLoading) ? null : _handleGoogleSignUp,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black87,
+            elevation: 2,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.grey.shade200),
+            ),
+          ),
+          child: _isGoogleLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      'assets/images/brand_google.png',
+                      height: 24,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        LucideIcons.chrome,
+                        color: Colors.blue,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Sign up with Google',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+        ).animate().fadeIn(delay: 400.ms),
+
+        const SizedBox(height: 32),
+
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Already have an account? ',
+              style: GoogleFonts.inter(color: Colors.grey[600]),
+            ),
+            GestureDetector(
+              onTap: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (c) => const SignInScreen()),
+                );
+              },
+              child: Text(
+                'Sign In',
+                style: GoogleFonts.inter(
+                  color: Colors.blue[600],
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+      ],
     );
   }
 }

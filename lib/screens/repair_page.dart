@@ -3,22 +3,29 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme.dart';
 import '../responsive.dart';
-import 'technician_selection_period.dart';
+
 import '../widgets/navbar.dart';
 import '../widgets/footer.dart';
 import '../widgets/app_drawer.dart';
 import '../services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'booking_success_screen.dart';
+import 'address_picker_screen.dart';
+import 'sign_in_screen.dart';
 
 class RepairPage extends StatefulWidget {
   final String deviceBrand;
   final String deviceModel;
   final Map<String, dynamic>? modelData;
+  final String? initialIssue;
 
   const RepairPage({
     super.key,
     this.deviceBrand = 'Apple',
     this.deviceModel = 'iPhone 13 Pro',
     this.modelData,
+    this.initialIssue,
   });
 
   @override
@@ -28,14 +35,46 @@ class RepairPage extends StatefulWidget {
 class _RepairPageState extends State<RepairPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  late String _currentBrand;
-  late String _currentModel;
+  // Removed - now using _currentStep instead
+
+  String _currentBrand = '';
+  String _currentModel = '';
   Map<String, dynamic>? _modelData;
+  List<dynamic> _brandModels = []; // Models for selected brand
+  bool _isLoadingModels = false;
+
   final Set<String> _selectedIssues = {};
   final ApiService _apiService = ApiService();
   List<dynamic> _apiIssues = [];
   List<dynamic> _apiBrands = [];
   bool _isLoading = true;
+
+  // Step 0: Brand, Step 1: Model, Step 2: Issues, Step 3: Technician, Step 4: Schedule
+  int _currentStep = 0;
+  List<dynamic> _apiTechnicians = [];
+  bool _isLoadingTechs = false;
+  List<dynamic> _savedAddresses = [];
+  bool _isLoadingAddresses = false;
+  int? _selectedTechIndex;
+  DateTime _selectedDate = DateTime.now();
+  String? _selectedTimeSlot;
+  Map<String, dynamic>? _selectedAddress;
+  String _currentPaymentMethod = 'Cash on Delivery';
+  String _userId = 'guest_user';
+  String _userName = 'App User';
+  String _userEmail = '';
+  bool _isBookingLoading = false;
+
+  final List<String> _timeSlots = [
+    '09:00 AM - 10:00 AM',
+    '10:00 AM - 11:00 AM',
+    '11:00 AM - 12:00 PM',
+    '12:00 PM - 01:00 PM',
+    '01:00 PM - 02:00 PM',
+    '02:00 PM - 03:00 PM',
+    '03:00 PM - 04:00 PM',
+    '04:00 PM - 05:00 PM',
+  ];
 
   @override
   void initState() {
@@ -43,10 +82,274 @@ class _RepairPageState extends State<RepairPage> {
     _currentBrand = widget.deviceBrand;
     _currentModel = widget.deviceModel;
     _modelData = widget.modelData;
-    _fetchIssues();
+
+    // If brand and model are provided, skip to issues step
+    if (_currentBrand.isNotEmpty && _currentModel.isNotEmpty) {
+      _currentStep = 2; // Jump to issues step
+    }
+
+    if (widget.initialIssue != null && widget.initialIssue!.isNotEmpty) {
+      _selectedIssues.add(widget.initialIssue!);
+    }
+
+    _initUserInfo();
     _fetchBrands();
-    if (_modelData == null) {
-      _fetchModelData();
+    _fetchIssues();
+  }
+
+  Future<void> _initUserInfo() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        _userId = user.uid;
+        _userName = user.displayName ?? 'App User';
+        _userEmail = user.email ?? '';
+      });
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      String? storedId =
+          prefs.getString('user_uid') ?? prefs.getString('user_id');
+      if (storedId == null) {
+        storedId = 'user_${DateTime.now().millisecondsSinceEpoch}';
+        await prefs.setString('user_id', storedId);
+      }
+      setState(() {
+        _userId = storedId!;
+        _userName = prefs.getString('user_name') ?? 'App User';
+        _userEmail = prefs.getString('user_email') ?? 'user_$_userId@ziyon.com';
+      });
+    }
+  }
+
+  Future<void> _fetchTechnicians() async {
+    setState(() => _isLoadingTechs = true);
+    try {
+      final techs = await _apiService.getTechnicians();
+      if (mounted) {
+        setState(() {
+          _apiTechnicians = techs
+              .where(
+                (t) => t['status'] == 'approved' || t['status'] == 'active',
+              )
+              .toList();
+          _isLoadingTechs = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching technicians: $e');
+      if (mounted) setState(() => _isLoadingTechs = false);
+    }
+  }
+
+  Future<void> _fetchAddresses() async {
+    setState(() => _isLoadingAddresses = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedLocationId = prefs.getString('selected_location_id');
+
+      final addresses = await _apiService.getAddresses(_userId);
+      if (mounted) {
+        setState(() {
+          _savedAddresses = addresses;
+          _isLoadingAddresses = false;
+
+          if (_savedAddresses.isNotEmpty) {
+            // 1. Try to find the globally selected address
+            if (savedLocationId != null) {
+              final selected = _savedAddresses.firstWhere(
+                (a) => a['_id'] == savedLocationId,
+                orElse: () => {},
+              );
+              if (selected.isNotEmpty) {
+                _selectedAddress = selected;
+                return;
+              }
+            }
+
+            // 2. Fallback to default or first
+            if (_selectedAddress == null) {
+              final defaultAddr = _savedAddresses.firstWhere(
+                (a) => a['isDefault'] == true,
+                orElse: () => _savedAddresses.first,
+              );
+              _selectedAddress = defaultAddr;
+            }
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching addresses: $e');
+    }
+  }
+
+  bool get _isLoggedIn => FirebaseAuth.instance.currentUser != null;
+
+  void _showLoginPrompt() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Login Required',
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Please login to continue with your booking and save your addresses.',
+          style: GoogleFonts.inter(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SignInScreen()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryButton,
+            ),
+            child: Text('Login Now'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper methods for step-based navigation
+  VoidCallback? _getNextStepAction() {
+    if (_isBookingLoading) return null;
+
+    switch (_currentStep) {
+      case 0: // Brand selection
+        return null; // No button needed, click on brand to proceed
+      case 1: // Model selection
+        return null; // No button needed, click on model to proceed
+      case 2: // Issues selection
+        return _selectedIssues.isEmpty
+            ? null
+            : () {
+                setState(() => _currentStep = 3);
+                _fetchTechnicians();
+              };
+      case 3: // Technician selection
+        return _selectedTechIndex == null
+            ? null
+            : () {
+                setState(() => _currentStep = 4);
+                _fetchAddresses();
+              };
+      case 4: // Schedule & address
+        return (_selectedTimeSlot == null || _selectedAddress == null)
+            ? null
+            : _confirmBooking;
+      default:
+        return null;
+    }
+  }
+
+  String _getNextStepLabel() {
+    switch (_currentStep) {
+      case 0:
+        return 'Select a Brand';
+      case 1:
+        return 'Select a Model';
+      case 2:
+        return 'Next: Choose Technician';
+      case 3:
+        return 'Next: Schedule Appointment';
+      case 4:
+        return 'Confirm Booking';
+      default:
+        return 'Next Step';
+    }
+  }
+
+  Future<void> _confirmBooking() async {
+    if (!_isLoggedIn) {
+      _showLoginPrompt();
+      return;
+    }
+    if (_selectedTechIndex == null || _selectedTimeSlot == null) return;
+    setState(() => _isBookingLoading = true);
+
+    try {
+      final technician = _apiTechnicians[_selectedTechIndex!];
+      String dbUserId;
+
+      // 1. Verify User
+      final userData = {
+        'name': _userName,
+        'email': _userEmail,
+        'firebaseUid': _userId,
+        'phone': _selectedAddress?['phone'] ?? '',
+      };
+
+      final userResult = await _apiService.registerUser(userData);
+      if (userResult != null && userResult['user'] != null) {
+        dbUserId = userResult['user']['_id'];
+      } else {
+        throw 'User registration failed';
+      }
+
+      // 2. Create Booking
+      final bookingData = {
+        'userId': dbUserId,
+        'technicianId': technician['_id'],
+        'deviceBrand': _currentBrand,
+        'deviceModel': _currentModel,
+        'issues': _selectedIssues
+            .map(
+              (i) => {
+                'issueName': i,
+                'price': 0, // Simplified for now
+              },
+            )
+            .toList(),
+        'totalPrice': _calculateTotal().toDouble(),
+        'scheduledDate': _selectedDate.toIso8601String(),
+        'timeSlot': _selectedTimeSlot,
+        'addressDetails':
+            _selectedAddress?['fullAddress'] ?? 'No address provided',
+        'address': _selectedAddress?['_id'],
+        'paymentStatus': 'Pending',
+        'status': 'Pending_Assignment',
+      };
+
+      final result = await _apiService.createBooking(bookingData);
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BookingSuccessScreen(
+              deviceName: '$_currentBrand $_currentModel',
+              technicianName: technician['name'] ?? 'Technician',
+              technicianImage: technician['photoUrl'] ?? '',
+              selectedIssues: _selectedIssues.toList(),
+              timeSlot: _selectedTimeSlot!,
+              date: _selectedDate,
+              amount: _calculateTotal().toDouble(),
+              otp: result?['otp']?.toString() ?? '000000',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Booking confirmation failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to book: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isBookingLoading = false);
     }
   }
 
@@ -81,24 +384,11 @@ class _RepairPageState extends State<RepairPage> {
       if (mounted) {
         setState(() {
           _apiBrands = brands;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error fetching brands: $e');
-    }
-  }
-
-  Future<void> _fetchIssues() async {
-    try {
-      final issues = await _apiService.getIssues();
-      if (mounted) {
-        setState(() {
-          _apiIssues = issues;
           _isLoading = false;
         });
       }
     } catch (e) {
-      debugPrint('Error fetching issues: $e');
+      debugPrint('Error fetching brands: $e');
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -138,53 +428,262 @@ class _RepairPageState extends State<RepairPage> {
     if (value is int) return value;
     if (value is double) return value.toInt();
     if (value is String) {
-      // Remove % sign if present and parse
       final cleanValue = value.replaceAll('%', '').trim();
       return int.tryParse(cleanValue) ?? 0;
     }
     return 0;
   }
 
-  String _repairOption = 'Doorstep';
-
   void _showChangeModelDialog() {
     final bool isDesktop = ResponsiveLayout.isDesktop(context);
     String tempBrand = _currentBrand;
     String tempModel = _currentModel;
+    List<dynamic> models = [];
+    bool isLoadingModels = false;
 
-    Widget buildContent(StateSetter setStateDialog) {
-      // Local state for the dialog to handle model fetching
-      List<dynamic> models = [];
-      bool isLoadingModels = false;
-
-      Future<void> fetchModelsForBrand(String brandName) async {
-        final brand = _apiBrands.firstWhere(
-          (b) => b['title'] == brandName,
-          orElse: () => null,
-        );
-        if (brand == null) return;
-
-        setStateDialog(() => isLoadingModels = true);
-        try {
-          final fetchedModels = await _apiService.getModels(brand['_id']);
-          setStateDialog(() {
-            models = fetchedModels;
-            isLoadingModels = false;
-            if (models.isNotEmpty) {
-              tempModel = models.first['name'];
-            } else {
-              tempModel = 'No Models';
-            }
-          });
-        } catch (e) {
-          debugPrint('Error fetching models: $e');
-          setStateDialog(() => isLoadingModels = false);
-        }
+    Future<void> fetchModels(String brandId, StateSetter setStateDialog) async {
+      setStateDialog(() => isLoadingModels = true);
+      try {
+        final fetchedModels = await _apiService.getModels(brandId);
+        setStateDialog(() {
+          models = fetchedModels;
+          isLoadingModels = false;
+        });
+      } catch (e) {
+        debugPrint('Error fetching models: $e');
+        setStateDialog(() => isLoadingModels = false);
       }
+    }
 
+    Widget buildDesktopDialog(StateSetter setStateDialog) {
+      return Container(
+        width: 900,
+        height: 600,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Row(
+          children: [
+            // Left Side: Brands
+            Container(
+              width: 250,
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                border: Border(right: BorderSide(color: Colors.grey.shade200)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      'Select Brand',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textHeading,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: _apiBrands.length,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemBuilder: (context, index) {
+                        final brand = _apiBrands[index];
+                        final isSelected = tempBrand == brand['title'];
+                        return ListTile(
+                          onTap: () {
+                            setStateDialog(() {
+                              tempBrand = brand['title'];
+                              tempModel = ''; // Reset model
+                            });
+                            fetchModels(brand['_id'], setStateDialog);
+                          },
+                          leading: Icon(
+                            LucideIcons.smartphone,
+                            size: 18,
+                            color: isSelected
+                                ? AppColors.primaryButton
+                                : Colors.grey,
+                          ),
+                          title: Text(
+                            brand['title'] ?? '',
+                            style: GoogleFonts.inter(
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: isSelected
+                                  ? AppColors.primaryButton
+                                  : AppColors.textHeading,
+                            ),
+                          ),
+                          selected: isSelected,
+                          selectedTileColor: AppColors.primaryButton.withValues(
+                            alpha: 0.1,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Right Side: Models
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Select Model for $tempBrand',
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textHeading,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(LucideIcons.x),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: isLoadingModels
+                        ? const Center(child: CircularProgressIndicator())
+                        : (models.isEmpty
+                              ? Center(
+                                  child: Text(
+                                    'Select a brand to see models',
+                                    style: GoogleFonts.inter(
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                )
+                              : GridView.builder(
+                                  padding: const EdgeInsets.all(24),
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: 3,
+                                        crossAxisSpacing: 16,
+                                        mainAxisSpacing: 16,
+                                        childAspectRatio: 2.5,
+                                      ),
+                                  itemCount: models.length,
+                                  itemBuilder: (context, index) {
+                                    final model = models[index];
+                                    final isSelected =
+                                        tempModel == model['name'];
+                                    return InkWell(
+                                      onTap: () => setStateDialog(
+                                        () => tempModel = model['name'],
+                                      ),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: isSelected
+                                              ? AppColors.primaryButton
+                                              : Colors.white,
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          border: Border.all(
+                                            color: isSelected
+                                                ? AppColors.primaryButton
+                                                : Colors.grey.shade200,
+                                          ),
+                                          boxShadow: isSelected
+                                              ? [
+                                                  BoxShadow(
+                                                    color: AppColors
+                                                        .primaryButton
+                                                        .withValues(alpha: 0.3),
+                                                    blurRadius: 8,
+                                                    offset: const Offset(0, 4),
+                                                  ),
+                                                ]
+                                              : null,
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          model['name'] ?? '',
+                                          textAlign: TextAlign.center,
+                                          style: GoogleFonts.inter(
+                                            fontWeight: isSelected
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : AppColors.textHeading,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                )),
+                  ),
+                  // Bottom Action
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        const SizedBox(width: 16),
+                        ElevatedButton(
+                          onPressed: tempModel.isEmpty
+                              ? null
+                              : () {
+                                  setState(() {
+                                    _currentBrand = tempBrand;
+                                    _currentModel = tempModel;
+                                    _selectedIssues.clear();
+                                    _modelData = null;
+                                  });
+                                  _fetchModelData();
+                                  Navigator.pop(context);
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryButton,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Confirm',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    Widget buildMobileContent(StateSetter setStateDialog) {
       return Container(
         padding: const EdgeInsets.all(24),
-        width: isDesktop ? 400 : double.infinity,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -197,7 +696,6 @@ class _RepairPageState extends State<RepairPage> {
                   style: GoogleFonts.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textHeading,
                   ),
                 ),
                 IconButton(
@@ -207,124 +705,85 @@ class _RepairPageState extends State<RepairPage> {
               ],
             ),
             const SizedBox(height: 24),
-            // Brand Selection
+            // Brand Dropdown
             Text(
               'Brand',
               style: GoogleFonts.inter(
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
-                color: AppColors.textHeading,
               ),
             ),
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _apiBrands.any((b) => (b['title'] ?? '') == tempBrand)
-                      ? tempBrand
-                      : null,
-                  hint: const Text('Select Brand'),
-                  isExpanded: true,
-                  items: _apiBrands
-                      .map((brand) {
-                        final name = (brand['title'] ?? '') as String;
-                        if (name.isEmpty) return null;
-                        return DropdownMenuItem<String>(
-                          value: name,
-                          child: Row(
-                            children: [
-                              Icon(LucideIcons.smartphone, size: 20),
-                              const SizedBox(width: 12),
-                              Text(name),
-                            ],
-                          ),
-                        );
-                      })
-                      .whereType<DropdownMenuItem<String>>()
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setStateDialog(() {
-                        tempBrand = value;
-                      });
-                      fetchModelsForBrand(value);
-                    }
-                  },
+            DropdownButtonFormField<String>(
+              value: tempBrand,
+              items: _apiBrands
+                  .map(
+                    (b) => DropdownMenuItem(
+                      value: b['title'] as String,
+                      child: Text(b['title']),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  setStateDialog(() => tempBrand = val);
+                  final brand = _apiBrands.firstWhere((b) => b['title'] == val);
+                  fetchModels(brand['_id'], setStateDialog);
+                }
+              },
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
               ),
             ),
             const SizedBox(height: 24),
-            // Model Selection
+            // Model Dropdown
             Text(
               'Model',
               style: GoogleFonts.inter(
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
-                color: AppColors.textHeading,
               ),
             ),
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: isLoadingModels
-                    ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
-                      )
-                    : DropdownButton<String>(
-                        value: models.any((m) => (m['name'] ?? '') == tempModel)
-                            ? tempModel
-                            : null,
-                        hint: const Text('Select Model'),
-                        isExpanded: true,
-                        items: models
-                            .map((model) {
-                              final name = (model['name'] ?? '') as String;
-                              if (name.isEmpty) return null;
-                              return DropdownMenuItem<String>(
-                                value: name,
-                                child: Text(name),
-                              );
-                            })
-                            .whereType<DropdownMenuItem<String>>()
-                            .toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setStateDialog(() {
-                              tempModel = value;
-                            });
-                          }
-                        },
-                      ),
+            DropdownButtonFormField<String>(
+              value: models.any((m) => m['name'] == tempModel)
+                  ? tempModel
+                  : null,
+              items: models
+                  .map(
+                    (m) => DropdownMenuItem(
+                      value: m['name'] as String,
+                      child: Text(m['name']),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (val) => setStateDialog(() => tempModel = val ?? ''),
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                hintText: isLoadingModels ? 'Loading...' : 'Select Model',
               ),
             ),
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _currentBrand = tempBrand;
-                    _currentModel = tempModel;
-                  });
-                  Navigator.pop(context);
-                },
+                onPressed: tempModel.isEmpty
+                    ? null
+                    : () {
+                        setState(() {
+                          _currentBrand = tempBrand;
+                          _currentModel = tempModel;
+                          _selectedIssues.clear();
+                        });
+                        _fetchModelData();
+                        Navigator.pop(context);
+                      },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryButton,
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -332,9 +791,9 @@ class _RepairPageState extends State<RepairPage> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: Text(
+                child: const Text(
                   'Update Device',
-                  style: GoogleFonts.inter(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -351,11 +810,17 @@ class _RepairPageState extends State<RepairPage> {
         context: context,
         builder: (context) => StatefulBuilder(
           builder: (context, setStateDialog) {
+            // Initial fetch if needed
+            if (!isLoadingModels && models.isEmpty && _apiBrands.isNotEmpty) {
+              final brand = _apiBrands.firstWhere(
+                (b) => b['title'] == tempBrand,
+                orElse: () => _apiBrands.first,
+              );
+              fetchModels(brand['_id'], setStateDialog);
+            }
             return Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: buildContent(setStateDialog),
+              backgroundColor: Colors.transparent,
+              child: buildDesktopDialog(setStateDialog),
             );
           },
         ),
@@ -369,17 +834,263 @@ class _RepairPageState extends State<RepairPage> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         builder: (context) => StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: buildContent(setStateDialog),
-            );
-          },
+          builder: (context, setStateDialog) =>
+              buildMobileContent(setStateDialog),
         ),
       );
     }
+  }
+
+  // Fetch models for a specific brand
+  Future<void> _fetchModelsForBrand(String brandId) async {
+    setState(() => _isLoadingModels = true);
+    try {
+      final models = await _apiService.getModels(brandId);
+      setState(() {
+        _brandModels = models;
+        _isLoadingModels = false;
+      });
+    } catch (e) {
+      debugPrint('Error fetching models: $e');
+      setState(() => _isLoadingModels = false);
+    }
+  }
+
+  Future<void> _fetchIssues() async {
+    setState(() => _isLoading = true);
+    try {
+      final issues = await _apiService.getIssues();
+      if (mounted) {
+        setState(() {
+          _apiIssues = issues;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching issues: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // Compact brand selection for left column
+  Widget _buildBrandStep() {
+    final displayBrands = _apiBrands.take(15).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Select Your Device Brand'),
+        const SizedBox(height: 24),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            childAspectRatio: 1.2,
+          ),
+          itemCount: displayBrands.length + 1,
+          itemBuilder: (context, index) {
+            if (index == displayBrands.length) {
+              return InkWell(
+                onTap: _showChangeModelDialog,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.primaryButton,
+                      width: 2,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        LucideIcons.moreHorizontal,
+                        size: 32,
+                        color: AppColors.primaryButton,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'More',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryButton,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            final brand = displayBrands[index];
+            return InkWell(
+              onTap: () {
+                setState(() {
+                  _currentBrand = brand['title'] ?? '';
+                  _currentStep = 1;
+                });
+                _fetchModelsForBrand(brand['_id']);
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade200),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      LucideIcons.smartphone,
+                      size: 32,
+                      color: AppColors.primaryButton,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      brand['title'] ?? '',
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  // Compact model selection for left column with pricing
+  Widget _buildModelStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              onPressed: () => setState(() => _currentStep = 0),
+              icon: const Icon(LucideIcons.arrowLeft, size: 20),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: _buildSectionTitle('Select $_currentBrand Model')),
+          ],
+        ),
+        const SizedBox(height: 24),
+        if (_isLoadingModels)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(40),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (_brandModels.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(40),
+              child: Text(
+                'No models available',
+                style: GoogleFonts.inter(color: Colors.grey),
+              ),
+            ),
+          )
+        else
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _brandModels.length,
+            itemBuilder: (context, index) {
+              final model = _brandModels[index];
+              final modelName = model['name'] ?? '';
+              final basePrice = _parseToInt(model['price'] ?? 0);
+
+              return InkWell(
+                onTap: () {
+                  setState(() {
+                    _currentModel = modelName;
+                    _modelData = model;
+                    _currentStep = 2;
+                    _selectedIssues.clear();
+                  });
+                  _fetchIssues();
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        LucideIcons.smartphone,
+                        size: 24,
+                        color: AppColors.primaryButton,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              modelName,
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Starting from ₹$basePrice',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        LucideIcons.chevronRight,
+                        size: 20,
+                        color: Colors.grey,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+      ],
+    );
   }
 
   // Mock Data with Images
@@ -414,17 +1125,18 @@ class _RepairPageState extends State<RepairPage> {
               ),
             ),
 
-            // Device Header Section
-            _buildDeviceHeader(isDesktop, padding),
+            // Multi-Phase Content Rendering
+            // Device Header Section (show only after brand/model selected)
+            if (_currentStep >= 2) _buildDeviceHeader(isDesktop, padding),
 
-            // Main Content
+            // Main Content - Repair Flow
             Padding(
               padding: EdgeInsets.symmetric(horizontal: padding, vertical: 40),
               child: isDesktop
                   ? Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Left Column: Issues & Details
+                        // Left Column: Steps (Brand -> Model -> Issues -> Tech -> Schedule)
                         Expanded(flex: 3, child: _buildLeftColumn()),
                         const SizedBox(width: 40),
                         // Right Column: Summary & Checkout
@@ -441,7 +1153,7 @@ class _RepairPageState extends State<RepairPage> {
             ),
 
             // Trust Badges Section
-            _buildTrustSection(isDesktop, padding),
+            if (_currentStep >= 2) _buildTrustSection(isDesktop, padding),
 
             const Footer(),
           ],
@@ -565,12 +1277,44 @@ class _RepairPageState extends State<RepairPage> {
               ),
             ],
           ),
-          TextButton.icon(
-            onPressed: _showChangeModelDialog,
-            icon: const Icon(LucideIcons.refreshCw, size: 16),
-            label: const Text('Change Model'),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.primaryButton,
+          // Highlighted Change Model Button for Desktop
+          GestureDetector(
+            onTap: _showChangeModelDialog,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primaryButton,
+                    AppColors.primaryButton.withValues(alpha: 0.8),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryButton.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    LucideIcons.refreshCw,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Change Model',
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -579,6 +1323,23 @@ class _RepairPageState extends State<RepairPage> {
   }
 
   Widget _buildLeftColumn() {
+    final bool isDesktop = ResponsiveLayout.isDesktop(context);
+
+    if (isDesktop) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildStepIndicator(),
+          const SizedBox(height: 32),
+          if (_currentStep == 0) _buildBrandStep(),
+          if (_currentStep == 1) _buildModelStep(),
+          if (_currentStep == 2) _buildIssuesStep(),
+          if (_currentStep == 3) _buildTechnicianStep(),
+          if (_currentStep == 4) _buildScheduleStep(),
+        ],
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -592,6 +1353,600 @@ class _RepairPageState extends State<RepairPage> {
     );
   }
 
+  Widget _buildStepIndicator() {
+    return Row(
+      children: [
+        _stepItem(0, 'Brand', LucideIcons.smartphone),
+        _stepDivider(),
+        _stepItem(1, 'Model', LucideIcons.tablet),
+        _stepDivider(),
+        _stepItem(2, 'Issues', LucideIcons.wrench),
+        _stepDivider(),
+        _stepItem(3, 'Technician', LucideIcons.user),
+        _stepDivider(),
+        _stepItem(4, 'Schedule', LucideIcons.calendar),
+      ],
+    );
+  }
+
+  Widget _stepItem(int step, String label, IconData icon) {
+    bool isCompleted = _currentStep > step;
+    bool isActive = _currentStep == step;
+
+    return Expanded(
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isActive
+                  ? AppColors.primaryButton
+                  : (isCompleted ? Colors.green : Colors.grey[200]),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isCompleted ? LucideIcons.check : icon,
+              color: (isActive || isCompleted) ? Colors.white : Colors.grey,
+              size: 18,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: (isActive || isCompleted)
+                  ? FontWeight.bold
+                  : FontWeight.w500,
+              color: (isActive || isCompleted)
+                  ? AppColors.textHeading
+                  : Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _stepDivider() {
+    return Container(
+      width: 40,
+      height: 2,
+      margin: const EdgeInsets.only(bottom: 24),
+      color: Colors.grey[200],
+    );
+  }
+
+  Widget _buildIssuesStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('What\'s wrong with your device?'),
+        const SizedBox(height: 24),
+        _buildIssuesGrid(),
+        const SizedBox(height: 40),
+        _buildOfferSection(),
+      ],
+    );
+  }
+
+  Widget _buildTechnicianStep() {
+    if (_isLoadingTechs)
+      return const Center(child: CircularProgressIndicator());
+    if (_apiTechnicians.isEmpty)
+      return const Center(child: Text('No technicians found'));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Select a Certified Technician'),
+        const SizedBox(height: 24),
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _apiTechnicians.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 16),
+          itemBuilder: (context, index) {
+            final tech = _apiTechnicians[index];
+            final isSelected = _selectedTechIndex == index;
+            return InkWell(
+              onTap: () => setState(() => _selectedTechIndex = index),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.primaryButton
+                        : Colors.grey.shade200,
+                    width: 2,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundImage:
+                          tech['photoUrl'] != null &&
+                              tech['photoUrl'].isNotEmpty
+                          ? NetworkImage(tech['photoUrl'])
+                          : null,
+                      child: tech['photoUrl'] == null
+                          ? const Icon(LucideIcons.user)
+                          : null,
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            tech['name'] ?? 'Expert Tech',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            tech['specialty'] ?? 'Mobile Specialist',
+                            style: GoogleFonts.inter(
+                              color: Colors.grey,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isSelected)
+                      const Icon(
+                        LucideIcons.checkCircle,
+                        color: AppColors.primaryButton,
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildScheduleStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Schedule & Address'),
+        const SizedBox(height: 8),
+        Text(
+          'Pick a convenient time and provide your service location.',
+          style: GoogleFonts.inter(color: Colors.grey, fontSize: 14),
+        ),
+        const SizedBox(height: 24),
+
+        // Date & Time Card
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(5),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+            border: Border.all(color: Colors.grey.shade100),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryButton.withAlpha(10),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      LucideIcons.calendar,
+                      color: AppColors.primaryButton,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    'Pick a Date',
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              CalendarDatePicker(
+                initialDate: _selectedDate,
+                firstDate: DateTime.now(),
+                lastDate: DateTime.now().add(const Duration(days: 30)),
+                onDateChanged: (d) => setState(() => _selectedDate = d),
+              ),
+              const Divider(height: 40),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryButton.withAlpha(10),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      LucideIcons.clock,
+                      color: AppColors.primaryButton,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    'Available Slots',
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: _timeSlots.map((slot) {
+                  final isSel = _selectedTimeSlot == slot;
+                  return InkWell(
+                    onTap: () => setState(() => _selectedTimeSlot = slot),
+                    borderRadius: BorderRadius.circular(12),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSel
+                            ? AppColors.primaryButton
+                            : Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSel
+                              ? AppColors.primaryButton
+                              : Colors.grey.shade200,
+                        ),
+                      ),
+                      child: Text(
+                        slot,
+                        style: GoogleFonts.inter(
+                          color: isSel ? Colors.white : Colors.black87,
+                          fontSize: 13,
+                          fontWeight: isSel
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 32),
+
+        // Highlighted Address Section
+        _buildAddressSection(),
+
+        const SizedBox(height: 32),
+
+        // Payment Method Card
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(5),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+            border: Border.all(color: Colors.grey.shade100),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryButton.withAlpha(10),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      LucideIcons.creditCard,
+                      color: AppColors.primaryButton,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    'Payment Mode',
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: ['Cash on Service', 'Online Payment'].map((method) {
+                  final isSel = _currentPaymentMethod == method;
+                  return Expanded(
+                    child: InkWell(
+                      onTap: () =>
+                          setState(() => _currentPaymentMethod = method),
+                      child: Container(
+                        margin: EdgeInsets.only(
+                          right: method == 'Cash on Service' ? 8 : 0,
+                          left: method == 'Online Payment' ? 8 : 0,
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: isSel
+                              ? AppColors.primaryButton
+                              : Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSel
+                                ? AppColors.primaryButton
+                                : Colors.grey.shade200,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            method,
+                            style: GoogleFonts.inter(
+                              color: isSel ? Colors.white : Colors.black87,
+                              fontWeight: isSel
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAddressSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSectionTitle('Service Address'),
+                Text(
+                  'Your device will be picked from here',
+                  style: GoogleFonts.inter(color: Colors.grey, fontSize: 13),
+                ),
+              ],
+            ),
+            if (_savedAddresses.isNotEmpty)
+              TextButton.icon(
+                onPressed: _showAddAddressDialog,
+                icon: const Icon(LucideIcons.plus, size: 16),
+                label: const Text('Add New'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primaryButton,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        if (_isLoadingAddresses)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (_savedAddresses.isEmpty)
+          // Highlighted Empty State
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: AppColors.primaryButton.withAlpha(5),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: AppColors.primaryButton.withAlpha(20),
+                width: 2,
+              ),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  LucideIcons.mapPin,
+                  size: 48,
+                  color: AppColors.primaryButton.withAlpha(50),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Where should we come?',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'No address found. Add your service address to continue.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: _showAddAddressDialog,
+                  icon: const Icon(LucideIcons.plus),
+                  label: const Text('Add My First Address'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryButton,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          // Scrollable Address List or Grid
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _savedAddresses.length,
+            itemBuilder: (context, index) {
+              final addr = _savedAddresses[index];
+              final isSel = _selectedAddress?['_id'] == addr['_id'];
+              return GestureDetector(
+                onTap: () => setState(() => _selectedAddress = addr),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isSel
+                          ? AppColors.primaryButton
+                          : Colors.grey.shade200,
+                      width: isSel ? 2 : 1,
+                    ),
+                    boxShadow: isSel
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primaryButton.withAlpha(10),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: isSel
+                              ? AppColors.primaryButton
+                              : Colors.grey[100],
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _getIcon(addr['label']?.toLowerCase()) ??
+                              LucideIcons.mapPin,
+                          color: isSel ? Colors.white : Colors.grey[600],
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              addr['label'] ?? 'Service Address',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            Text(
+                              addr['fullAddress'] ?? '',
+                              style: GoogleFonts.inter(
+                                color: Colors.grey[600],
+                                fontSize: 13,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (isSel)
+                        const Icon(
+                          LucideIcons.checkCircle2,
+                          color: AppColors.primaryButton,
+                          size: 24,
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  Future<void> _showAddAddressDialog() async {
+    if (!_isLoggedIn) {
+      _showLoginPrompt();
+      return;
+    }
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddressPickerScreen(userId: _userId),
+      ),
+    );
+
+    if (result != null && result is Map<String, dynamic>) {
+      setState(() {
+        _savedAddresses.add(result);
+        _selectedAddress = result;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Address added and selected!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
   Widget _buildIssuesGrid() {
     final bool isDesktop = ResponsiveLayout.isDesktop(context);
     if (_isLoading) {
@@ -601,46 +1956,40 @@ class _RepairPageState extends State<RepairPage> {
       return const Center(child: Text('No repair issues found in database'));
     }
 
-    // Filter issues to only show ones with price > 0
+    // Source of truth: Use repairPrices from _modelData
     final List<Map<String, dynamic>> filteredIssues = [];
-    for (final item in _apiIssues) {
-      final key = (item['name'] ?? '') as String;
-      if (key.isEmpty) continue;
 
-      // Get model-specific price from repairPrices array
-      int price = 0;
-      int originalPrice = 0;
-      int discount = 0;
-      if (_modelData != null && _modelData!['repairPrices'] != null) {
-        final repairPricesList = _modelData!['repairPrices'];
-        if (repairPricesList is List) {
-          final priceItem = repairPricesList.firstWhere(
-            (p) => p['issueName'] == key,
+    if (_modelData != null && _modelData!['repairPrices'] != null) {
+      final repairPricesList = _modelData!['repairPrices'];
+      if (repairPricesList is List) {
+        for (final priceItem in repairPricesList) {
+          final issueName = (priceItem['issueName'] ?? '').toString();
+          if (issueName.isEmpty) continue;
+
+          final price = _parseToInt(priceItem['price']);
+          if (price <= 0) continue;
+
+          // Cross-reference with global issues for icons/images
+          final itemDetail = _apiIssues.firstWhere(
+            (i) => i['name'] == issueName,
             orElse: () => null,
           );
-          if (priceItem != null) {
-            // Handle various types from API (int, double, String)
-            price = _parseToInt(priceItem['price']);
-            originalPrice = _parseToInt(priceItem['originalPrice'] ?? priceItem['price']);
-            discount = _parseToInt(priceItem['discount']);
-          }
-        }
-      }
 
-      // Only include issues with price > 0
-      if (price > 0) {
-        filteredIssues.add({
-          'item': item,
-          'key': key,
-          'price': price,
-          'originalPrice': originalPrice,
-          'discount': discount,
-        });
+          filteredIssues.add({
+            'item': itemDetail ?? {'name': issueName},
+            'key': issueName,
+            'price': price,
+            'originalPrice': _parseToInt(priceItem['originalPrice'] ?? price),
+            'discount': _parseToInt(priceItem['discount']),
+          });
+        }
       }
     }
 
     if (filteredIssues.isEmpty) {
-      return const Center(child: Text('No repair services available for this model'));
+      return const Center(
+        child: Text('No repair services available for this model'),
+      );
     }
 
     return GridView.builder(
@@ -650,7 +1999,7 @@ class _RepairPageState extends State<RepairPage> {
         crossAxisCount: isDesktop ? 4 : 2,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 0.85, // Adjusted for more content
+        childAspectRatio: 0.78, // Adjusted for more content and price row
       ),
       itemCount: filteredIssues.length,
       itemBuilder: (context, index) {
@@ -671,7 +2020,9 @@ class _RepairPageState extends State<RepairPage> {
           'discount': discount,
           'warranty': '6 Months',
           'time': '45 mins',
-          'symptoms': item['symptoms'] is List ? item['symptoms'] : ['Diagnosis', 'Repair', 'Quality Check'],
+          'symptoms': item['symptoms'] is List
+              ? item['symptoms']
+              : ['Diagnosis', 'Repair', 'Quality Check'],
         };
 
         return _IssueCard(
@@ -694,6 +2045,7 @@ class _RepairPageState extends State<RepairPage> {
   }
 
   Widget _buildRightColumn() {
+    final bool isDesktop = ResponsiveLayout.isDesktop(context);
     return Column(
       children: [
         // Checkout Card
@@ -736,12 +2088,11 @@ class _RepairPageState extends State<RepairPage> {
                     (i) => i['name'] == issue,
                     orElse: () => <String, dynamic>{},
                   );
-                  
+
                   // Get model-specific price
                   int price = 0;
-                  int originalPrice = 0;
-                  int discount = 0;
-                  if (_modelData != null && _modelData!['repairPrices'] != null) {
+                  if (_modelData != null &&
+                      _modelData!['repairPrices'] != null) {
                     final repairPricesList = _modelData!['repairPrices'];
                     if (repairPricesList is List) {
                       final priceItem = repairPricesList.firstWhere(
@@ -750,18 +2101,17 @@ class _RepairPageState extends State<RepairPage> {
                       );
                       if (priceItem != null) {
                         price = _parseToInt(priceItem['price']);
-                        originalPrice = _parseToInt(priceItem['originalPrice'] ?? priceItem['price']);
-                        discount = _parseToInt(priceItem['discount']);
                       }
                     }
                   }
-                  
+
                   final data = {
                     'imageUrl': item['imageUrl'],
                     'price': price,
                     'warranty': '6 Months',
                     'time': '45 mins',
                   };
+
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(12),
@@ -829,126 +2179,70 @@ class _RepairPageState extends State<RepairPage> {
 
               const Divider(height: 32),
 
-              // Repair Options
-              Text(
-                'Repair Mode',
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+              // Step details in summary (Desktop)
+              if (isDesktop) ...[
+                // Show brand/model after selection
+                if (_currentBrand.isNotEmpty && _currentStep >= 1)
+                  _buildSummaryItem(
+                    LucideIcons.smartphone,
+                    'Brand',
+                    _currentBrand,
+                  ),
+                if (_currentModel.isNotEmpty && _currentStep >= 2)
+                  _buildSummaryItem(LucideIcons.tablet, 'Model', _currentModel),
+                if (_selectedTechIndex != null && _currentStep >= 3)
+                  _buildSummaryItem(
+                    LucideIcons.user,
+                    'Technician',
+                    _apiTechnicians[_selectedTechIndex!]['name'] ?? 'Expert',
+                  ),
+                if (_currentStep == 4 && _selectedTimeSlot != null)
+                  _buildSummaryItem(
+                    LucideIcons.calendar,
+                    'Schedule',
+                    '${_selectedDate.day}/${_selectedDate.month} @ $_selectedTimeSlot',
+                  ),
+                if (_currentStep == 4 && _selectedAddress != null)
+                  _buildSummaryItem(
+                    LucideIcons.mapPin,
+                    'Address',
+                    _selectedAddress!['label'] ?? 'Service Location',
+                  ),
+                if (_currentStep == 4)
+                  _buildSummaryItem(
+                    LucideIcons.creditCard,
+                    'Payment',
+                    _currentPaymentMethod,
+                  ),
+                const Divider(height: 32),
+              ],
+
+              // Total (only show when issues are selected)
+              if (_currentStep >= 2) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Total Amount',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      '₹${_calculateTotal()}',
+                      style: GoogleFonts.inter(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryButton,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 12),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  return Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: ['Doorstep', 'Pickup', 'Walk-in'].map((mode) {
-                        final isSelected = _repairOption == mode;
-                        return Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(() => _repairOption = mode),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? Colors.white
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(8),
-                                boxShadow: isSelected
-                                    ? [
-                                        BoxShadow(
-                                          color: Colors.black.withAlpha(10),
-                                          blurRadius: 4,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ]
-                                    : [],
-                              ),
-                              child: Text(
-                                mode,
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: isSelected
-                                      ? FontWeight.bold
-                                      : FontWeight.w500,
-                                  color: isSelected
-                                      ? AppColors.textHeading
-                                      : Colors.grey[600],
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 24),
-              // Availability
-              Row(
-                children: [
-                  const Icon(LucideIcons.clock, size: 16, color: Colors.green),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Earliest Slot: Today, 4:00 PM',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: Colors.green,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-
-              const Divider(height: 32),
-
-              // Total
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Total Amount',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    '₹${_calculateTotal()}',
-                    style: GoogleFonts.inter(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryButton,
-                    ),
-                  ),
-                ],
-              ),
+              ],
 
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _selectedIssues.isNotEmpty
-                      ? () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => TechnicianSelectionScreen(
-                                deviceName: '$_currentBrand $_currentModel',
-                                selectedIssues: _selectedIssues.toList(),
-                                totalPrice: _calculateTotal().toDouble(),
-                                repairMode: _repairOption,
-                              ),
-                            ),
-                          );
-                        }
-                      : null,
+                  onPressed: _getNextStepAction(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryButton,
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -956,16 +2250,40 @@ class _RepairPageState extends State<RepairPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: Text(
-                    'Proceed to Schedule',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                  child: _isBookingLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          ResponsiveLayout.isDesktop(context)
+                              ? _getNextStepLabel()
+                              : 'Proceed to Schedule',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                ),
+              ),
+              if (ResponsiveLayout.isDesktop(context) && _currentStep > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: TextButton(
+                    onPressed: () => setState(() => _currentStep--),
+                    child: Center(
+                      child: Text(
+                        'Go Back',
+                        style: GoogleFonts.inter(color: Colors.grey),
+                      ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
@@ -1387,6 +2705,31 @@ class _RepairPageState extends State<RepairPage> {
     );
   }
 
+  Widget _buildSummaryItem(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: AppColors.primaryButton),
+          const SizedBox(width: 12),
+          Text(
+            '$label: ',
+            style: GoogleFonts.inter(color: Colors.grey, fontSize: 13),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSectionTitle(String title) {
     return Text(title, style: _buildSectionTitleStyle());
   }
@@ -1481,7 +2824,8 @@ class _IssueCardState extends State<_IssueCard> {
           child: Stack(
             children: [
               // Background Image
-              if (widget.data['imageUrl'] != null && (widget.data['imageUrl'] as String).isNotEmpty)
+              if (widget.data['imageUrl'] != null &&
+                  (widget.data['imageUrl'] as String).isNotEmpty)
                 Positioned.fill(
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(18),
@@ -1541,44 +2885,62 @@ class _IssueCardState extends State<_IssueCard> {
                         widget.title,
                         style: GoogleFonts.inter(
                           fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                          fontSize: 14,
                           color: AppColors.textHeading,
                         ),
                         textAlign: TextAlign.center,
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
-                      // Original price (strikethrough) if discount exists
-                      if ((widget.data['discount'] ?? 0) > 0 && 
-                          (widget.data['originalPrice'] ?? 0) > (widget.data['price'] ?? 0))
-                        Text(
-                          '₹${widget.data['originalPrice']}',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            color: Colors.grey,
-                            decoration: TextDecoration.lineThrough,
+                      const SizedBox(height: 6),
+                      // Price and Discount row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if ((widget.data['discount'] ?? 0) > 0 &&
+                              (widget.data['originalPrice'] ?? 0) >
+                                  (widget.data['price'] ?? 0))
+                            Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: Text(
+                                '₹${widget.data['originalPrice']}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  color: Colors.grey,
+                                  decoration: TextDecoration.lineThrough,
+                                ),
+                              ),
+                            ),
+                          Text(
+                            '₹${widget.data['price']}',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              color: AppColors.primaryButton,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
-                        ),
-                      // Discount percentage
-                      if ((widget.data['discount'] ?? 0) > 0)
-                        Text(
-                          '${widget.data['discount']}% OFF',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            color: Colors.green,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      // Final price
-                      Text(
-                        '₹${widget.data['price']}',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: AppColors.primaryButton,
-                          fontWeight: FontWeight.w700,
-                        ),
+                        ],
                       ),
+                      if ((widget.data['discount'] ?? 0) > 0)
+                        Container(
+                          margin: const EdgeInsets.only(top: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '${widget.data['discount']}% OFF',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),

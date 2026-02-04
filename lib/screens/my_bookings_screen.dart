@@ -519,418 +519,260 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             children: [
               // Header
               Container(
-                padding: EdgeInsets.all(isDesktop ? 24 : 16),
-                decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: Color(0xFFEEEFF2))),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 20,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(
+                    bottom: BorderSide(color: Colors.grey.shade100),
+                  ),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryButton.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        LucideIcons.fileText,
+                        color: AppColors.primaryButton,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
                     Text(
                       'Booking Details',
                       style: GoogleFonts.poppins(
-                        fontSize: isDesktop ? 20 : 18,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        color: AppColors.textHeading,
                       ),
                     ),
+                    const Spacer(),
                     IconButton(
                       onPressed: () => setState(() => _selectedBooking = null),
-                      icon: const Icon(LucideIcons.x),
+                      icon: const Icon(LucideIcons.x, size: 20),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.grey[50],
+                        hoverColor: Colors.grey[100],
+                      ),
                     ),
                   ],
                 ),
               ),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.all(isDesktop ? 24 : 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 32,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Status and Device Header
                       _buildStatusChip(
                         _selectedBooking!['status'],
                         large: true,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       Text(
                         _selectedBooking!['device'],
                         style: GoogleFonts.poppins(
-                          fontSize: isDesktop ? 24 : 20,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textHeading,
+                          letterSpacing: -0.5,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Text(
                         'Booking ID: ${_selectedBooking!['id']}',
                         style: GoogleFonts.inter(
-                          color: Colors.grey,
-                          fontSize: isDesktop ? 14 : 12,
+                          color: Colors.grey[500],
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 32),
 
-                      // OTP Display Section
-                      if (_selectedBooking!['otp'].toString().isNotEmpty &&
-                          !_selectedBooking!['otpVerified'] &&
-                          _selectedBooking!['rawStatus'] != 'Completed' &&
-                          _selectedBooking!['rawStatus'] != 'Cancelled')
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 24),
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryButton.withOpacity(0.05),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: AppColors.primaryButton.withOpacity(0.2),
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    LucideIcons.shieldCheck,
-                                    size: 16,
-                                    color: AppColors.primaryButton,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'JOB VERIFICATION CODE',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primaryButton,
-                                      letterSpacing: 1.1,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    _selectedBooking!['otp'],
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primaryButton,
-                                      letterSpacing: 4,
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
-                                        color: Colors.grey.shade200,
-                                      ),
-                                    ),
-                                    child: const Text(
-                                      'Active',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Provide this code to the technician upon arrival to start the job.',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  color: Colors.grey[600],
-                                  height: 1.4,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      const SizedBox(height: 40),
 
-                      // Pickup Details Section
-                      if (_selectedBooking!['pickupDetails'] != null &&
-                          _selectedBooking!['pickupDetails']['isPickedUp'] ==
-                              true)
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 24),
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.05),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.blue.withOpacity(0.2),
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(
-                                    LucideIcons.package,
-                                    size: 16,
-                                    color: Colors.blue,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'DEVICE PICKED UP',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blue,
-                                      letterSpacing: 1.1,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Estimated Delivery',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              Text(
-                                _selectedBooking!['pickupDetails']['deliveryTime'] ??
-                                    'TBD',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Device Images',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              SizedBox(
-                                height: 60,
-                                child: ListView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount:
-                                      (_selectedBooking!['pickupDetails']['images']
-                                              as List)
-                                          .length,
-                                  itemBuilder: (context, index) {
-                                    final imageUrl =
-                                        (_selectedBooking!['pickupDetails']['images']
-                                            as List)[index];
-                                    return Padding(
-                                      padding: const EdgeInsets.only(right: 8),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Image.network(
-                                          imageUrl,
-                                          width: 60,
-                                          height: 60,
-                                          fit: BoxFit.cover,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      if (_selectedBooking!['otpVerified'])
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 24),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.green.withOpacity(0.2),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                LucideIcons.checkCircle2,
-                                color: Colors.green,
-                                size: 18,
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                'Job Code Verified',
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.green[700],
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                      _buildDetailRow(
+                      // Information Grid/List
+                      _buildSidebarInfoSection(
                         LucideIcons.calendar,
-                        'Date & Time',
-                        '${_selectedBooking!['date']}${_selectedBooking!['timeSlot'].toString().isNotEmpty ? ' at ${_selectedBooking!['timeSlot']}' : ''}',
+                        'Schedule',
+                        '${_selectedBooking!['date']} at ${_selectedBooking!['timeSlot']}',
+                        Colors.blue,
                       ),
-                      const SizedBox(height: 16),
-                      _buildDetailRow(
+                      const SizedBox(height: 24),
+                      _buildSidebarInfoSection(
                         LucideIcons.mapPin,
-                        'Address',
+                        'Service Address',
                         _selectedBooking!['address'],
+                        Colors.red,
                       ),
-                      const SizedBox(height: 16),
-                      _buildDetailRow(
+                      const SizedBox(height: 24),
+                      _buildSidebarInfoSection(
                         LucideIcons.creditCard,
-                        'Payment',
+                        'Payment Method',
                         _selectedBooking!['payment'],
+                        Colors.green,
                       ),
 
-                      const Divider(height: 48),
+                      const SizedBox(height: 40),
+                      const Divider(),
+                      const SizedBox(height: 40),
 
+                      // Technician Section
                       Text(
-                        'Technician',
-                        style: GoogleFonts.inter(
+                        'Assigned Technician',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          fontSize: isDesktop ? 14 : 13,
+                          color: AppColors.textHeading,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: isDesktop ? 25 : 20,
-                            backgroundImage:
-                                _selectedBooking!['techImage']
-                                    .toString()
-                                    .startsWith('http')
-                                ? NetworkImage(_selectedBooking!['techImage'])
-                                : AssetImage(_selectedBooking!['techImage'])
-                                      as ImageProvider,
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _selectedBooking!['technician'],
-                                  style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: isDesktop ? 16 : 14,
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.grey.shade100),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.primaryButton.withOpacity(
+                                    0.1,
                                   ),
+                                  width: 2,
                                 ),
-                                Text(
-                                  'Expert Technician',
-                                  style: GoogleFonts.inter(
-                                    color: Colors.grey,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
+                              ),
+                              child: CircleAvatar(
+                                radius: 28,
+                                backgroundImage:
+                                    _selectedBooking!['techImage']
+                                        .toString()
+                                        .startsWith('http')
+                                    ? NetworkImage(
+                                        _selectedBooking!['techImage'],
+                                      )
+                                    : AssetImage(_selectedBooking!['techImage'])
+                                          as ImageProvider,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          IconButton(
-                            onPressed: () =>
-                                _callTechnician(_selectedBooking!['techPhone']),
-                            icon: const Icon(
-                              LucideIcons.phone,
-                              color: Colors.blue,
-                              size: 20,
-                            ),
-                            style: IconButton.styleFrom(
-                              backgroundColor: Colors.blue.withOpacity(0.1),
-                              padding: const EdgeInsets.all(12),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            onPressed: () {
-                              final user = FirebaseAuth.instance.currentUser;
-                              if (user != null) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => ChatScreen(
-                                      bookingId: _selectedBooking!['id'],
-                                      currentUserId: user.uid,
-                                      otherUserName:
-                                          _selectedBooking!['technician'],
-                                      senderRole: 'user',
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _selectedBooking!['technician'],
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: AppColors.textHeading,
                                     ),
                                   ),
-                                );
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Please login to chat'),
+                                  Text(
+                                    'Ziyonstar Certified Expert',
+                                    style: GoogleFonts.inter(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                    ),
                                   ),
-                                );
-                              }
-                            },
-                            icon: const Icon(
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            _buildCircleAction(
+                              LucideIcons.phone,
+                              Colors.blue,
+                              () => _callTechnician(
+                                _selectedBooking!['techPhone'],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildCircleAction(
                               LucideIcons.messageSquare,
-                              color: Colors.green,
-                              size: 20,
+                              Colors.green,
+                              () {
+                                final user = FirebaseAuth.instance.currentUser;
+                                if (user != null) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ChatScreen(
+                                        bookingId: _selectedBooking!['id'],
+                                        currentUserId: user.uid,
+                                        otherUserName:
+                                            _selectedBooking!['technician'],
+                                        senderRole: 'user',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
                             ),
-                            style: IconButton.styleFrom(
-                              backgroundColor: Colors.green.withOpacity(0.1),
-                              padding: const EdgeInsets.all(12),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const Divider(height: 48),
-
-                      Text(
-                        'Issues to be fixed',
-                        style: GoogleFonts.inter(
-                          fontWeight: FontWeight.bold,
-                          fontSize: isDesktop ? 14 : 13,
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 16),
+
+                      const SizedBox(height: 40),
+
+                      // Issues Section
+                      Text(
+                        'Issues Reported',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textHeading,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
                       Wrap(
                         spacing: 12,
                         runSpacing: 12,
                         children: (_selectedBooking!['issues'] as List).map((
                           issue,
                         ) {
-                          final rawImg = issue['issueImage']?.toString();
                           final issueName =
                               issue['issueName']?.toString() ?? '';
+                          final rawImg = issue['issueImage']?.toString();
                           final img = _getIssueImagePath(issueName, rawImg);
 
                           return Container(
-                            width: isDesktop ? 100 : 80,
-                            padding: const EdgeInsets.all(8),
+                            width: 120,
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade200),
-                              borderRadius: BorderRadius.circular(12),
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.grey.shade100),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.02),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
                             child: Column(
                               children: [
                                 Container(
+                                  height: 60,
                                   width: double.infinity,
-                                  height: isDesktop ? 60 : 50,
                                   decoration: BoxDecoration(
                                     color: Colors.grey[50],
-                                    borderRadius: BorderRadius.circular(8),
-                                    image: (img.isNotEmpty)
+                                    borderRadius: BorderRadius.circular(10),
+                                    image: img.isNotEmpty
                                         ? DecorationImage(
                                             image: img.startsWith('http')
                                                 ? NetworkImage(img)
@@ -944,22 +786,21 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                                           )
                                         : null,
                                   ),
-                                  child: (img.isEmpty)
-                                      ? const Center(
-                                          child: Icon(
-                                            LucideIcons.wrench,
-                                            size: 24,
-                                          ),
-                                        )
+                                  child: img.isEmpty
+                                      ? const Icon(LucideIcons.wrench, size: 20)
                                       : null,
                                 ),
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 10),
                                 Text(
                                   issueName,
                                   textAlign: TextAlign.center,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.inter(fontSize: 10),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textHeading,
+                                  ),
                                 ),
                               ],
                             ),
@@ -967,81 +808,60 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                         }).toList(),
                       ),
 
-                      const SizedBox(height: 40),
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 60),
+
+                      // Footer Actions (Cancel/Reassign)
                       if (_selectedBooking!['status'] == 'Upcoming')
                         SizedBox(
                           width: double.infinity,
-                          child: OutlinedButton.icon(
+                          child: ElevatedButton.icon(
                             onPressed: () {
-                              // Cancel Logic
-                              setState(() {
-                                _selectedBooking!['status'] = 'Cancelled';
-                              });
+                              setState(
+                                () => _selectedBooking!['status'] = 'Cancelled',
+                              );
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Booking Cancelled'),
                                 ),
                               );
                             },
-                            icon: const Icon(
-                              LucideIcons.xCircle,
-                              color: Colors.red,
-                            ),
-                            label: const Text('Cancel Booking'),
-                            style: OutlinedButton.styleFrom(
+                            icon: const Icon(LucideIcons.xCircle, size: 18),
+                            label: const Text('Cancel Appointment'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
                               foregroundColor: Colors.red,
-                              side: const BorderSide(color: Colors.red),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              elevation: 0,
+                              side: const BorderSide(
+                                color: Colors.red,
+                                width: 1.5,
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
                             ),
                           ),
                         ),
-                      if (_selectedBooking!['rawStatus'] == 'Rejected' ||
-                          _selectedBooking!['status'] == 'Rejected')
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.orange),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Technician Declined",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.orange,
-                                ),
+
+                      if (_selectedBooking!['status'] == 'Rejected')
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () =>
+                                _handleReassign(_selectedBooking!['id']),
+                            icon: const Icon(LucideIcons.refreshCw, size: 18),
+                            label: const Text('Find New Technician'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryButton,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
                               ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                "The technician could not accept this job. Please reassign to find another expert.",
-                                style: TextStyle(fontSize: 12),
-                              ),
-                              const SizedBox(height: 16),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  onPressed: () =>
-                                      _handleReassign(_selectedBooking!['id']),
-                                  icon: const Icon(
-                                    LucideIcons.refreshCw,
-                                    color: Colors.white,
-                                  ),
-                                  label: const Text('Find Another Technician'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.black,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ),
+                      const SizedBox(height: 40),
                     ],
                   ),
                 ),
@@ -1151,39 +971,72 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            borderRadius: BorderRadius.circular(10),
+  Widget _buildSidebarInfoSection(
+    IconData icon,
+    String title,
+    String value,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.1)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 20),
           ),
-          child: Icon(icon, size: 20, color: Colors.grey[600]),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                softWrap: true,
-                overflow:
-                    TextOverflow.visible, // Ensure it wraps and doesn't clip
-              ),
-            ],
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textHeading,
+                  ),
+                ),
+              ],
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCircleAction(IconData icon, Color color, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(50),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          shape: BoxShape.circle,
         ),
-      ],
+        child: Icon(icon, color: color, size: 20),
+      ),
     );
   }
 
@@ -1346,84 +1199,94 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
           onTap: () => setState(() => _selectedBooking = booking),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            margin: isMobile
-                ? const EdgeInsets.only(bottom: 20)
-                : EdgeInsets.zero,
             transform: Matrix4.identity()
               ..scale(_hoveredBookingId == booking['id'] ? 1.02 : 1.0),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(isMobile ? 20 : 16),
+              borderRadius: BorderRadius.circular(24),
               border: Border.all(
                 color: _hoveredBookingId == booking['id']
                     ? AppColors.primaryButton.withOpacity(0.3)
                     : Colors.grey.shade100,
+                width: _hoveredBookingId == booking['id'] ? 2 : 1,
               ),
               boxShadow: [
                 BoxShadow(
                   color: _hoveredBookingId == booking['id']
-                      ? AppColors.primaryButton.withOpacity(0.1)
-                      : Colors.black.withOpacity(isMobile ? 0.08 : 0.05),
-                  blurRadius: _hoveredBookingId == booking['id']
-                      ? 20
-                      : (isMobile ? 15 : 10),
-                  offset: const Offset(0, 4),
+                      ? AppColors.primaryButton.withOpacity(0.12)
+                      : Colors.black.withOpacity(0.04),
+                  blurRadius: _hoveredBookingId == booking['id'] ? 30 : 20,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
             child: Padding(
-              padding: EdgeInsets.all(isMobile ? 24 : 16),
+              padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: isMobile
-                    ? MainAxisAlignment.start
-                    : MainAxisAlignment.spaceBetween,
                 children: [
-                  // Header
+                  // ID and Status Chip
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isMobile ? 12 : 0,
-                          vertical: isMobile ? 6 : 0,
-                        ),
-                        decoration: isMobile
-                            ? BoxDecoration(
-                                color: Colors.grey[50],
-                                borderRadius: BorderRadius.circular(8),
-                              )
-                            : null,
-                        child: Text(
-                          booking['id'],
-                          style: GoogleFonts.inter(
-                            fontSize: isMobile ? 12 : 10,
-                            color: Colors.grey[600],
-                            fontWeight: FontWeight.w500,
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade100),
+                          ),
+                          child: Text(
+                            booking['id'],
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: Colors.grey[500],
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
                           ),
                         ),
                       ),
-                      _buildStatusChip(booking['status'], large: isMobile),
+                      const SizedBox(width: 12),
+                      _buildStatusChip(booking['status'], large: true),
                     ],
                   ),
 
-                  SizedBox(height: isMobile ? 20 : 0),
+                  const SizedBox(height: 24),
 
-                  // Content
+                  // Technician and Device Details
                   Row(
                     children: [
                       Hero(
                         tag: 'tech_${booking['id']}',
-                        child: CircleAvatar(
-                          radius: isMobile ? 24 : 18,
-                          backgroundImage:
-                              booking['techImage'].toString().startsWith('http')
-                              ? NetworkImage(booking['techImage'])
-                              : AssetImage(booking['techImage'])
-                                    as ImageProvider,
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.primaryButton.withOpacity(0.1),
+                              width: 2,
+                            ),
+                          ),
+                          child: CircleAvatar(
+                            radius: 22,
+                            backgroundImage:
+                                booking['techImage'].toString().startsWith(
+                                  'http',
+                                )
+                                ? NetworkImage(booking['techImage'])
+                                : AssetImage(booking['techImage'])
+                                      as ImageProvider,
+                          ),
                         ),
                       ),
-                      SizedBox(width: isMobile ? 16 : 12),
+                      const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1434,226 +1297,146 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.poppins(
                                 fontWeight: FontWeight.bold,
-                                fontSize: isMobile ? 16 : 14,
+                                fontSize: 16,
                                 color: AppColors.textHeading,
+                                letterSpacing: -0.2,
                               ),
                             ),
-                            SizedBox(height: isMobile ? 4 : 0),
+                            const SizedBox(height: 2),
                             Text(
                               booking['technician'],
                               style: GoogleFonts.inter(
-                                fontSize: isMobile ? 13 : 11,
+                                fontSize: 13,
                                 color: Colors.grey[600],
-                              ),
-                            ),
-                            // ADDED: Time and Address display for replica feel (Safe wrap)
-                            const SizedBox(height: 4),
-                            Text(
-                              '${booking['date']}${booking['timeSlot'].toString().isNotEmpty ? ' • ${booking['timeSlot']}' : ''}',
-                              // Removed maxLines to allow full detail display if space permits
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.inter(
-                                fontSize: isMobile ? 12 : 10,
-                                color: Colors.blueGrey,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      // Chat/Phone Actions
-                      if (!isMobile) ...[
-                        Row(
-                          children: [
-                            _buildActionButton(
-                              context,
-                              LucideIcons.phone,
-                              Colors.green,
-                              () => _callTechnician(booking['techPhone']),
-                            ),
-                            const SizedBox(width: 8),
-                            _buildActionButton(
-                              context,
-                              LucideIcons.alertTriangle,
-                              Colors.orange,
-                              () => _showComplaintDialog(booking),
-                            ),
-                          ],
-                        ),
-                      ],
                     ],
                   ),
 
-                  SizedBox(height: isMobile ? 20 : 0),
+                  const SizedBox(height: 20),
 
-                  // Issues Icons Row
-                  Row(
-                    children: [
-                      ...(booking['issues'] as List).take(3).map<Widget>((
-                        issue,
-                      ) {
-                        final rawImg = issue['issueImage']?.toString();
-                        final issueName = issue['issueName']?.toString() ?? '';
-                        final img = _getIssueImagePath(issueName, rawImg);
-
-                        return Container(
-                          width: isMobile ? 60 : 50,
-                          height: isMobile ? 60 : 50,
-                          margin: const EdgeInsets.only(right: 8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF9FAFB),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade100),
-                            image: (img.isNotEmpty)
-                                ? DecorationImage(
-                                    image: img.startsWith('http')
-                                        ? NetworkImage(img)
-                                        : AssetImage(
-                                                img.startsWith('assets')
-                                                    ? img
-                                                    : 'assets/images/issues/$img',
-                                              )
-                                              as ImageProvider,
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
-                          ),
-                          child: (img.isEmpty)
-                              ? const Center(
-                                  child: Icon(LucideIcons.wrench, size: 24),
-                                )
-                              : null,
-                        );
-                      }).toList(),
-                    ],
-                  ),
-
-                  // Mobile Actions Row (Chat/Phone below issues on mobile)
-                  if (isMobile) ...[
-                    const SizedBox(height: 20),
-                    Row(
+                  // Time and Date
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryButton.withOpacity(0.04),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
                       children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () =>
-                                _callTechnician(booking['techPhone']),
-                            icon: const Icon(LucideIcons.phone, size: 16),
-                            label: const Text('Call'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.green,
-                              side: BorderSide(
-                                color: Colors.green.withOpacity(0.5),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
+                        Icon(
+                          LucideIcons.calendar,
+                          size: 14,
+                          color: AppColors.primaryButton,
                         ),
                         const SizedBox(width: 8),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () => _showComplaintDialog(booking),
-                            icon: const Icon(
-                              LucideIcons.alertTriangle,
-                              size: 16,
-                            ),
-                            label: const Text('Complaint'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.orange,
-                              side: BorderSide(
-                                color: Colors.orange.withOpacity(0.5),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
+                        Text(
+                          '${booking['date']} • ${booking['timeSlot']}',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primaryButton,
                           ),
                         ),
                       ],
                     ),
-                  ],
+                  ),
 
-                  SizedBox(height: isMobile ? 20 : 0),
+                  const SizedBox(height: 20),
 
-                  // Footer
+                  // Action Buttons (Call / Complaint)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton.icon(
+                          onPressed: () =>
+                              _callTechnician(booking['techPhone']),
+                          icon: const Icon(LucideIcons.phone, size: 14),
+                          label: const Text('Call'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.blue,
+                            backgroundColor: Colors.blue.withOpacity(0.05),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextButton.icon(
+                          onPressed: () => _showComplaintDialog(booking),
+                          icon: const Icon(LucideIcons.alertCircle, size: 14),
+                          label: const Text('Support'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.orange,
+                            backgroundColor: Colors.orange.withOpacity(0.05),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+                  Divider(color: Colors.grey.shade100, height: 1),
+                  const SizedBox(height: 20),
+
+                  // Price and View Details
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (isMobile)
-                            Text(
-                              'Total Amount',
-                              style: GoogleFonts.inter(
-                                fontSize: 10,
-                                color: Colors.grey,
-                              ),
+                          Text(
+                            'Amount to pay',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: Colors.grey,
                             ),
+                          ),
                           Text(
                             '₹${booking['price']}',
-                            style: GoogleFonts.inter(
-                              fontSize: isMobile ? 18 : 14,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primaryButton,
+                            style: GoogleFonts.poppins(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textHeading,
                             ),
                           ),
                         ],
                       ),
-                      if (!isMobile) // Mobile has dedicated buttons above
-                        Icon(
-                          LucideIcons.arrowRight,
-                          size: 16,
-                          color: Colors.grey[400],
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryButton,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primaryButton.withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
+                        child: const Icon(
+                          LucideIcons.chevronRight,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                      ),
                     ],
                   ),
-
-                  // Review Section (for Completed bookings without review)
-                  if (booking['status'] == 'Completed' &&
-                      booking['reviewed'] != true)
-                    Column(
-                      children: [
-                        const SizedBox(height: 12),
-                        // Star Rating Display
-                        Row(
-                          children: List.generate(5, (index) {
-                            return Icon(
-                              LucideIcons.star,
-                              size: 16,
-                              color: Colors.amber.shade300,
-                            );
-                          }),
-                        ),
-                        const SizedBox(height: 8),
-                        // Give Review Button
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton(
-                            onPressed: () => _showReviewDialog(booking),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.primaryButton,
-                              side: BorderSide(
-                                color: AppColors.primaryButton.withOpacity(0.3),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: Text(
-                              'Give Review',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
                 ],
               ),
             ),
@@ -1676,236 +1459,48 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     }
   }
 
-  IconData _getStatusIcon(String status) {
-    switch (status) {
-      case 'Upcoming':
-        return LucideIcons.clock;
-      case 'Completed':
-        return LucideIcons.checkCircle;
-      case 'Cancelled':
-        return LucideIcons.xCircle;
-      default:
-        return LucideIcons.circle;
-    }
-  }
-
   Widget _buildStatusChip(String status, {bool large = false}) {
     final color = _getStatusColor(status);
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: large ? 16 : 8,
-        vertical: large ? 8 : 4,
+        horizontal: large ? 14 : 10,
+        vertical: large ? 6 : 4,
       ),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(color: color.withOpacity(0.2), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(_getStatusIcon(status), size: large ? 16 : 10, color: color),
-          SizedBox(width: large ? 8 : 4),
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.4),
+                  blurRadius: 4,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
           Text(
             status,
             style: GoogleFonts.inter(
-              fontSize: large ? 14 : 10,
-              fontWeight: FontWeight.bold,
+              fontSize: large ? 12 : 10,
+              fontWeight: FontWeight.w700,
               color: color,
+              letterSpacing: 0.3,
             ),
           ),
         ],
       ),
-    );
-  }
-
-  void _showReviewDialog(Map<String, dynamic> booking) {
-    int selectedRating = 0;
-    final TextEditingController reviewController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(32),
-                constraints: const BoxConstraints(maxWidth: 500),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Header
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                AppColors.primaryButton,
-                                AppColors.primaryButton.withOpacity(0.7),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            LucideIcons.star,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Rate Your Service',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                booking['id'],
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(LucideIcons.x),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Star Rating
-                    Text(
-                      'How was your experience?',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(5, (index) {
-                        return GestureDetector(
-                          onTap: () {
-                            setDialogState(() {
-                              selectedRating = index + 1;
-                            });
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            child: Icon(
-                              index < selectedRating
-                                  ? Icons.star
-                                  : Icons.star_border,
-                              size: 40,
-                              color: index < selectedRating
-                                  ? Colors.amber
-                                  : Colors.grey.shade300,
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Review Text
-                    TextField(
-                      controller: reviewController,
-                      maxLines: 4,
-                      decoration: InputDecoration(
-                        hintText: 'Share your experience (optional)',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Submit Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: selectedRating > 0
-                            ? () async {
-                                final success = await ApiService().submitReview(
-                                  bookingId: booking['id'],
-                                  rating: selectedRating,
-                                  reviewText: reviewController.text,
-                                );
-                                if (success) {
-                                  setState(() {
-                                    booking['reviewed'] = true;
-                                    booking['rating'] = selectedRating;
-                                    booking['reviewText'] =
-                                        reviewController.text;
-                                  });
-                                  if (context.mounted) Navigator.pop(context);
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Thank you for your review!',
-                                          style: GoogleFonts.inter(),
-                                        ),
-                                        backgroundColor: Colors.green,
-                                      ),
-                                    );
-                                  }
-                                } else {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Failed to submit review',
-                                        ),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                  }
-                                }
-                              }
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryButton,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Text(
-                          'Submit Review',
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
     );
   }
 
@@ -1939,23 +1534,5 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     if (name.contains('glass')) return 'issue_backglass.png';
 
     return '';
-  }
-
-  Widget _buildActionButton(
-    BuildContext context,
-    IconData icon,
-    Color color,
-    VoidCallback onPressed,
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        shape: BoxShape.circle,
-      ),
-      child: IconButton(
-        onPressed: onPressed,
-        icon: Icon(icon, size: 18, color: color),
-      ),
-    );
   }
 }

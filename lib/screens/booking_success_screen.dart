@@ -424,7 +424,7 @@ class _BookingSuccessScreenState extends State<BookingSuccessScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Amount Paid',
+                'Amount to be Paid',
                 style: GoogleFonts.inter(
                   fontWeight: FontWeight.w600,
                   color: AppColors.textHeading,
