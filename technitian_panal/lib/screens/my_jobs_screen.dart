@@ -337,8 +337,9 @@ class _MyJobsScreenState extends State<MyJobsScreen>
                   scrollDirection: Axis.horizontal,
                   itemCount: issuesData.length,
                   itemBuilder: (context, i) {
-                    final img = issuesData[i]['issueImage'];
+                    final rawImg = issuesData[i]['issueImage']?.toString();
                     final name = issuesData[i]['issueName'] ?? 'Issue';
+                    final img = _getIssueImagePath(name, rawImg);
                     return Container(
                       margin: const EdgeInsets.only(right: 8),
                       padding: const EdgeInsets.symmetric(
@@ -353,14 +354,21 @@ class _MyJobsScreenState extends State<MyJobsScreen>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (img != null && img.toString().isNotEmpty)
+                          if (img.isNotEmpty)
                             Container(
                               width: 20,
                               height: 20,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(4),
                                 image: DecorationImage(
-                                  image: NetworkImage(img),
+                                  image: img.startsWith('http')
+                                      ? NetworkImage(img)
+                                      : AssetImage(
+                                              img.startsWith('assets')
+                                                  ? img
+                                                  : 'assets/images/issues/$img',
+                                            )
+                                            as ImageProvider,
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -529,5 +537,37 @@ class _MyJobsScreenState extends State<MyJobsScreen>
         ),
       ),
     );
+  }
+
+  String _getIssueImagePath(String issueName, String? existingImg) {
+    if (existingImg != null && existingImg.isNotEmpty) return existingImg;
+
+    final name = issueName.toLowerCase();
+    if (name.contains('camera')) return 'issue_camera.png';
+    if (name.contains('battery')) return 'issue_battery.png';
+    if (name.contains('screen') || name.contains('display')) {
+      return 'issue_screen.png';
+    }
+    if (name.contains('charging') ||
+        name.contains('jack') ||
+        name.contains('port')) {
+      return 'issue_charging.png';
+    }
+    if (name.contains('mic')) return 'issue_mic.png';
+    if (name.contains('speaker') || name.contains('receiver')) {
+      return 'issue_speaker.png';
+    }
+    if (name.contains('face id')) return 'issue_faceid.png';
+    if (name.contains('water') || name.contains('liquid')) {
+      return 'issue_water.png';
+    }
+    if (name.contains('software')) return 'issue_software.png';
+    if (name.contains('motherboard') || name.contains('ic')) {
+      return 'issue_motherboard.png';
+    }
+    if (name.contains('sensor')) return 'issue_sensors.png';
+    if (name.contains('glass')) return 'issue_backglass.png';
+
+    return '';
   }
 }

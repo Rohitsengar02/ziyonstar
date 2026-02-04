@@ -8,7 +8,7 @@ import 'onboarding_wrapper.dart';
 import 'register_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-// Duplicate import removed
+import 'pending_approval_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -48,43 +48,11 @@ class _LoginScreenState extends State<LoginScreen> {
         } else if (techData != null &&
             techData['status'] == 'pending' &&
             techData['agreedToTerms'] == true) {
-          // Show pending popup
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              title: Row(
-                children: [
-                  const Icon(LucideIcons.clock, color: Colors.orange),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Application Pending',
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              content: Text(
-                'Your application is currently under review by our team. We will notify you once it is approved.',
-                style: GoogleFonts.inter(),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    FirebaseAuth.instance.signOut();
-                    Navigator.pop(context);
-                  },
-                  child: Text(
-                    'OK',
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryButton,
-                    ),
-                  ),
-                ),
-              ],
+          // Navigate to Pending Approval Screen instead of popup
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const PendingApprovalScreen(),
             ),
           );
         } else {

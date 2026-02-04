@@ -528,13 +528,17 @@ class _HomeContentState extends State<_HomeContent> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    widget.technicianData['name'] ?? 'Technician',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textHeading,
+                  Flexible(
+                    child: Text(
+                      widget.technicianData['name'] ?? 'Technician',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textHeading,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const SizedBox(width: 4),

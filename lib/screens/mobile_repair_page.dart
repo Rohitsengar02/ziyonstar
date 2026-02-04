@@ -760,9 +760,16 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
                       (issue) => issue['name'] == key,
                       orElse: () => null,
                     );
-                    final imageUrl = matchingIssue != null
+                    String? imageUrl = matchingIssue != null
                         ? matchingIssue['imageUrl']
                         : null;
+
+                    if (imageUrl == null || imageUrl.isEmpty) {
+                      final localPath = _getIssueImagePath(key);
+                      if (localPath.isNotEmpty) {
+                        imageUrl = localPath;
+                      }
+                    }
 
                     final isSelected = _selectedIssues.contains(key);
 
@@ -2167,5 +2174,49 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
         ],
       ),
     );
+  }
+
+  String _getIssueImagePath(String issueName) {
+    final name = issueName.toLowerCase();
+    if (name.contains('front camera')) {
+      return 'assets/images/issues/issue_frontcamera.png';
+    }
+    if (name.contains('receiver') || name.contains('ear speaker')) {
+      return 'assets/images/issues/issue_speaker.png';
+    }
+    if (name.contains('speaker')) {
+      return 'assets/images/issues/issue_speakerback.png';
+    }
+    if (name.contains('camera')) return 'assets/images/issues/issue_camera.png';
+    if (name.contains('battery'))
+      return 'assets/images/issues/issue_battery.png';
+    if (name.contains('screen') || name.contains('display')) {
+      return 'assets/images/issues/issue_screen.png';
+    }
+    if (name.contains('charging') ||
+        name.contains('jack') ||
+        name.contains('port')) {
+      return 'assets/images/issues/issue_charging.png';
+    }
+    if (name.contains('mic')) return 'assets/images/issues/issue_mic.png';
+    if (name.contains('speaker') || name.contains('receiver')) {
+      return 'assets/images/issues/issue_speakerback.png';
+    }
+    if (name.contains('face id'))
+      return 'assets/images/issues/issue_faceid.png';
+    if (name.contains('water') || name.contains('liquid')) {
+      return 'assets/images/issues/issue_water.png';
+    }
+    if (name.contains('software'))
+      return 'assets/images/issues/issue_software.png';
+    if (name.contains('motherboard') || name.contains('ic')) {
+      return 'assets/images/issues/issue_motherboard.png';
+    }
+    if (name.contains('sensor'))
+      return 'assets/images/issues/issue_sensors.png';
+    if (name.contains('glass'))
+      return 'assets/images/issues/issue_backglass.png';
+
+    return '';
   }
 }

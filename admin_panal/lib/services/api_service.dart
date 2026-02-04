@@ -8,10 +8,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiService {
   static String get baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:5001/api';
-    }
-    return dotenv.env['BACKEND_URL'] ?? 'http://192.168.1.35:5001/api';
+    return dotenv.env['BACKEND_URL'] ?? 'https://ziyonstar.onrender.com/api';
   }
 
   Future<Map<String, dynamic>> login(String email, String password) async {
@@ -178,11 +175,20 @@ class ApiService {
   }
 
   // Update and Delete Model
-  Future<void> updateModel(String id, String name, String price) async {
+  Future<void> updateModel(
+    String id,
+    String name,
+    String price, {
+    List<dynamic>? repairPrices,
+  }) async {
     final response = await http.put(
       Uri.parse('$baseUrl/models/$id'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'name': name, 'price': price}),
+      body: jsonEncode({
+        'name': name,
+        'price': price,
+        if (repairPrices != null) 'repairPrices': repairPrices,
+      }),
     );
     if (response.statusCode != 200) throw Exception('Failed to update model');
   }

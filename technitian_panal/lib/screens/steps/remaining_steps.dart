@@ -820,10 +820,41 @@ class _AgreementStepState extends State<AgreementStep> {
   }
 }
 
-// SCREEN: Status / Verification Pending
-class StatusStep extends StatelessWidget {
+class StatusStep extends StatefulWidget {
   final VoidCallback onNext;
   const StatusStep({super.key, required this.onNext});
+
+  @override
+  State<StatusStep> createState() => _StatusStepState();
+}
+
+class _StatusStepState extends State<StatusStep> {
+  String? _techName;
+  bool _isLoadingName = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTechName();
+  }
+
+  Future<void> _fetchTechName() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final techData = await ApiService().getTechnician(user.uid);
+        if (techData != null) {
+          setState(() {
+            _techName = techData['name'];
+            _isLoadingName = false;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching tech name: $e');
+      setState(() => _isLoadingName = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -836,37 +867,54 @@ class StatusStep extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // Branded T-Shirt Section
                   Stack(
                     alignment: Alignment.center,
                     children: [
-                      SizedBox(
-                        width: 140,
-                        height: 140,
-                        child: CircularProgressIndicator(
-                          value: 0.7,
-                          strokeWidth: 8,
-                          backgroundColor: Colors.grey[100],
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            Colors.black,
-                          ),
+                      // T-Shirt Image (Black T-shirt on white background)
+                      Container(
+                        width: 250,
+                        height: 250,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Image.asset(
+                          'assets/tswhirt.png',
+                          fit: BoxFit.contain,
                         ),
                       ),
-                      Container(
-                        width: 100,
-                        height: 100,
-                        decoration: const BoxDecoration(
-                          color: Colors.black,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          LucideIcons.shieldCheck,
-                          size: 40,
-                          color: Colors.white,
+                      // Overlay Text (ZIYONSTAR and Technician Name)
+                      Positioned(
+                        top: 70,
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 0),
+                            if (_isLoadingName)
+                              const SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            else
+                              Text(
+                                _techName?.toUpperCase() ?? 'TECHNICIAN',
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 32),
                   Text(
                     'Evaluating Profile',
                     style: GoogleFonts.poppins(
@@ -884,7 +932,7 @@ class StatusStep extends StatelessWidget {
                       height: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 40),
                   _statusTile(
                     'KYC Documents',
                     'Under Review',

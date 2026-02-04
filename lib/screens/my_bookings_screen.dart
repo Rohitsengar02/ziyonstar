@@ -14,6 +14,7 @@ import '../services/api_service.dart';
 // Unused import removed
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'chat_screen.dart';
 
 class MyBookingsScreen extends StatefulWidget {
   final String? initialBookingId;
@@ -160,6 +161,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
               'price': b['totalPrice']?.toString() ?? '0',
               'address': addressStr,
               'payment': b['paymentStatus']?.toString() ?? 'Pending',
+              'otp': b['otp']?.toString() ?? '',
+              'otpVerified': b['otpVerified'] == true,
+              'pickupDetails': b['pickupDetails'],
             };
           }).toList();
 
@@ -278,7 +282,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       'Technician didn\'t arrive',
       'High pricing',
       'Poor service quality',
-      'Rude behavior',
+      'Rude behaviour',
       'Parts not replaced correctly',
       'Other',
     ];
@@ -564,6 +568,218 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                       ),
                       const SizedBox(height: 32),
 
+                      // OTP Display Section
+                      if (_selectedBooking!['otp'].toString().isNotEmpty &&
+                          !_selectedBooking!['otpVerified'] &&
+                          _selectedBooking!['rawStatus'] != 'Completed' &&
+                          _selectedBooking!['rawStatus'] != 'Cancelled')
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 24),
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryButton.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: AppColors.primaryButton.withOpacity(0.2),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    LucideIcons.shieldCheck,
+                                    size: 16,
+                                    color: AppColors.primaryButton,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'JOB VERIFICATION CODE',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primaryButton,
+                                      letterSpacing: 1.1,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    _selectedBooking!['otp'],
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primaryButton,
+                                      letterSpacing: 4,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: Colors.grey.shade200,
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Active',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Provide this code to the technician upon arrival to start the job.',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  color: Colors.grey[600],
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      // Pickup Details Section
+                      if (_selectedBooking!['pickupDetails'] != null &&
+                          _selectedBooking!['pickupDetails']['isPickedUp'] ==
+                              true)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 24),
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.blue.withOpacity(0.2),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    LucideIcons.package,
+                                    size: 16,
+                                    color: Colors.blue,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'DEVICE PICKED UP',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue,
+                                      letterSpacing: 1.1,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Estimated Delivery',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              Text(
+                                _selectedBooking!['pickupDetails']['deliveryTime'] ??
+                                    'TBD',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Device Images',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                height: 60,
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount:
+                                      (_selectedBooking!['pickupDetails']['images']
+                                              as List)
+                                          .length,
+                                  itemBuilder: (context, index) {
+                                    final imageUrl =
+                                        (_selectedBooking!['pickupDetails']['images']
+                                            as List)[index];
+                                    return Padding(
+                                      padding: const EdgeInsets.only(right: 8),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.network(
+                                          imageUrl,
+                                          width: 60,
+                                          height: 60,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (_selectedBooking!['otpVerified'])
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 24),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.green.withOpacity(0.2),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                LucideIcons.checkCircle2,
+                                color: Colors.green,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Job Code Verified',
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.green[700],
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
                       _buildDetailRow(
                         LucideIcons.calendar,
                         'Date & Time',
@@ -626,13 +842,62 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                               ],
                             ),
                           ),
+                          const SizedBox(width: 12),
+                          IconButton(
+                            onPressed: () =>
+                                _callTechnician(_selectedBooking!['techPhone']),
+                            icon: const Icon(
+                              LucideIcons.phone,
+                              color: Colors.blue,
+                              size: 20,
+                            ),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.blue.withOpacity(0.1),
+                              padding: const EdgeInsets.all(12),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: () {
+                              final user = FirebaseAuth.instance.currentUser;
+                              if (user != null) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ChatScreen(
+                                      bookingId: _selectedBooking!['id'],
+                                      currentUserId: user.uid,
+                                      otherUserName:
+                                          _selectedBooking!['technician'],
+                                      senderRole: 'user',
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Please login to chat'),
+                                  ),
+                                );
+                              }
+                            },
+                            icon: const Icon(
+                              LucideIcons.messageSquare,
+                              color: Colors.green,
+                              size: 20,
+                            ),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.green.withOpacity(0.1),
+                              padding: const EdgeInsets.all(12),
+                            ),
+                          ),
                         ],
                       ),
 
                       const Divider(height: 48),
 
                       Text(
-                        'Issues Fixed',
+                        'Issues to be fixed',
                         style: GoogleFonts.inter(
                           fontWeight: FontWeight.bold,
                           fontSize: isDesktop ? 14 : 13,
@@ -645,7 +910,11 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                         children: (_selectedBooking!['issues'] as List).map((
                           issue,
                         ) {
-                          final img = issue['issueImage'];
+                          final rawImg = issue['issueImage']?.toString();
+                          final issueName =
+                              issue['issueName']?.toString() ?? '';
+                          final img = _getIssueImagePath(issueName, rawImg);
+
                           return Container(
                             width: isDesktop ? 100 : 80,
                             padding: const EdgeInsets.all(8),
@@ -661,14 +930,21 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                                   decoration: BoxDecoration(
                                     color: Colors.grey[50],
                                     borderRadius: BorderRadius.circular(8),
-                                    image: (img != null && img.isNotEmpty)
+                                    image: (img.isNotEmpty)
                                         ? DecorationImage(
-                                            image: NetworkImage(img),
+                                            image: img.startsWith('http')
+                                                ? NetworkImage(img)
+                                                : AssetImage(
+                                                        img.startsWith('assets')
+                                                            ? img
+                                                            : 'assets/images/issues/$img',
+                                                      )
+                                                      as ImageProvider,
                                             fit: BoxFit.cover,
                                           )
                                         : null,
                                   ),
-                                  child: (img == null || img.isEmpty)
+                                  child: (img.isEmpty)
                                       ? const Center(
                                           child: Icon(
                                             LucideIcons.wrench,
@@ -679,7 +955,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  issue['issueName'] ?? '',
+                                  issueName,
                                   textAlign: TextAlign.center,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
@@ -1215,6 +1491,10 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                       ...(booking['issues'] as List).take(3).map<Widget>((
                         issue,
                       ) {
+                        final rawImg = issue['issueImage']?.toString();
+                        final issueName = issue['issueName']?.toString() ?? '';
+                        final img = _getIssueImagePath(issueName, rawImg);
+
                         return Container(
                           width: isMobile ? 60 : 50,
                           height: isMobile ? 60 : 50,
@@ -1223,24 +1503,27 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                             color: const Color(0xFFF9FAFB),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.grey.shade100),
-                            image:
-                                (issue['issueImage'] != null &&
-                                    issue['issueImage'].toString().isNotEmpty)
+                            image: (img.isNotEmpty)
                                 ? DecorationImage(
-                                    image: NetworkImage(issue['issueImage']),
+                                    image: img.startsWith('http')
+                                        ? NetworkImage(img)
+                                        : AssetImage(
+                                                img.startsWith('assets')
+                                                    ? img
+                                                    : 'assets/images/issues/$img',
+                                              )
+                                              as ImageProvider,
                                     fit: BoxFit.cover,
                                   )
                                 : null,
                           ),
-                          child:
-                              (issue['issueImage'] == null ||
-                                  issue['issueImage'].toString().isEmpty)
+                          child: (img.isEmpty)
                               ? const Center(
                                   child: Icon(LucideIcons.wrench, size: 24),
                                 )
                               : null,
                         );
-                      }),
+                      }).toList(),
                     ],
                   ),
 
@@ -1624,6 +1907,38 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         );
       },
     );
+  }
+
+  String _getIssueImagePath(String issueName, String? existingImg) {
+    if (existingImg != null && existingImg.isNotEmpty) return existingImg;
+
+    final name = issueName.toLowerCase();
+    if (name.contains('camera')) return 'issue_camera.png';
+    if (name.contains('battery')) return 'issue_battery.png';
+    if (name.contains('screen') || name.contains('display')) {
+      return 'issue_screen.png';
+    }
+    if (name.contains('charging') ||
+        name.contains('jack') ||
+        name.contains('port')) {
+      return 'issue_charging.png';
+    }
+    if (name.contains('mic')) return 'issue_mic.png';
+    if (name.contains('speaker') || name.contains('receiver')) {
+      return 'issue_speaker.png';
+    }
+    if (name.contains('face id')) return 'issue_faceid.png';
+    if (name.contains('water') || name.contains('liquid')) {
+      return 'issue_water.png';
+    }
+    if (name.contains('software')) return 'issue_software.png';
+    if (name.contains('motherboard') || name.contains('ic')) {
+      return 'issue_motherboard.png';
+    }
+    if (name.contains('sensor')) return 'issue_sensors.png';
+    if (name.contains('glass')) return 'issue_backglass.png';
+
+    return '';
   }
 
   Widget _buildActionButton(

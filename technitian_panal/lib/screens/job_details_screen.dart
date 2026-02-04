@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'map_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'chat_screen.dart';
 import '../services/api_service.dart';
 
 class JobDetailsScreen extends StatefulWidget {
@@ -317,8 +320,11 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                         scrollDirection: Axis.horizontal,
                         itemCount: issuesList.length,
                         itemBuilder: (context, i) {
-                          final img = issuesList[i]['issueImage'];
+                          final rawImg = issuesList[i]['issueImage']
+                              ?.toString();
                           final name = issuesList[i]['issueName'] ?? 'Issue';
+                          final img = _getIssueImagePath(name, rawImg);
+
                           return Container(
                             width: 120,
                             margin: const EdgeInsets.only(right: 12),
@@ -330,14 +336,21 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                if (img != null && img.toString().isNotEmpty)
+                                if (img.isNotEmpty)
                                   Container(
                                     width: 50,
                                     height: 50,
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(8),
                                       image: DecorationImage(
-                                        image: NetworkImage(img),
+                                        image: img.startsWith('http')
+                                            ? NetworkImage(img)
+                                            : AssetImage(
+                                                    img.startsWith('assets')
+                                                        ? img
+                                                        : 'assets/images/issues/$img',
+                                                  )
+                                                  as ImageProvider,
                                         fit: BoxFit.cover,
                                       ),
                                     ),
@@ -462,6 +475,37 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                                 ],
                               ),
                             ),
+                            IconButton(
+                              onPressed: () {
+                                final user = FirebaseAuth.instance.currentUser;
+                                if (user != null) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ChatScreen(
+                                        bookingId: widget.orderId,
+                                        currentUserId: user.uid,
+                                        otherUserName: customerName,
+                                        senderRole: 'technician',
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('User not authenticated'),
+                                    ),
+                                  );
+                                }
+                              },
+                              icon: const Icon(
+                                LucideIcons.messageSquare,
+                                color: Colors.blue,
+                              ),
+                              style: IconButton.styleFrom(
+                                backgroundColor: Colors.blue.shade50,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 24),
@@ -483,7 +527,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => MapScreen(
-                                  orderId: orderId,
+                                  orderId: widget.orderId,
                                   destination: addressDetails,
                                 ),
                               ),
@@ -887,7 +931,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
     } else if (status == 'Accepted') {
       buttonText = 'On My Way 🚚';
       buttonColor = Colors.blue;
-    } else if (status == 'In_Progress') {
+    } else if (status == 'In_Progress' || status == 'Picked_Up') {
       buttonText = 'Mark as Completed';
       buttonColor = Colors.green;
     } else if (status == 'Completed') {
@@ -956,8 +1000,9 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
     } else if (currentStatus == 'On_Way') {
       newStatus = 'Arrived';
     } else if (currentStatus == 'Arrived') {
-      newStatus = 'In_Progress';
-    } else if (currentStatus == 'In_Progress') {
+      _showOtpVerificationDialog();
+      return;
+    } else if (currentStatus == 'In_Progress' || currentStatus == 'Picked_Up') {
       newStatus = 'Completed';
     } else {
       return;
@@ -985,5 +1030,410 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
         ),
       );
     }
+  }
+
+  void _showOtpVerificationDialog() {
+    final otpController = TextEditingController();
+    bool isVerifying = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            'Verify Job Code',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Please ask the customer for the 6-digit verification code to start the job.',
+                style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: otpController,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 8,
+                ),
+                decoration: InputDecoration(
+                  hintText: '000000',
+                  counterText: '',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.black, width: 2),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isVerifying ? null : () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.inter(color: Colors.grey),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: isVerifying
+                  ? null
+                  : () async {
+                      if (otpController.text.length != 6) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please enter 6-digit OTP'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() => isVerifying = true);
+
+                      try {
+                        final result = await _apiService.verifyOtp(
+                          widget.orderId,
+                          otpController.text,
+                        );
+
+                        if (result['success'] == true) {
+                          if (context.mounted) {
+                            Navigator.pop(context); // Close OTP Dialog
+                            _showPickupChoiceDialog(); // Show Pickup/Skip choice
+                          }
+                        }
+                      } catch (e) {
+                        setDialogState(() => isVerifying = false);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(e.toString()),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: isVerifying
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text('Verify & Start'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getIssueImagePath(String issueName, String? existingImg) {
+    if (existingImg != null && existingImg.isNotEmpty) return existingImg;
+
+    final name = issueName.toLowerCase();
+    if (name.contains('camera')) return 'issue_camera.png';
+    if (name.contains('battery')) return 'issue_battery.png';
+    if (name.contains('screen') || name.contains('display')) {
+      return 'issue_screen.png';
+    }
+    if (name.contains('charging') ||
+        name.contains('jack') ||
+        name.contains('port')) {
+      return 'issue_charging.png';
+    }
+    if (name.contains('mic')) return 'issue_mic.png';
+    if (name.contains('speaker') || name.contains('receiver')) {
+      return 'issue_speaker.png';
+    }
+    if (name.contains('face id')) return 'issue_faceid.png';
+    if (name.contains('water') || name.contains('liquid')) {
+      return 'issue_water.png';
+    }
+    if (name.contains('software')) return 'issue_software.png';
+    if (name.contains('motherboard') || name.contains('ic')) {
+      return 'issue_motherboard.png';
+    }
+    if (name.contains('sensor')) return 'issue_sensors.png';
+    if (name.contains('glass')) return 'issue_backglass.png';
+
+    return '';
+  }
+
+  void _showPickupChoiceDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Next Step',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Do you want to pick up the device for repair or continue with on-site repair?',
+          style: GoogleFonts.inter(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _fetchBookingDetails(); // Just refresh and stay in In_Progress
+            },
+            child: Text(
+              'Skip (On-Site Repair)',
+              style: GoogleFonts.inter(color: Colors.grey),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _showPickupFormDialog();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.black,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Pickup Device'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPickupFormDialog() {
+    List<XFile> selectedImages = [];
+    final deliveryController = TextEditingController();
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            'Device Pickup Details',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Add 4 images of the mobile device (Front, Back, Sides) before picking up.',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ...List.generate(selectedImages.length, (index) {
+                      return Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              selectedImages[index].path,
+                              width: 60,
+                              height: 60,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                // For non-web, use Image.file if it were a file
+                                return Container(
+                                  color: Colors.grey[300],
+                                  width: 60,
+                                  height: 60,
+                                );
+                              },
+                            ),
+                          ),
+                          Positioned(
+                            top: -10,
+                            right: -10,
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.cancel,
+                                color: Colors.red,
+                                size: 20,
+                              ),
+                              onPressed: () {
+                                setDialogState(() {
+                                  selectedImages.removeAt(index);
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    }),
+                    if (selectedImages.length < 4)
+                      GestureDetector(
+                        onTap: () async {
+                          final ImagePicker picker = ImagePicker();
+                          final XFile? image = await picker.pickImage(
+                            source: ImageSource.camera,
+                          );
+                          if (image != null) {
+                            setDialogState(() {
+                              selectedImages.add(image);
+                            });
+                          }
+                        },
+                        child: Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: const Icon(
+                            LucideIcons.camera,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: deliveryController,
+                  decoration: InputDecoration(
+                    labelText: 'Estimated Delivery Time',
+                    hintText: 'e.g., Tomorrow, 4 PM',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.inter(color: Colors.grey),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      if (selectedImages.length < 4) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please add 4 images of device'),
+                          ),
+                        );
+                        return;
+                      }
+                      if (deliveryController.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please enter delivery time'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() => isSubmitting = true);
+
+                      try {
+                        // Upload Images
+                        List<String> imageUrls = [];
+                        for (var xfile in selectedImages) {
+                          final url = await _apiService.uploadImage(xfile);
+                          if (url != null) imageUrls.add(url);
+                        }
+
+                        // Confirm Pickup
+                        final result = await _apiService.confirmPickup(
+                          bookingId: widget.orderId,
+                          images: imageUrls,
+                          deliveryTime: deliveryController.text,
+                        );
+
+                        if (result['success'] == true) {
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Device Picked Up Successfully'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                            _fetchBookingDetails();
+                          }
+                        }
+                      } catch (e) {
+                        setDialogState(() => isSubmitting = false);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(e.toString()),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text('Confirm Pickup'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

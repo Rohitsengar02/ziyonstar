@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../services/api_service.dart';
+import 'model_issues_screen.dart';
 
 class BrandDetailScreen extends StatefulWidget {
   final Map<String, dynamic> brand;
@@ -234,58 +235,76 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
                     itemCount: _models.length,
                     itemBuilder: (context, index) {
                       final model = _models[index];
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.shade100),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                      return GestureDetector(
+                        onTap: () async {
+                          final updated = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ModelIssuesScreen(model: model),
+                            ),
+                          );
+                          if (updated == true) {
+                            _loadModels();
+                          }
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.grey.shade100),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      model['name'],
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    Text(
+                                      model['price'] ?? '0',
+                                      style: GoogleFonts.inter(
+                                        color: Colors.green,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(
-                                    model['name'],
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16,
+                                  IconButton(
+                                    icon: const Icon(
+                                      LucideIcons.edit3,
+                                      size: 18,
                                     ),
+                                    onPressed: () =>
+                                        _showAddModelDialog(model: model),
                                   ),
-                                  Text(
-                                    model['price'],
-                                    style: GoogleFonts.inter(
-                                      color: Colors.green,
-                                      fontWeight: FontWeight.bold,
+                                  IconButton(
+                                    icon: const Icon(
+                                      LucideIcons.trash2,
+                                      size: 18,
+                                      color: Colors.red,
                                     ),
+                                    onPressed: () =>
+                                        _confirmDelete(model['_id']),
                                   ),
                                 ],
                               ),
-                            ),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(LucideIcons.edit3, size: 18),
-                                  onPressed: () =>
-                                      _showAddModelDialog(model: model),
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    LucideIcons.trash2,
-                                    size: 18,
-                                    color: Colors.red,
-                                  ),
-                                  onPressed: () => _confirmDelete(model['_id']),
-                                ),
-                              ],
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       );
                     },

@@ -43,12 +43,13 @@ const bookingSchema = new mongoose.Schema({
         enum: [
             'Pending_Assignment', // Created, waiting for tech assignment (if manual/auto)
             'Pending_Acceptance', // Assigned to tech, waiting for tech response
-            'Accepted',           // Tech accepted
+            'Accepted',
             'On_Way',             // Tech is on the way to user
             'Arrived',            // Tech has arrived at location
             'Rejected',           // Tech rejected, waiting for user action
             'Reassign_Requested', // User requested new tech
             'In_Progress',
+            'Picked_Up',          // Device picked up by technician
             'Completed',
             'Cancelled'
         ],
@@ -67,6 +68,20 @@ const bookingSchema = new mongoose.Schema({
         enum: ['Pending', 'Paid'],
         default: 'Pending'
     },
+    otp: {
+        type: String,
+        default: ''
+    },
+    otpVerified: {
+        type: Boolean,
+        default: false
+    },
+    pickupDetails: {
+        images: [String],
+        deliveryTime: String,
+        isPickedUp: { type: Boolean, default: false },
+        pickedUpAt: Date
+    }
 
 }, { timestamps: true });
 

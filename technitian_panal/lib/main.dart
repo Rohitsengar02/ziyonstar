@@ -8,8 +8,7 @@ import 'firebase_options.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'services/api_service.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'screens/pending_approval_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,12 +40,14 @@ class TechAuthWrapper extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
-        
+
         if (snapshot.hasData && snapshot.data != null) {
-            // User is signed in, fetch technician data to route correctly
-            return TechnicianRouter(user: snapshot.data!);
+          // User is signed in, fetch technician data to route correctly
+          return TechnicianRouter(user: snapshot.data!);
         }
 
         return const WelcomeScreen();
@@ -78,59 +79,27 @@ class _TechnicianRouterState extends State<TechnicianRouter> {
       future: _techFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
-        
+
         final techData = snapshot.data;
-        
+
         // Logic mirroring LoginScreen
         if (techData != null && techData['status'] == 'approved') {
-           return DashboardScreen(technicianData: techData);
-        } else if (techData != null && techData['status'] == 'pending' && techData['agreedToTerms'] == true) {
-           return const PendingApprovalScreen();
+          return DashboardScreen(technicianData: techData);
+        } else if (techData != null &&
+            techData['status'] == 'pending' &&
+            techData['agreedToTerms'] == true) {
+          return const PendingApprovalScreen();
         } else {
-           // New or Incomplete
-           return const OnboardingWrapper();
+          // New or Incomplete
+          return const OnboardingWrapper();
         }
       },
     );
   }
 }
 
-class PendingApprovalScreen extends StatelessWidget {
-  const PendingApprovalScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-      return Scaffold(
-          body: Center(
-              child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                          const Icon(LucideIcons.clock, color: Colors.orange, size: 60),
-                          const SizedBox(height: 20),
-                          Text(
-                            'Application Pending',
-                            style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 20),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'Your application is currently under review by our team. We will notify you once it is approved.',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(),
-                          ),
-                          const SizedBox(height: 30),
-                          ElevatedButton(
-                              onPressed: () {
-                                  FirebaseAuth.instance.signOut();
-                              },
-                              child: const Text("Log Out")
-                          )
-                      ]
-                  )
-              )
-          )
-      );
-  }
-}
+// Removed local PendingApprovalScreen

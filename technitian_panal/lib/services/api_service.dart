@@ -8,13 +8,7 @@ class ApiService {
   // Use localhost for Android emulator (10.0.2.2) and local IP for real device testing if needed
   // For web, localhost works fine.
   static String get baseUrl {
-    if (kIsWeb) {
-      return dotenv.env['BACKEND_URL'] ?? 'http://localhost:5001/api';
-    } else {
-      // Logic for Android Emulator vs Real Device
-      // Often better to use computer's local network IP for real devices
-      return dotenv.env['BACKEND_URL'] ?? 'http://10.0.2.2:5001/api';
-    }
+    return dotenv.env['BACKEND_URL'] ?? 'https://ziyonstar.onrender.com/api';
   }
 
   // Register technician
@@ -295,6 +289,28 @@ class ApiService {
     }
   }
 
+  // Verify OTP and Start Job
+  Future<Map<String, dynamic>> verifyOtp(String bookingId, String otp) async {
+    final url = Uri.parse('$baseUrl/bookings/$bookingId/verify-otp');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'otp': otp}),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return data;
+      } else {
+        throw data['message'] ?? 'Failed to verify OTP';
+      }
+    } catch (e) {
+      debugPrint('Error verifying OTP: $e');
+      rethrow;
+    }
+  }
+
   // Fetch Technician Bookings
   Future<List<dynamic>> getTechnicianBookings(String technicianId) async {
     final url = Uri.parse('$baseUrl/bookings/technician/$technicianId');
@@ -391,6 +407,91 @@ class ApiService {
     } catch (e) {
       debugPrint('Error fetching wallet stats: $e');
       return null;
+    }
+  }
+
+  // ===== CHAT APIs =====
+  Future<Map<String, dynamic>?> getOrCreateChat(String bookingId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/chat/get-or-create'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'bookingId': bookingId}),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error getting or creating chat: $e');
+      return null;
+    }
+  }
+
+  Future<List<dynamic>> getChatMessages(String chatId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/chat/messages/$chatId'),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error fetching chat messages: $e');
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> createMessage(
+    String chatId,
+    String senderId,
+    String senderRole,
+    String text,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/chat/messages'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'chatId': chatId,
+          'senderId': senderId,
+          'senderRole': senderRole,
+          'text': text,
+        }),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error creating message: $e');
+      return null;
+    }
+  }
+
+  // Confirm Pickup
+  Future<Map<String, dynamic>> confirmPickup({
+    required String bookingId,
+    required List<String> images,
+    required String deliveryTime,
+  }) async {
+    final url = Uri.parse('$baseUrl/bookings/$bookingId/pickup');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'images': images, 'deliveryTime': deliveryTime}),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to confirm pickup: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error confirming pickup: $e');
+      rethrow;
     }
   }
 }

@@ -53,7 +53,17 @@ class SocketService {
       if (data is Map<String, dynamic>) {
         callback(data);
       } else if (data != null) {
-        // Handle cases where data might be a JSON-decoded Map
+        callback(Map<String, dynamic>.from(data));
+      }
+    });
+  }
+
+  void onJobStarted(Function(Map<String, dynamic>) callback) {
+    if (socket == null) connect();
+    socket!.on('job_started', (data) {
+      if (data is Map<String, dynamic>) {
+        callback(data);
+      } else if (data != null) {
         callback(Map<String, dynamic>.from(data));
       }
     });

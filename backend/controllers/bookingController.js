@@ -35,6 +35,7 @@ exports.createBooking = async (req, res) => {
             assignedTech = await findNextTechnician();
         }
 
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const newBooking = new Booking({
             userId,
             deviceBrand,
@@ -46,7 +47,8 @@ exports.createBooking = async (req, res) => {
             address: addressId,
             addressDetails: req.body.addressDetails,
             technicianId: assignedTech ? assignedTech._id : null,
-            status: assignedTech ? 'Pending_Acceptance' : 'Pending_Assignment'
+            status: assignedTech ? 'Pending_Acceptance' : 'Pending_Assignment',
+            otp
         });
 
         await newBooking.save();
@@ -420,5 +422,90 @@ exports.getTechnicianWallet = async (req, res) => {
 
     } catch (error) {
         res.status(500).json({ message: 'Error fetching wallet data', error: error.message });
+    }
+};
+
+// 11. Verify OTP and Start Job
+exports.verifyOtpAndStartJob = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { otp } = req.body;
+
+        const booking = await Booking.findById(id);
+        if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+        if (booking.otp !== otp) {
+            return res.status(400).json({ success: false, message: 'Invalid OTP' });
+        }
+
+        booking.otpVerified = true;
+        booking.status = 'In_Progress';
+        await booking.save();
+
+        // Notify via Socket.io
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('job_started', {
+                bookingId: booking._id,
+                status: 'In_Progress'
+            });
+        }
+
+        // Notify User via push notification
+        await notificationController.createNotification(
+            booking.userId,
+            'Job Started',
+            `Technician has verified the OTP and started work on your ${booking.deviceBrand}.`,
+            'success',
+            booking._id
+        );
+
+        res.json({ success: true, message: 'OTP verified successfully. Job started.', booking });
+    } catch (error) {
+        res.status(500).json({ message: 'Error verifying OTP', error: error.message });
+    }
+};
+
+// 12. Confirm Pickup
+exports.confirmPickup = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { images, deliveryTime } = req.body;
+
+        const booking = await Booking.findById(id);
+        if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+        booking.status = 'Picked_Up';
+        booking.pickupDetails = {
+            images: images || [],
+            deliveryTime: deliveryTime || '',
+            isPickedUp: true,
+            pickedUpAt: new Date()
+        };
+
+        await booking.save();
+
+        // Notify via Socket.io
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('device_picked_up', {
+                bookingId: booking._id,
+                status: 'Picked_Up',
+                pickupDetails: booking.pickupDetails
+            });
+        }
+
+        // Notify User via push notification
+        await notificationController.createNotification(
+            booking.userId,
+            'Device Picked Up',
+            `Technician has picked up your device. Estimated delivery: ${deliveryTime}.`,
+            'info',
+            booking._id
+        );
+
+        res.json({ success: true, message: 'Device picked up successfully.', booking });
+    } catch (error) {
+        res.status(500).json({ message: 'Error confirming pickup', error: error.message });
     }
 };

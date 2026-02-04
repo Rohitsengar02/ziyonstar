@@ -215,7 +215,10 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
               (e) => {
                 'type': 'issue',
                 'name': e['name'],
-                'image': e['imageUrl'],
+                'image': _getIssueImagePath(
+                  (e['name'] ?? '').toString(),
+                  e['imageUrl']?.toString(),
+                ),
                 'icon': _getIcon(e['icon']),
               },
             ),
@@ -621,7 +624,9 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
                                       ),
                                 )
                               : Image.asset(
-                                  item['image'] as String,
+                                  (item['image'] as String).startsWith('assets')
+                                      ? (item['image'] as String)
+                                      : 'assets/images/issues/${item['image']}',
                                   fit: BoxFit.cover,
                                   width: double.infinity,
                                   height: double.infinity,
@@ -1331,5 +1336,43 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
         },
       ),
     );
+  }
+
+  String _getIssueImagePath(String issueName, String? existingImg) {
+    if (existingImg != null && existingImg.isNotEmpty) return existingImg;
+
+    final name = issueName.toLowerCase();
+    if (name.contains('front camera')) {
+      return 'assets/images/issues/issue_frontcamera.png';
+    }
+    if (name.contains('camera')) return 'issue_camera.png';
+    if (name.contains('battery')) return 'issue_battery.png';
+    if (name.contains('screen') || name.contains('display')) {
+      return 'issue_screen.png';
+    }
+    if (name.contains('charging') ||
+        name.contains('jack') ||
+        name.contains('port')) {
+      return 'issue_charging.png';
+    }
+    if (name.contains('mic')) return 'issue_mic.png';
+    if (name.contains('receiver') || name.contains('ear speaker')) {
+      return 'issue_speaker.png';
+    }
+    if (name.contains('speaker')) {
+      return 'assets/images/issues/issue_speakerback.png';
+    }
+    if (name.contains('face id')) return 'issue_faceid.png';
+    if (name.contains('water') || name.contains('liquid')) {
+      return 'issue_water.png';
+    }
+    if (name.contains('software')) return 'issue_software.png';
+    if (name.contains('motherboard') || name.contains('ic')) {
+      return 'issue_motherboard.png';
+    }
+    if (name.contains('sensor')) return 'issue_sensors.png';
+    if (name.contains('glass')) return 'issue_backglass.png';
+
+    return '';
   }
 }

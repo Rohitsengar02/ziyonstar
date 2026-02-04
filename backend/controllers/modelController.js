@@ -27,12 +27,13 @@ exports.createModel = async (req, res) => {
 // Update a model
 exports.updateModel = async (req, res) => {
     try {
-        const { name, price } = req.body;
+        const { name, price, repairPrices } = req.body;
         let model = await Model.findById(req.params.id);
         if (!model) return res.status(404).json({ msg: 'Model not found' });
 
         model.name = name || model.name;
         model.price = price || model.price;
+        if (repairPrices) model.repairPrices = repairPrices;
 
         await model.save();
         res.json(model);

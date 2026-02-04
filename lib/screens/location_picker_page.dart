@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:flutter_map/flutter_map.dart';
+
 import '../services/location_service.dart';
 import '../theme.dart';
 
@@ -8,11 +11,7 @@ class LocationPickerPage extends StatefulWidget {
   final double? initialLat;
   final double? initialLng;
 
-  const LocationPickerPage({
-    super.key,
-    this.initialLat,
-    this.initialLng,
-  });
+  const LocationPickerPage({super.key, this.initialLat, this.initialLng});
 
   @override
   State<LocationPickerPage> createState() => _LocationPickerPageState();
@@ -24,7 +23,15 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
   bool _isLoading = true;
   bool _isLoadingAddress = false;
   String? _errorMessage;
-  final TextEditingController _addressController = TextEditingController();
+
+  // Form Controllers
+  final TextEditingController _fullAddressController = TextEditingController();
+  final TextEditingController _cityController = TextEditingController();
+  final TextEditingController _stateController = TextEditingController();
+  final TextEditingController _pincodeController = TextEditingController();
+  final TextEditingController _landmarkController = TextEditingController();
+
+  final MapController _mapController = MapController();
 
   @override
   void initState() {
@@ -34,7 +41,11 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
 
   @override
   void dispose() {
-    _addressController.dispose();
+    _fullAddressController.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
+    _pincodeController.dispose();
+    _landmarkController.dispose();
     super.dispose();
   }
 
@@ -44,36 +55,48 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
       _errorMessage = null;
     });
 
-    // If initial coordinates provided, use them
-    if (widget.initialLat != null && widget.initialLng != null) {
-      setState(() {
-        _currentLat = widget.initialLat;
-        _currentLng = widget.initialLng;
-        _isLoading = false;
-      });
-      _fetchAddressFromCoordinates();
-      return;
-    }
+    try {
+      // If initial coordinates provided, use them
+      if (widget.initialLat != null && widget.initialLng != null) {
+        setState(() {
+          _currentLat = widget.initialLat;
+          _currentLng = widget.initialLng;
+          _isLoading = false;
+        });
+        _fetchAddressFromCoordinates();
+        return;
+      }
 
-    // Otherwise, get current location
-    final position = await LocationService.getCurrentLocation();
+      // Otherwise, get current location
+      final position = await LocationService.getCurrentLocation();
 
-    if (position != null) {
+      if (position != null) {
+        setState(() {
+          _currentLat = position.latitude;
+          _currentLng = position.longitude;
+          _isLoading = false;
+        });
+        _fetchAddressFromCoordinates();
+
+        // Move map to current location
+        _mapController.move(LatLng(_currentLat!, _currentLng!), 15);
+      } else {
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              'Unable to get your location. Please enable location services.';
+          // Default to Delhi
+          _currentLat = 28.6139;
+          _currentLng = 77.2090;
+        });
+        _fetchAddressFromCoordinates();
+      }
+    } catch (e) {
       setState(() {
-        _currentLat = position.latitude;
-        _currentLng = position.longitude;
         _isLoading = false;
-      });
-      _fetchAddressFromCoordinates();
-    } else {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Unable to get your location. Please enable location services.';
-        // Default to Delhi
+        _errorMessage = 'An error occurred while getting location.';
         _currentLat = 28.6139;
         _currentLng = 77.2090;
-        // Set coordinates as address
-        _addressController.text = 'Location: ${28.6139.toStringAsFixed(4)}, ${77.2090.toStringAsFixed(4)}';
       });
     }
   }
@@ -84,57 +107,51 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     setState(() => _isLoadingAddress = true);
 
     try {
-      final address = await LocationService.getAddressFromCoordinates(
-        _currentLat!,
-        _currentLng!,
-      );
+      final structuredData =
+          await LocationService.getStructuredAddressFromCoordinates(
+            _currentLat!,
+            _currentLng!,
+          );
 
       if (mounted) {
-        if (address != null && address.isNotEmpty) {
+        if (structuredData != null) {
           setState(() {
-            _addressController.text = address;
+            _fullAddressController.text = structuredData['full'] ?? '';
+            _cityController.text = structuredData['city'] ?? '';
+            _stateController.text = structuredData['state'] ?? '';
+            _pincodeController.text = structuredData['postcode'] ?? '';
             _isLoadingAddress = false;
-            _errorMessage = null;
           });
         } else {
-          // Fallback: Use coordinates as address
+          // Fallback
           setState(() {
-            _addressController.text = 'Lat: ${_currentLat!.toStringAsFixed(6)}, Lng: ${_currentLng!.toStringAsFixed(6)}';
+            _fullAddressController.text =
+                'Lat: ${_currentLat!.toStringAsFixed(6)}, Lng: ${_currentLng!.toStringAsFixed(6)}';
             _isLoadingAddress = false;
-            _errorMessage = 'Address could not be detected. You can edit it below.';
           });
         }
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _addressController.text = 'Lat: ${_currentLat!.toStringAsFixed(6)}, Lng: ${_currentLng!.toStringAsFixed(6)}';
-          _isLoadingAddress = false;
-          _errorMessage = 'Address detection failed. You can edit it below.';
-        });
+        setState(() => _isLoadingAddress = false);
       }
     }
   }
 
   void _confirmLocation() {
-    final finalAddress = _addressController.text.trim();
-    
-    if (finalAddress.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter an address'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
+    final fullAddress = _fullAddressController.text.trim();
+    if (fullAddress.isEmpty) return;
 
     if (_currentLat != null && _currentLng != null) {
-      Navigator.pop(context, LocationData(
-        latitude: _currentLat!,
-        longitude: _currentLng!,
-        address: finalAddress,
-      ));
+      Navigator.pop(
+        context,
+        LocationData(
+          latitude: _currentLat!,
+          longitude: _currentLng!,
+          address: fullAddress,
+          // We could return more structured data but let's stick to what's expected
+        ),
+      );
     }
   }
 
@@ -150,256 +167,287 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Select Location',
+          'Confirm Location',
           style: GoogleFonts.poppins(
             color: Colors.black,
             fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.locateFixed, color: AppColors.primaryButton),
-            onPressed: _initLocation,
-            tooltip: 'Refresh Location',
-          ),
-        ],
       ),
       body: _isLoading
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Getting your location...',
-                    style: GoogleFonts.inter(color: Colors.grey),
-                  ),
-                ],
-              ),
-            )
-          : SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Success/Warning message
-                    if (_errorMessage != null)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        margin: const EdgeInsets.only(bottom: 20),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.orange.shade200),
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                // Map Section
+                Expanded(
+                  flex: 3,
+                  child: Stack(
+                    children: [
+                      FlutterMap(
+                        mapController: _mapController,
+                        options: MapOptions(
+                          initialCenter: LatLng(
+                            _currentLat ?? 28.6139,
+                            _currentLng ?? 77.2090,
+                          ),
+                          initialZoom: 15,
+                          onPositionChanged: (position, hasGesture) {
+                            if (hasGesture) {
+                              setState(() {
+                                _currentLat = position.center.latitude;
+                                _currentLng = position.center.longitude;
+                              });
+                            }
+                          },
+                          onMapEvent: (event) {
+                            if (event is MapEventMoveEnd) {
+                              _fetchAddressFromCoordinates();
+                            }
+                          },
                         ),
-                        child: Row(
-                          children: [
-                            Icon(LucideIcons.info, color: Colors.orange.shade700, size: 20),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _errorMessage!,
-                                style: GoogleFonts.inter(fontSize: 13, color: Colors.orange.shade900),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                    // Location Card
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.green.shade50, Colors.green.shade100],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.green.shade200),
-                      ),
-                      child: Column(
                         children: [
-                          // Success Icon
-                          Container(
-                            width: 70,
-                            height: 70,
-                            decoration: BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.green.withOpacity(0.4),
-                                  blurRadius: 20,
-                                  spreadRadius: 5,
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              LucideIcons.checkCircle,
-                              color: Colors.white,
-                              size: 36,
-                            ),
+                          TileLayer(
+                            urlTemplate:
+                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            userAgentPackageName: 'com.ziyonstar.app',
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            '📍 Location Captured!',
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green.shade800,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          if (_currentLat != null && _currentLng != null)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(LucideIcons.navigation, size: 14, color: Colors.grey.shade600),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '${_currentLat!.toStringAsFixed(4)}, ${_currentLng!.toStringAsFixed(4)}',
-                                    style: GoogleFonts.robotoMono(
-                                      fontSize: 13,
-                                      color: Colors.grey.shade700,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          if (_isLoadingAddress)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 12),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.green),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Detecting address...',
-                                    style: GoogleFonts.inter(color: Colors.green.shade700, fontSize: 13),
-                                  ),
-                                ],
-                              ),
-                            ),
                         ],
                       ),
-                    ),
-
-                    const SizedBox(height: 28),
-
-                    // Address Input Section
-                    Row(
-                      children: [
-                        const Icon(LucideIcons.home, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Delivery Address',
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                      // Center Marker (Fixed Pin)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 40),
+                          child: Icon(
+                            LucideIcons.mapPin,
+                            color: AppColors.accentRed,
+                            size: 40,
                           ),
+                        ),
+                      ),
+                      // Floating Refresh Button
+                      Positioned(
+                        right: 16,
+                        bottom: 16,
+                        child: FloatingActionButton(
+                          mini: true,
+                          backgroundColor: Colors.white,
+                          onPressed: _initLocation,
+                          child: const Icon(
+                            LucideIcons.locateFixed,
+                            color: AppColors.primaryButton,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Form Section
+                Expanded(
+                  flex: 4,
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(30),
+                        topRight: Radius.circular(30),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 10,
+                          offset: Offset(0, -5),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Verify or edit the address below',
-                      style: GoogleFonts.inter(
-                        color: Colors.grey.shade600,
-                        fontSize: 13,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    
-                    // Address Text Field
-                    TextField(
-                      controller: _addressController,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        hintText: 'Enter your complete address...',
-                        hintStyle: GoogleFonts.inter(color: Colors.grey.shade400),
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: AppColors.primaryButton, width: 2),
-                        ),
-                      ),
-                      style: GoogleFonts.inter(fontSize: 14),
-                      onChanged: (_) => setState(() {}), // Rebuild to update button state
-                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (_errorMessage != null)
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              margin: const EdgeInsets.only(bottom: 20),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.red.shade200),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    LucideIcons.alertCircle,
+                                    color: Colors.red.shade700,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      _errorMessage!,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        color: Colors.red.shade900,
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(LucideIcons.x, size: 16),
+                                    onPressed: () =>
+                                        setState(() => _errorMessage = null),
+                                  ),
+                                ],
+                              ),
+                            ),
 
-                    const SizedBox(height: 28),
-
-                    // Confirm Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: (!_isLoadingAddress && _addressController.text.trim().isNotEmpty)
-                            ? _confirmLocation
-                            : null,
-                        icon: const Icon(LucideIcons.check, color: Colors.white),
-                        label: Text(
-                          'Confirm Location',
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                          Row(
+                            children: [
+                              Text(
+                                'Delivery Address',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              if (_isLoadingAddress)
+                                const Padding(
+                                  padding: EdgeInsets.only(left: 12),
+                                  child: SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                          const SizedBox(height: 20),
+
+                          _buildTextField(
+                            controller: _fullAddressController,
+                            label: 'Building/Street/Area',
+                            maxLines: 2,
+                            icon: LucideIcons.home,
                           ),
-                          disabledBackgroundColor: Colors.grey.shade300,
-                        ),
+                          const SizedBox(height: 16),
+
+                          _buildTextField(
+                            controller: _landmarkController,
+                            label: 'Landmark (Optional)',
+                            icon: LucideIcons.mapPin,
+                          ),
+                          const SizedBox(height: 16),
+
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildTextField(
+                                  controller: _cityController,
+                                  label: 'City',
+                                  icon: LucideIcons.building,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildTextField(
+                                  controller: _stateController,
+                                  label: 'State',
+                                  icon: LucideIcons.map,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          _buildTextField(
+                            controller: _pincodeController,
+                            label: 'Pincode',
+                            icon: LucideIcons.hash,
+                            keyboardType: TextInputType.number,
+                          ),
+                          const SizedBox(height: 32),
+
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _isLoadingAddress
+                                  ? null
+                                  : _confirmLocation,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryButton,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 18,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              child: Text(
+                                'Confirm and Save',
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-
-                    const SizedBox(height: 16),
-
-                    // Info text
-                    Center(
-                      child: Text(
-                        'Your location will be shared with the technician for service.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          color: Colors.grey,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    int maxLines = 1,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          maxLines: maxLines,
+          keyboardType: keyboardType,
+          style: GoogleFonts.inter(fontSize: 14),
+          decoration: InputDecoration(
+            isDense: true,
+            prefixIcon: Icon(icon, size: 18, color: Colors.grey[400]),
+            filled: true,
+            fillColor: Colors.grey[50],
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[200]!),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[200]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.primaryButton),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

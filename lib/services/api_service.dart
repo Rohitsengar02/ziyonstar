@@ -6,11 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiService {
   static String get baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:5001/api';
-    }
-    // For local development on physical devices, use your machine's IP address
-    return dotenv.env['BACKEND_URL'] ?? 'http://192.168.1.35:5001/api';
+    return dotenv.env['BACKEND_URL'] ?? 'https://ziyonstar.onrender.com/api';
   }
 
   Future<List<dynamic>> getIssues() async {
@@ -462,6 +458,66 @@ class ApiService {
       return null;
     } catch (e) {
       debugPrint('Error fetching company info: $e');
+      return null;
+    }
+  }
+
+  // ===== CHAT APIs =====
+  Future<Map<String, dynamic>?> getOrCreateChat(String bookingId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/chat/get-or-create'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'bookingId': bookingId}),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error getting or creating chat: $e');
+      return null;
+    }
+  }
+
+  Future<List<dynamic>> getChatMessages(String chatId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/chat/messages/$chatId'),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error fetching chat messages: $e');
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> createMessage(
+    String chatId,
+    String senderId,
+    String senderRole,
+    String text,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/chat/messages'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'chatId': chatId,
+          'senderId': senderId,
+          'senderRole': senderRole,
+          'text': text,
+        }),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error creating message: $e');
       return null;
     }
   }

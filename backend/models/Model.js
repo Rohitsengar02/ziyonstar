@@ -8,7 +8,8 @@ const ModelSchema = new mongoose.Schema({
         issueName: { type: String, required: true }, // e.g., "Screen", "Battery"
         price: { type: Number, required: true },      // Final Price
         originalPrice: { type: Number },              // Column 2 (Price before discount)
-        discount: { type: String }                    // Column 3 (e.g. "48%")
+        discount: { type: String },                   // Column 3 (e.g. "48%")
+        imageUrl: { type: String }                    // Image URL for the issue
     }],
     createdAt: { type: Date, default: Date.now }
 });

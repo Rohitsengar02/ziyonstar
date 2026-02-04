@@ -27,10 +27,16 @@ router.post('/:id/respond', bookingController.respondToBooking);
 // Update Booking Status (Technician updates job progress)
 router.post('/:id/status', bookingController.updateBookingStatus);
 
+// Verify OTP (Technician starts job)
+router.post('/:id/verify-otp', bookingController.verifyOtpAndStartJob);
+
 // User Requests Reassignment
 router.post('/:id/reassign', bookingController.reassignBooking);
 
 // User Submits Review
 router.post('/:id/review', bookingController.submitReview);
+
+// Confirm Pickup (Technician picks up device)
+router.post('/:id/pickup', bookingController.confirmPickup);
 
 module.exports = router;

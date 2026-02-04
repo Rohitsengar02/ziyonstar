@@ -16,6 +16,7 @@ class BookingSuccessScreen extends StatefulWidget {
   final String timeSlot;
   final DateTime date;
   final double amount;
+  final String otp;
 
   const BookingSuccessScreen({
     super.key,
@@ -26,6 +27,7 @@ class BookingSuccessScreen extends StatefulWidget {
     required this.timeSlot,
     required this.date,
     required this.amount,
+    required this.otp,
   });
 
   @override
@@ -232,6 +234,36 @@ class _BookingSuccessScreenState extends State<BookingSuccessScreen>
     );
   }
 
+  String _getIssueImagePath(String issueName) {
+    final name = issueName.toLowerCase();
+    if (name.contains('camera')) return 'issue_camera.png';
+    if (name.contains('battery')) return 'issue_battery.png';
+    if (name.contains('screen') || name.contains('display')) {
+      return 'issue_screen.png';
+    }
+    if (name.contains('charging') ||
+        name.contains('jack') ||
+        name.contains('port')) {
+      return 'issue_charging.png';
+    }
+    if (name.contains('mic')) return 'issue_mic.png';
+    if (name.contains('speaker') || name.contains('receiver')) {
+      return 'issue_speaker.png';
+    }
+    if (name.contains('face id')) return 'issue_faceid.png';
+    if (name.contains('water') || name.contains('liquid')) {
+      return 'issue_water.png';
+    }
+    if (name.contains('software')) return 'issue_software.png';
+    if (name.contains('motherboard') || name.contains('ic')) {
+      return 'issue_motherboard.png';
+    }
+    if (name.contains('sensor')) return 'issue_sensors.png';
+    if (name.contains('glass')) return 'issue_backglass.png';
+
+    return '';
+  }
+
   Widget _buildSummaryCard() {
     return Container(
       width: 500,
@@ -250,6 +282,50 @@ class _BookingSuccessScreenState extends State<BookingSuccessScreen>
       ),
       child: Column(
         children: [
+          // OTP Section
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+            margin: const EdgeInsets.only(bottom: 24),
+            decoration: BoxDecoration(
+              color: AppColors.primaryButton.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppColors.primaryButton.withOpacity(0.2),
+              ),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'Job Verification OTP',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primaryButton,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  widget.otp,
+                  style: GoogleFonts.poppins(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryButton,
+                    letterSpacing: 8,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Share this code with the technician to start the job',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -273,6 +349,7 @@ class _BookingSuccessScreenState extends State<BookingSuccessScreen>
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(
                 children: widget.selectedIssues.map((issue) {
+                  final asset = _getIssueImagePath(issue);
                   return Padding(
                     padding: const EdgeInsets.only(right: 12),
                     child: Tooltip(
@@ -286,7 +363,9 @@ class _BookingSuccessScreenState extends State<BookingSuccessScreen>
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.grey[300]!),
                         ),
-                        child: const Icon(LucideIcons.wrench, size: 24),
+                        child: asset.isNotEmpty
+                            ? Image.asset('assets/images/issues/$asset')
+                            : const Icon(LucideIcons.wrench, size: 24),
                       ),
                     ),
                   );

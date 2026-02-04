@@ -57,6 +57,7 @@ app.use('/api/contact', require('./routes/contactRoutes'));
 app.use('/api/settings', require('./routes/settingsRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
+app.use('/api/chat', require('./routes/chatRoutes'));
 
 
 
@@ -91,6 +92,22 @@ io.on('connection', (socket) => {
             if (data.role === 'technician') {
                 io.emit('technicianStatusUpdate', { technicianId: data.userId, isOnline: true });
             }
+        }
+    });
+
+    // Chat handlers
+    socket.on('join_chat', (data) => {
+        if (data.chatId) {
+            socket.join(data.chatId);
+            console.log(`Socket ${socket.id} joined chat: ${data.chatId}`);
+        }
+    });
+
+    socket.on('send_message', (data) => {
+        console.log('New message received via socket:', data);
+        // data should have chatId, senderId, senderRole, text, createdAt
+        if (data.chatId) {
+            io.to(data.chatId).emit('receive_message', data);
         }
     });
 

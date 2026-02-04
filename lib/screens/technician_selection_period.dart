@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:ziyonstar/screens/my_bookings_screen.dart';
+import 'package:ziyonstar/screens/booking_success_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme.dart';
 import '../responsive.dart';
@@ -311,8 +311,16 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) =>
-              MyBookingsScreen(initialBookingId: newBooking?['_id']),
+          builder: (context) => BookingSuccessScreen(
+            deviceName: widget.deviceName,
+            technicianName: technician['name'] ?? 'Technician',
+            technicianImage: technician['photoUrl'] ?? '',
+            selectedIssues: widget.selectedIssues,
+            timeSlot: _selectedTimeSlot ?? '',
+            date: _selectedDate,
+            amount: widget.totalPrice,
+            otp: newBooking?['otp']?.toString() ?? '000000',
+          ),
         ),
       );
     } catch (e) {

@@ -97,37 +97,74 @@ const issuesData = [
 
 const seedIssues = async () => {
     try {
-        console.log('Clearing existing issues...');
-        await Issue.deleteMany({});
+        console.log('Connecting to DB...');
+        // DB connection is handled by connectDB() call above, but we need to ensure it's ready if logic was different. 
+        // connectDB is async but not awaited here in original code? 
+        // Original code: connectDB(); 
+        // It connects. Mongoose buffers.
 
-        console.log('Uploading images and seeding issues...');
+        console.log('Starting issue seed/update...');
 
-        for (const issue of issuesData) {
-            const imagePath = path.join(__dirname, '../assets/images/issues', issue.imageFile);
+        // Verify/Add new issues to the list
+        const allIssuesData = [
+            ...issuesData,
+            {
+                name: 'Front Camera',
+                category: 'Camera',
+                icon: 'camera',
+                imageFile: 'issue_frontcamera.png',
+                base_price: '1299',
+            },
+            {
+                name: 'Main Speaker', // Back/Loud Speaker
+                category: 'Audio',
+                icon: 'speaker',
+                imageFile: 'issue_speakerback.png',
+                base_price: '999',
+            }
+        ];
 
-            console.log(`Uploading ${issue.name} image from ${imagePath}...`);
+        for (const issue of allIssuesData) {
+            let imageUrl = '';
 
-            const result = await cloudinary.uploader.upload(imagePath, {
-                folder: 'ziyonstar_issues',
-                use_filename: true,
-                unique_filename: false,
-            });
+            // Try to find existing first to avoid re-uploading if not needed? 
+            // Or just re-upload to ensure latest image. Cloudinary handles duplicates if filename same?
+            // User requested "PUSH THESE ALL ISSUE IMAGES", so we will upload.
 
-            console.log(`Image uploaded: ${result.secure_url}`);
+            try {
+                const imagePath = path.join(__dirname, '../assets/images/issues', issue.imageFile);
+                console.log(`Uploading ${issue.name} image from ${imagePath}...`);
+                const result = await cloudinary.uploader.upload(imagePath, {
+                    folder: 'ziyonstar_issues',
+                    use_filename: true,
+                    unique_filename: false,
+                });
+                imageUrl = result.secure_url;
+            } catch (imgError) {
+                console.error(`Failed to upload image for ${issue.name}: ${imgError.message}`);
+                // Continue? If existing issue has image, keep it?
+                // For now, allow failing if file missing but standard issues should have files.
+            }
 
-            const newIssue = new Issue({
-                name: issue.name,
+            const updateData = {
                 category: issue.category,
                 base_price: issue.base_price,
                 icon: issue.icon,
-                imageUrl: result.secure_url,
-            });
+            };
 
-            await newIssue.save();
-            console.log(`Saved issue: ${issue.name}`);
+            if (imageUrl) {
+                updateData.imageUrl = imageUrl;
+            }
+
+            const doc = await Issue.findOneAndUpdate(
+                { name: issue.name },
+                { $set: updateData },
+                { upsert: true, new: true }
+            );
+            console.log(`Upserted issue: ${doc.name}`);
         }
 
-        console.log('Seeding completed successfully!');
+        console.log('Issue seeding/updating completed successfully!');
         process.exit(0);
     } catch (error) {
         console.error('Error seeding issues:', error);
