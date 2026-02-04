@@ -1,0 +1,21 @@
+# Ignore build script - we're deploying pre-built files
+build.sh
+flutter/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+android/
+ios/
+linux/
+macos/
+windows/
+test/
+lib/
+pubspec.yaml
+pubspec.lock
+analysis_options.yaml
+README.md
+.metadata
