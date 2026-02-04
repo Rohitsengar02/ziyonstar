@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e  # Exit on error
-
 echo "🚀 Starting Flutter Web Build..."
 
 # Download Flutter SDK
@@ -22,13 +20,10 @@ export PATH="$PATH:`pwd`/flutter/bin"
 echo "🔧 Flutter Configuration..."
 flutter config --enable-web --no-analytics
 
-echo " Installing Dependencies..."
+echo "📦 Installing Dependencies..."
 flutter pub get
 
-echo "🧹 Cleaning Previous Builds..."
-flutter clean
-
 echo "🏗️  Building Web App..."
-flutter build web --release
+flutter build web --release --no-wasm-dry-run
 
 echo "✅ Build Complete!"
