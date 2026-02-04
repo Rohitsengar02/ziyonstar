@@ -11,10 +11,38 @@ import 'services/api_service.dart';
 import 'screens/pending_approval_screen.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: "assets/.env");
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const TechnicianApp());
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    debugPrint("TechnicianApp: Starting initialization...");
+
+    try {
+      await dotenv.load(fileName: "assets/.env");
+      debugPrint("TechnicianApp: DotEnv loaded.");
+    } catch (e) {
+      debugPrint("TechnicianApp: DotEnv load failed: $e");
+    }
+
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      debugPrint("TechnicianApp: Firebase initialized.");
+    } catch (e) {
+      debugPrint("TechnicianApp: Firebase init failed: $e");
+    }
+
+    runApp(const TechnicianApp());
+  } catch (e, stack) {
+    debugPrint("TechnicianApp: CRITICAL ERROR in main: $e\n$stack");
+    // Attempt to run app anyway to show something
+    runApp(
+      const MaterialApp(
+        home: Scaffold(
+          body: Center(child: Text("App Failed to Start. Check logs.")),
+        ),
+      ),
+    );
+  }
 }
 
 class TechnicianApp extends StatelessWidget {

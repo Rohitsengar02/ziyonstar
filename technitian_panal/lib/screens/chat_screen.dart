@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../services/api_service.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
+import '../services/socket_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final String bookingId;
@@ -28,7 +27,8 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ApiService _apiService = ApiService();
-  late IO.Socket _socket;
+  final SocketService _socketService = SocketService();
+  // Socket handled by service
 
   List<dynamic> _messages = [];
   String? _chatId;
@@ -57,66 +57,37 @@ class _ChatScreenState extends State<ChatScreen> {
         });
       }
       _scrollToBottom();
-      _connectSocket();
+
+      // Connect/Join via Service
+      _socketService.joinChat(_chatId!);
+
+      // Listen for messages
+      _socketService.onMessage((data) {
+        debugPrint('Technician Received Message: $data');
+        if (mounted && data != null) {
+          setState(() {
+            final newMessage = Map<String, dynamic>.from(data);
+            // Simple duplicate check
+            bool exists = _messages.any(
+              (m) =>
+                  m['_id'] == newMessage['_id'] || // Check ID if available
+                  (m['text'] == newMessage['text'] &&
+                      m['createdAt'] == newMessage['createdAt'] &&
+                      m['senderId'] == newMessage['senderId']),
+            );
+            if (!exists) {
+              _messages.add(newMessage);
+            }
+          });
+          _scrollToBottom();
+        }
+      });
     } else {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _connectSocket() {
-    try {
-      String socketUrl =
-          dotenv.env['BACKEND_URL'] ?? 'https://ziyonstar.onrender.com';
-      socketUrl = socketUrl.replaceAll('/api', '');
-      debugPrint('Connecting to socket at: $socketUrl');
-
-      _socket = IO.io(socketUrl, <String, dynamic>{
-        'transports': ['websocket'],
-        'autoConnect': true, // Changed to true
-        'extraHeaders': {'foo': 'bar'}, // Sometimes needed for some servers
-      });
-
-      _socket.onConnect((_) {
-        debugPrint('Technician Socket Connected: ${_socket.id}');
-        if (_chatId != null) {
-          _socket.emit('join_chat', {'chatId': _chatId});
-          debugPrint('Technician Joined Chat Room: $_chatId');
-        }
-
-        // Move listener here to ensure it's registered after connection
-        _socket.off('receive_message'); // Clear existing to avoid duplicates
-        _socket.on('receive_message', (data) {
-          debugPrint('Technician Received Message: $data');
-          if (mounted && data != null) {
-            setState(() {
-              final newMessage = Map<String, dynamic>.from(data);
-              // Simple duplicate check (optional, but good for stability)
-              bool exists = _messages.any(
-                (m) =>
-                    m['text'] == newMessage['text'] &&
-                    m['createdAt'] == newMessage['createdAt'] &&
-                    m['senderId'] == newMessage['senderId'],
-              );
-              if (!exists) {
-                _messages.add(newMessage);
-              }
-            });
-            _scrollToBottom();
-          }
-        });
-      });
-
-      _socket.onDisconnect((_) => debugPrint('Technician Socket Disconnected'));
-      _socket.onConnectError(
-        (err) => debugPrint('Technician Socket Connect Error: $err'),
-      );
-      _socket.onError((err) => debugPrint('Technician Socket Error: $err'));
-
-      _socket.connect();
-    } catch (e) {
-      debugPrint('Error setting up socket: $e');
-    }
-  }
+  // _connectSocket removed
 
   void _sendMessage() async {
     if (_messageController.text.trim().isEmpty || _chatId == null) return;
@@ -132,7 +103,15 @@ class _ChatScreenState extends State<ChatScreen> {
       'createdAt': DateTime.now().toIso8601String(),
     };
 
-    _socket.emit('send_message', messageData);
+    // Optimistic Update? The socket broadcast will come back to us too in this setup?
+    // Usually socket broadcast is to room. Sender is in room. Sender gets it back.
+    // If backend emits to room including sender, we don't need optimistic update or we need to dedup.
+    // Backend code: io.to(chatId).emit... this sends to everyone in room including sender.
+    // So we rely on the listener.
+
+    if (_socketService.socket != null) {
+      _socketService.socket!.emit('send_message', messageData);
+    }
 
     try {
       await _apiService.createMessage(
@@ -160,8 +139,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
-    _socket.disconnect();
-    _socket.dispose();
+    _socketService.offMessage();
+    // Do not dispose socket service here as it might be used globally
+    // _socketService.leaveChat(_chatId); // Optional if implemented
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();

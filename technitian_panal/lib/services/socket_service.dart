@@ -47,6 +47,38 @@ class SocketService {
     socket!.emit('register', {'userId': userId, 'role': role});
   }
 
+  void joinChat(String chatId) {
+    if (socket != null && socket!.connected) {
+      socket!.emit('join_chat', {'chatId': chatId});
+      debugPrint('Joined chat: $chatId');
+    }
+  }
+
+  void leaveChat(String chatId) {
+    // If backend supports leave_chat, emit it. Currently just join is enough to receive.
+    // To stop receiving, client just stops listening or we could implement leave room on backend.
+    // For now, no-op or close socket if specific chat focused.
+    // Actually socket room joins are persistent until disconnect.
+  }
+
+  void onMessage(Function(dynamic) callback) {
+    socket?.on('receive_message', (data) {
+      debugPrint('📥 New message received: $data');
+      callback(data);
+    });
+  }
+
+  void offMessage() {
+    socket?.off('receive_message');
+  }
+
+  void onNotification(Function(dynamic) callback) {
+    socket?.on('new_notification', (data) {
+      debugPrint('🔔 New notification: $data');
+      callback(data);
+    });
+  }
+
   void dispose() {
     socket?.disconnect();
     socket?.dispose();

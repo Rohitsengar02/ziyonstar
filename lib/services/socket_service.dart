@@ -69,6 +69,31 @@ class SocketService {
     });
   }
 
+  void joinChat(String chatId) {
+    if (socket != null && socket!.connected) {
+      socket!.emit('join_chat', {'chatId': chatId});
+      debugPrint('Joined chat: $chatId');
+    }
+  }
+
+  void onMessage(Function(dynamic) callback) {
+    socket?.on('receive_message', (data) {
+      debugPrint('📥 New message received: $data');
+      callback(data);
+    });
+  }
+
+  void offMessage() {
+    socket?.off('receive_message');
+  }
+
+  void onNotification(Function(dynamic) callback) {
+    socket?.on('new_notification', (data) {
+      debugPrint('🔔 New notification: $data');
+      callback(data);
+    });
+  }
+
   void dispose() {
     socket?.disconnect();
     socket?.dispose();

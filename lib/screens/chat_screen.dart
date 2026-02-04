@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../services/api_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
+import '../services/socket_service.dart';
 
 class ChatScreen extends StatefulWidget {
+  // ... (class definition same)
+
+  // ...
+
   final String bookingId;
   final String currentUserId;
   final String otherUserName;
@@ -28,7 +32,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ApiService _apiService = ApiService();
-  late IO.Socket _socket;
+  final SocketService _socketService = SocketService();
 
   List<dynamic> _messages = [];
   String? _chatId;
@@ -44,69 +48,47 @@ class _ChatScreenState extends State<ChatScreen> {
     // 1. Get or Create Chat via API
     final chatData = await _apiService.getOrCreateChat(widget.bookingId);
     if (chatData != null) {
-      setState(() {
-        _chatId = chatData['_id'];
-      });
+      if (mounted) {
+        setState(() {
+          _chatId = chatData['_id'];
+        });
+      }
 
       // 2. Load History
       final history = await _apiService.getChatMessages(_chatId!);
-      setState(() {
-        _messages = history;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _messages = history;
+          _isLoading = false;
+        });
+      }
       _scrollToBottom();
 
-      // 3. Connect Socket
-      _connectSocket();
-    } else {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  void _connectSocket() {
-    try {
-      String socketUrl =
-          dotenv.env['BACKEND_URL'] ?? 'https://ziyonstar.onrender.com';
-      // Remove /api from socket URL if present
-      socketUrl = socketUrl.replaceAll('/api', '');
-
-      _socket = IO.io(socketUrl, <String, dynamic>{
-        'transports': ['websocket'],
-        'autoConnect': true,
-      });
-
-      _socket.onConnect((_) {
-        debugPrint('Connected to socket: ${_socket.id}');
-        if (_chatId != null) {
-          _socket.emit('join_chat', {'chatId': _chatId});
+      // 3. Connect Socket via Service
+      _socketService.joinChat(_chatId!);
+      _socketService.onMessage((data) {
+        if (mounted && data != null) {
+          setState(() {
+            final newMessage = Map<String, dynamic>.from(data);
+            bool exists = _messages.any(
+              (m) =>
+                  m is Map &&
+                  m['text'] == newMessage['text'] &&
+                  m['createdAt'] == newMessage['createdAt'],
+            );
+            if (!exists) {
+              _messages.add(newMessage);
+            }
+          });
+          _scrollToBottom();
         }
-
-        _socket.off('receive_message');
-        _socket.on('receive_message', (data) {
-          if (mounted && data != null) {
-            setState(() {
-              final newMessage = Map<String, dynamic>.from(data);
-              bool exists = _messages.any(
-                (m) =>
-                    m is Map &&
-                    m['text'] == newMessage['text'] &&
-                    m['createdAt'] == newMessage['createdAt'],
-              );
-              if (!exists) {
-                _messages.add(newMessage);
-              }
-            });
-            _scrollToBottom();
-          }
-        });
       });
-
-      _socket.onDisconnect((_) => debugPrint('Disconnected from socket'));
-      _socket.connect();
-    } catch (e) {
-      debugPrint('Error setting up socket: $e');
+    } else {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
+
+  // _connectSocket removed
 
   void _sendMessage() async {
     if (_messageController.text.trim().isEmpty || _chatId == null) return;
@@ -123,7 +105,9 @@ class _ChatScreenState extends State<ChatScreen> {
     };
 
     // Emit via socket for real-time
-    _socket.emit('send_message', messageData);
+    if (_socketService.socket != null) {
+      _socketService.socket!.emit('send_message', messageData);
+    }
 
     // Save to DB via API
     try {
@@ -152,8 +136,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
-    _socket.disconnect();
-    _socket.dispose();
+    _socketService.offMessage();
+    // Do not dispose singleton socket here.
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();

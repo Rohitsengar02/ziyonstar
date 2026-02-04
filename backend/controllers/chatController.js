@@ -1,6 +1,7 @@
 const Chat = require('../models/Chat');
 const Message = require('../models/Message');
 const Booking = require('../models/Booking');
+const Notification = require('../models/Notification');
 
 // Get or Create Chat for a booking
 exports.getOrCreateChat = async (req, res) => {
@@ -72,14 +73,49 @@ exports.sendMessage = async (req, res) => {
         console.log(`[CHAT] Message saved: ${savedMessage._id}`);
 
         // Update last message in Chat
-        await Chat.findByIdAndUpdate(chatId, {
+        // Update last message in Chat
+        const chat = await Chat.findByIdAndUpdate(chatId, {
             lastMessage: {
                 text,
                 senderId,
                 timestamp: Date.now()
             },
             updatedAt: Date.now()
-        });
+        }, { new: true }); // Get updated doc? Not strictly needed for logic but good practice
+
+        // --- Socket.IO Emission for Realtime Chat ---
+        const io = req.app.get('io');
+        if (io) {
+            io.to(chatId).emit('receive_message', savedMessage);
+            console.log(`[SOCKET] Emitted receive_message to room ${chatId}`);
+        }
+
+        // --- Notification Logic ---
+        let recipientId = null;
+        if (senderRole === 'user') {
+            recipientId = chat.technicianId ? chat.technicianId.toString() : null;
+        } else {
+            recipientId = chat.userId ? chat.userId.toString() : null;
+        }
+
+        if (recipientId) {
+            // Create in-app notification
+            const notification = new Notification({
+                userId: recipientId,
+                title: 'New Message',
+                message: text,
+                type: 'info',
+                bookingId: chat.bookingId,
+                seen: false
+            });
+            await notification.save();
+
+            // Emit notification event to recipient's room
+            if (io) {
+                io.to(recipientId).emit('new_notification', notification);
+                console.log(`[SOCKET] Emitted new_notification to user ${recipientId}`);
+            }
+        }
 
         res.json(savedMessage);
     } catch (err) {

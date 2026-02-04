@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/api_service.dart';
+import 'sign_up_screen.dart';
 import '../theme.dart';
 import '../widgets/mobile_bottom_nav.dart';
 import 'edit_profile_page.dart';
@@ -371,12 +373,24 @@ class _MobileProfilePageState extends State<MobileProfilePage> {
           color: Colors.transparent,
           child: InkWell(
             onTap: () async {
-              // Clear prefs and navigate to login?
+              // 1. Clear Local Storage
               final prefs = await SharedPreferences.getInstance();
               await prefs.clear();
-              // Assuming routing to home or login logic exists externally or we pushreplacement.
-              // For now just show snackbar or print.
-              debugPrint("Logged out");
+
+              // 2. Sign Out from Firebase
+              try {
+                await FirebaseAuth.instance.signOut();
+              } catch (e) {
+                debugPrint("Firebase SignOut Error: $e");
+              }
+
+              // 3. Navigate to Sign Up Screen
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const SignUpScreen()),
+                  (route) => false,
+                );
+              }
             },
             borderRadius: BorderRadius.circular(16),
             child: Padding(

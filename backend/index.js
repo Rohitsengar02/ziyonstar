@@ -88,6 +88,9 @@ io.on('connection', (socket) => {
             connectedUsers.set(socket.id, { userId: data.userId, role: data.role });
             console.log(`User registered: ${data.userId} as ${data.role}`);
 
+            // Join a secure room for specific user notifications
+            socket.join(data.userId);
+
             // If it's a technician, we could broadcast status here if needed
             if (data.role === 'technician') {
                 io.emit('technicianStatusUpdate', { technicianId: data.userId, isOnline: true });
