@@ -107,6 +107,10 @@ exports.checkPaymentStatus = async (req, res) => {
             if (booking) {
                 if (status === 'success') {
                     booking.paymentStatus = 'Paid';
+                    // RELEASE TO TECHNICIAN: Update status from Awaiting_Payment to actual queue
+                    if (booking.status === 'Awaiting_Payment') {
+                        booking.status = booking.technicianId ? 'Pending_Acceptance' : 'Pending_Assignment';
+                    }
                 } else if (status === 'failure') {
                     booking.paymentStatus = 'Failed';
                 }
@@ -140,6 +144,10 @@ exports.paymentWebhook = async (req, res) => {
         if (booking) {
             if (status === 'success') {
                 booking.paymentStatus = 'Paid';
+                // RELEASE TO TECHNICIAN: Update status from Awaiting_Payment to actual queue
+                if (booking.status === 'Awaiting_Payment') {
+                    booking.status = booking.technicianId ? 'Pending_Acceptance' : 'Pending_Assignment';
+                }
             } else if (status === 'failure') {
                 booking.paymentStatus = 'Failed';
             }

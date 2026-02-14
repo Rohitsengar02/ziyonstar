@@ -43,6 +43,7 @@ const bookingSchema = new mongoose.Schema({
         enum: [
             'Pending_Assignment', // Created, waiting for tech assignment (if manual/auto)
             'Pending_Acceptance', // Assigned to tech, waiting for tech response
+            'Awaiting_Payment',   // Online payment pending
             'Accepted',
             'On_Way',             // Tech is on the way to user
             'Arrived',            // Tech has arrived at location

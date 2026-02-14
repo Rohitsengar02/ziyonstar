@@ -35,7 +35,10 @@ exports.createBooking = async (req, res) => {
             assignedTech = await findNextTechnician();
         }
 
+        const paymentMethod = req.body.paymentMethod || 'Cash';
+        const isOnlinePayment = paymentMethod === 'UPI' || paymentMethod === 'Card';
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
         const newBooking = new Booking({
             userId,
             deviceBrand,
@@ -47,8 +50,10 @@ exports.createBooking = async (req, res) => {
             address: addressId,
             addressDetails: req.body.addressDetails,
             technicianId: assignedTech ? assignedTech._id : null,
-            status: assignedTech ? 'Pending_Acceptance' : 'Pending_Assignment',
-            paymentMethod: req.body.paymentMethod || 'Cash',
+            status: isOnlinePayment
+                ? 'Awaiting_Payment'
+                : (assignedTech ? 'Pending_Acceptance' : 'Pending_Assignment'),
+            paymentMethod: paymentMethod,
             otp
         });
 
@@ -89,7 +94,10 @@ exports.getBooking = async (req, res) => {
 exports.getTechnicianBookings = async (req, res) => {
     try {
         const { technicianId } = req.params;
-        const bookings = await Booking.find({ technicianId })
+        const bookings = await Booking.find({
+            technicianId,
+            status: { $ne: 'Awaiting_Payment' }
+        })
             .populate('userId', 'name phone photoUrl')
             .populate('address')
             .sort({ createdAt: -1 });
