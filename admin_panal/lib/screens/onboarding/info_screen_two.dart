@@ -32,185 +32,223 @@ class _InfoScreenTwoState extends State<InfoScreenTwo>
 
   @override
   Widget build(BuildContext context) {
+    final bool isDesktop = MediaQuery.of(context).size.width >= 1000;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'ZiyonStar',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AdminLoginScreen(),
-                        ),
-                      );
-                    },
-                    child: Text(
-                      'Finish',
-                      style: GoogleFonts.inter(
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              Center(
-                child: AnimatedBuilder(
-                  animation: _controller,
-                  builder: (context, child) {
-                    return Container(
-                      height: 280,
-                      width: 280,
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(40),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(
-                              0.3 * _controller.value,
-                            ),
-                            blurRadius: 30,
-                            spreadRadius: 5 * _controller.value,
-                          ),
-                        ],
-                      ),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Positioned(
-                            top: 60 + (20 * _controller.value),
-                            child: Container(
-                              width: 140,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                color: Colors.white24,
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            top: 90 + (20 * _controller.value),
-                            child: Container(
-                              width: 100,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                color: Colors.white12,
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                            ),
-                          ),
-                          const Icon(
-                            LucideIcons.barChart3,
-                            color: Colors.white,
-                            size: 60,
-                          ),
-                          Positioned(
-                            bottom: 60 - (10 * _controller.value),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: List.generate(
-                                3,
-                                (index) => Container(
-                                  margin: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                  ),
-                                  width: 20,
-                                  height:
-                                      20 +
-                                      (30 *
-                                          _controller.value *
-                                          (index + 1) /
-                                          3),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const Spacer(),
-              Text(
-                'Data Analytics',
-                style: GoogleFonts.poppins(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  height: 1.1,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Gain deep insights into your business performance with real-time analytics and detailed reports.',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  color: AppColors.textSecondary,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 48),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
+        child: Center(
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: isDesktop ? 1200 : double.infinity,
+            ),
+            padding: EdgeInsets.symmetric(
+              horizontal: isDesktop ? 60 : 30,
+              vertical: 20,
+            ),
+            child: isDesktop
+                ? Row(
                     children: [
-                      _buildDot(false),
-                      const SizedBox(width: 8),
-                      _buildDot(true),
+                      Expanded(flex: 5, child: _buildVisualSection()),
+                      const SizedBox(width: 80),
+                      Expanded(flex: 4, child: _buildContentSection(isDesktop)),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTopBar(),
+                      const Spacer(),
+                      _buildVisualSection(),
+                      const Spacer(),
+                      _buildContentSection(isDesktop),
+                      const SizedBox(height: 20),
                     ],
                   ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AdminLoginScreen(),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        LucideIcons.check,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-            ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTopBar() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'ZiyonStar',
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1,
+          ),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const AdminLoginScreen()),
+            );
+          },
+          child: Text(
+            'Finish',
+            style: GoogleFonts.inter(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVisualSection() {
+    return Center(
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Container(
+            height: 280,
+            width: 280,
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(40),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3 * _controller.value),
+                  blurRadius: 30,
+                  spreadRadius: 5 * _controller.value,
+                ),
+              ],
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Positioned(
+                  top: 60 + (20 * _controller.value),
+                  child: Container(
+                    width: 140,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 90 + (20 * _controller.value),
+                  child: Container(
+                    width: 100,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: Colors.white12,
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                  ),
+                ),
+                const Icon(
+                  LucideIcons.barChart3,
+                  color: Colors.white,
+                  size: 60,
+                ),
+                Positioned(
+                  bottom: 60 - (10 * _controller.value),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(
+                      3,
+                      (index) => Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        width: 20,
+                        height: 20 + (30 * _controller.value * (index + 1) / 3),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildContentSection(bool isDesktop) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: isDesktop
+          ? MainAxisAlignment.center
+          : MainAxisAlignment.start,
+      children: [
+        if (isDesktop) ...[
+          Text(
+            'ZiyonStar',
+            style: GoogleFonts.poppins(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 48),
+        ],
+        Text(
+          'Data Analytics',
+          style: GoogleFonts.poppins(
+            fontSize: isDesktop ? 48 : 32,
+            fontWeight: FontWeight.bold,
+            height: 1.1,
+          ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Gain deep insights into your business performance with real-time analytics and detailed reports.',
+          style: GoogleFonts.inter(
+            fontSize: isDesktop ? 18 : 16,
+            color: AppColors.textSecondary,
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 60),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                _buildDot(false),
+                const SizedBox(width: 8),
+                _buildDot(true),
+              ],
+            ),
+            GestureDetector(
+              onTap: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AdminLoginScreen(),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  LucideIcons.check,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 

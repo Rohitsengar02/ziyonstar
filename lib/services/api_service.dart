@@ -249,6 +249,32 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>?> updateUser(
+    String firebaseUid,
+    Map<String, dynamic> userData,
+  ) async {
+    final url = Uri.parse('$baseUrl/users/register'); // Upsert logic
+    debugPrint('ApiService: Updating user at $url');
+    try {
+      final data = Map<String, dynamic>.from(userData);
+      data['firebaseUid'] = firebaseUid;
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(data),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        throw 'Failed to update user: ${response.body}';
+      }
+    } catch (e) {
+      debugPrint('ApiService: Error updating user: $e');
+      rethrow;
+    }
+  }
+
   // ===== UPLOAD API =====
   Future<String?> uploadImage(XFile file) async {
     try {
@@ -518,6 +544,53 @@ class ApiService {
       return null;
     } catch (e) {
       debugPrint('Error creating message: $e');
+      return null;
+    }
+  }
+
+  // ===== PAYMENT APIs =====
+  Future<Map<String, dynamic>?> createPaymentOrder({
+    required String bookingId,
+    required double amount,
+    required String customerName,
+    String? customerEmail,
+    required String customerMobile,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/payments/create-order'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'bookingId': bookingId,
+          'amount': amount,
+          'customerName': customerName,
+          'customerEmail': customerEmail,
+          'customerMobile': customerMobile,
+        }),
+      );
+      if (response.statusCode == 200 || response.statusCode == 400) {
+        return jsonDecode(response.body);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error creating payment order: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> checkPaymentStatus(String txnId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/payments/check-status'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'client_txn_id': txnId}),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error checking payment status: $e');
       return null;
     }
   }

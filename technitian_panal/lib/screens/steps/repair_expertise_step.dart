@@ -108,13 +108,14 @@ class _RepairExpertiseStepState extends State<RepairExpertiseStep> {
                   GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 24,
-                          childAspectRatio: 0.8,
-                        ),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: MediaQuery.of(context).size.width > 600
+                          ? 3
+                          : 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 0.75,
+                    ),
                     itemCount: _issues.length,
                     itemBuilder: (context, index) {
                       final issue = _issues[index];
@@ -233,10 +234,10 @@ class _RepairExpertiseStepState extends State<RepairExpertiseStep> {
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 15,
+                                fontSize: 13,
                                 color: Color(0xFF0F172A),
                               ),
-                              maxLines: 1,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                             if (issue['base_price'] != null)

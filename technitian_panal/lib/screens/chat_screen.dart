@@ -4,6 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../services/api_service.dart';
 import 'package:intl/intl.dart';
 import '../services/socket_service.dart';
+import '../responsive.dart';
 
 class ChatScreen extends StatefulWidget {
   final String bookingId;
@@ -172,74 +173,76 @@ class _ChatScreenState extends State<ChatScreen> {
         foregroundColor: Colors.black,
         elevation: 0.5,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _chatId == null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      LucideIcons.messageSquare,
-                      size: 64,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Chat Not Available',
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+      body: Responsive(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _chatId == null
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        LucideIcons.messageSquare,
+                        size: 64,
+                        color: Colors.grey,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'This chat session could not be initialized. Please try again later.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue.shade600,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Chat Not Available',
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      child: const Text('Go Back'),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          : Column(
-              children: [
-                Expanded(
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = _messages[index];
-                      if (msg == null || msg is! Map) {
-                        return const SizedBox.shrink();
-                      }
-
-                      final mapMsg = Map<String, dynamic>.from(msg);
-                      final senderRole = mapMsg['senderRole']?.toString();
-                      if (senderRole == null) return const SizedBox.shrink();
-
-                      final isMe = senderRole == 'technician';
-                      return _buildMessageBubble(mapMsg, isMe);
-                    },
+                      const SizedBox(height: 8),
+                      const Text(
+                        'This chat session could not be initialized. Please try again later.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade600,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Go Back'),
+                      ),
+                    ],
                   ),
                 ),
-                _buildMessageInput(),
-              ],
-            ),
+              )
+            : Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = _messages[index];
+                        if (msg == null || msg is! Map) {
+                          return const SizedBox.shrink();
+                        }
+
+                        final mapMsg = Map<String, dynamic>.from(msg);
+                        final senderRole = mapMsg['senderRole']?.toString();
+                        if (senderRole == null) return const SizedBox.shrink();
+
+                        final isMe = senderRole == 'technician';
+                        return _buildMessageBubble(mapMsg, isMe);
+                      },
+                    ),
+                  ),
+                  _buildMessageInput(),
+                ],
+              ),
+      ),
     );
   }
 

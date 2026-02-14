@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../theme.dart';
+import '../../responsive.dart';
 
 class KycDocumentsScreen extends StatelessWidget {
   final Map<String, dynamic> technicianData;
@@ -27,50 +28,56 @@ class KycDocumentsScreen extends StatelessWidget {
         foregroundColor: Colors.black,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildStatusCard(status),
-            const SizedBox(height: 32),
-            _buildInfoRow('Document Type', kycType, LucideIcons.fileText),
-            const SizedBox(height: 16),
-            _buildInfoRow('Document Number', kycNumber, LucideIcons.creditCard),
-            const SizedBox(height: 32),
-            Text(
-              'Uploaded Images',
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+      body: Responsive(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildStatusCard(status),
+              const SizedBox(height: 32),
+              _buildInfoRow('Document Type', kycType, LucideIcons.fileText),
+              const SizedBox(height: 16),
+              _buildInfoRow(
+                'Document Number',
+                kycNumber,
+                LucideIcons.creditCard,
               ),
-            ),
-            const SizedBox(height: 16),
-            _buildImageCard('Front Side', frontImg),
-            const SizedBox(height: 20),
-            _buildImageCard('Back Side', backImg),
-            const SizedBox(height: 40),
-            if (status == 'rejected')
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Navigate to re-upload or contact support
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryButton,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'Resubmit Documents',
-                    style: TextStyle(color: Colors.white),
-                  ),
+              const SizedBox(height: 32),
+              Text(
+                'Uploaded Images',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-          ],
+              const SizedBox(height: 16),
+              _buildImageCard('Front Side', frontImg),
+              const SizedBox(height: 20),
+              _buildImageCard('Back Side', backImg),
+              const SizedBox(height: 40),
+              if (status == 'rejected')
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // Navigate to re-upload or contact support
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryButton,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Resubmit Documents',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

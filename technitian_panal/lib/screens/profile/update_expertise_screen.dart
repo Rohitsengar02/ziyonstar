@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../services/api_service.dart';
 import '../../theme.dart';
+import '../../responsive.dart';
 
 class UpdateExpertiseScreen extends StatefulWidget {
   final Map<String, dynamic> technicianData;
@@ -142,9 +143,11 @@ class _UpdateExpertiseScreenState extends State<UpdateExpertiseScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [_buildBrandsGrid(), _buildIssuesGrid()],
+      body: Responsive(
+        child: TabBarView(
+          controller: _tabController,
+          children: [_buildBrandsGrid(), _buildIssuesGrid()],
+        ),
       ),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(24),

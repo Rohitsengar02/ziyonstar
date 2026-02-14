@@ -215,10 +215,459 @@ class _DashboardScreenState extends State<DashboardScreen> {
       const ProfileScreen(),
     ];
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF6F8FA),
-      body: _pages[_selectedIndex],
-      bottomNavigationBar: _buildBottomNav(),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isDesktop = MediaQuery.of(context).size.width >= 1200;
+        final bool isTablet =
+            MediaQuery.of(context).size.width >= 900 &&
+            MediaQuery.of(context).size.width < 1200;
+
+        if (isDesktop || isTablet) {
+          return Scaffold(
+            backgroundColor: const Color(0xFFF6F8FA),
+            body: Row(
+              children: [
+                _buildSidebar(),
+                Expanded(
+                  child: Column(
+                    children: [
+                      _buildDesktopDashboardHeader(),
+                      Expanded(child: _pages[_selectedIndex]),
+                    ],
+                  ),
+                ),
+                if (isDesktop) _buildRightSidebar(),
+              ],
+            ),
+          );
+        }
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFF6F8FA),
+          body: _pages[_selectedIndex],
+          bottomNavigationBar: _buildBottomNav(),
+        );
+      },
+    );
+  }
+
+  Widget _buildDesktopDashboardHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+      color: Colors.white,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            _selectedIndex == 0
+                ? 'Dashboard Overview'
+                : _selectedIndex == 1
+                ? 'My Jobs'
+                : _selectedIndex == 2
+                ? 'Wallet & Earnings'
+                : 'My Profile',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(LucideIcons.bell),
+                onPressed: () {},
+                color: Colors.grey[600],
+              ),
+              const SizedBox(width: 16),
+              const VerticalDivider(width: 1, indent: 10, endIndent: 10),
+              const SizedBox(width: 16),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundImage:
+                        widget.technicianData?['photoUrl'] != null &&
+                            widget.technicianData!['photoUrl'].isNotEmpty
+                        ? NetworkImage(widget.technicianData!['photoUrl'])
+                        : const NetworkImage('https://i.pravatar.cc/150?img=11')
+                              as ImageProvider,
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.technicianData?['name'] ?? 'Technician',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        'Premium Partner',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: Colors.blue,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebar() {
+    return Container(
+      width: 280,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(right: BorderSide(color: Colors.grey.shade100)),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 32),
+          // Brand Logo
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    LucideIcons.zap,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'ZIYONSTAR',
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 48),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                _buildSidebarItem(0, LucideIcons.home, 'Dashboard'),
+                _buildSidebarItem(1, LucideIcons.briefcase, 'My Jobs'),
+                _buildSidebarItem(2, LucideIcons.wallet, 'Wallet'),
+                _buildSidebarItem(3, LucideIcons.user, 'Profile'),
+              ],
+            ),
+          ),
+          // Sidebar Footer
+          _buildSidebarFooter(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebarItem(int index, IconData icon, String label) {
+    bool isSelected = _selectedIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedIndex = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.black : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: isSelected ? Colors.white : Colors.grey[600],
+            ),
+            const SizedBox(width: 16),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? Colors.white : Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRightSidebar() {
+    return Container(
+      width: 320,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(left: BorderSide(color: Colors.grey.shade100)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 32),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Notifications',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '3 New',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                _buildNotificationItem(
+                  icon: LucideIcons.zap,
+                  color: Colors.orange,
+                  title: 'New Repair Job',
+                  desc: 'iPhone 13 Pro Screen Replacement available now.',
+                  time: '2m ago',
+                  isUnread: true,
+                ),
+                _buildNotificationItem(
+                  icon: LucideIcons.checkCircle,
+                  color: Colors.green,
+                  title: 'Payment Received',
+                  desc: '₹1,200 has been credited to your wallet.',
+                  time: '1h ago',
+                  isUnread: true,
+                ),
+                _buildNotificationItem(
+                  icon: LucideIcons.star,
+                  color: Colors.amber,
+                  title: '5 Star Review',
+                  desc: 'Rahul Gupta left a wonderful review for your service.',
+                  time: '5h ago',
+                  isUnread: true,
+                ),
+                _buildNotificationItem(
+                  icon: LucideIcons.shieldCheck,
+                  color: Colors.blue,
+                  title: 'KYC Verified',
+                  desc:
+                      'Your profile is now fully verified. Enjoy premium perks.',
+                  time: 'Yesterday',
+                  isUnread: false,
+                ),
+              ],
+            ),
+          ),
+          _buildRightSidebarPromo(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationItem({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String desc,
+    required String time,
+    required bool isUnread,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isUnread ? color.withOpacity(0.03) : Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isUnread ? color.withOpacity(0.1) : Colors.transparent,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 16, color: color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    Text(
+                      time,
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  desc,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRightSidebarPromo() {
+    return Container(
+      margin: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        children: [
+          const Icon(LucideIcons.crown, color: Colors.amber, size: 32),
+          const SizedBox(height: 12),
+          Text(
+            'Pro Support Plan',
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Get 24/7 priority help',
+            style: GoogleFonts.inter(color: Colors.grey[400], fontSize: 11),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+              minimumSize: const Size(double.infinity, 40),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              'Upgrade Now',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebarFooter() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: Colors.grey.shade100)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                const Icon(LucideIcons.helpCircle, size: 18),
+                const SizedBox(width: 12),
+                Text(
+                  'Support Center',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Icon(LucideIcons.logOut, size: 18, color: Colors.red),
+              const SizedBox(width: 12),
+              Text(
+                'Logout',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: Colors.red,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -424,59 +873,77 @@ class _HomeContentState extends State<_HomeContent> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDesktop = MediaQuery.of(context).size.width >= 900;
+
     return SafeArea(
       child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 1. Header / Profile Section
-            _buildHeader(),
-            const SizedBox(height: 28),
+        padding: EdgeInsets.symmetric(
+          horizontal: isDesktop ? 0 : 24,
+          vertical: 24,
+        ),
+        child: Center(
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: isDesktop ? 1000 : double.infinity,
+            ),
+            padding: EdgeInsets.symmetric(horizontal: isDesktop ? 40 : 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Header Section
+                if (!isDesktop) ...[_buildHeader(), const SizedBox(height: 32)],
 
-            // 4. Earnings Snapshot (Moved up for quick visibility)
-            _buildEarningsRow(),
-            const SizedBox(height: 28),
+                // 4. Earnings Grid
+                _buildEarningsRow(),
+                const SizedBox(height: 32),
 
-            // 2. Announcements & Alerts (Important for admin broadcast)
-            _buildAlertBanner(),
-            const SizedBox(height: 28),
+                // 2. Announcements
+                _buildAlertBanner(),
+                const SizedBox(height: 32),
 
-            // 7. Job Status Timeline (For active job)
-            if (_activeJob != null) ...[
-              _buildSectionHeader('Job Timeline', 'Current Progress'),
-              const SizedBox(height: 12),
-              _buildTimeline(),
-              const SizedBox(height: 28),
-            ],
+                // 7. Active Job Section
+                if (_activeJob != null) ...[
+                  _buildSectionHeader('Live Repair', 'Active Session'),
+                  const SizedBox(height: 16),
+                  _buildTimeline(),
+                  const SizedBox(height: 16),
+                  _buildActiveJobCard(),
+                  const SizedBox(height: 32),
+                ],
 
-            // 2. Active Jobs Section
-            _buildSectionHeader('Live Job', 'Track Progress'),
-            const SizedBox(height: 12),
-            _buildActiveJobCard(),
-            const SizedBox(height: 28),
+                // 11. Status & Compliance
+                _buildSectionHeader(
+                  'Account Status',
+                  'Verification & Compliance',
+                ),
+                const SizedBox(height: 16),
+                _buildComplianceCard(),
+                const SizedBox(height: 32),
 
-            // 11. Compliance & KYC Status
-            _buildComplianceCard(),
-            const SizedBox(height: 28),
+                // 3. New Requests
+                _buildSectionHeader(
+                  'New Requests',
+                  'Immediate Action Required',
+                ),
+                const SizedBox(height: 16),
+                _buildNewJobRequest(),
+                const SizedBox(height: 32),
 
-            // 3. New Job Requests
-            _buildSectionHeader('New Requests', 'Accept Now'),
-            const SizedBox(height: 12),
-            _buildNewJobRequest(),
-            const SizedBox(height: 28),
+                // 5. Financial Overview
+                _buildSectionHeader('Financial Overview', 'Wallet & Payouts'),
+                const SizedBox(height: 16),
+                _buildWalletCard(),
+                const SizedBox(height: 32),
 
-            // 5. Wallet Section
-            _buildWalletCard(),
-            const SizedBox(height: 28),
-
-            // 9. Ratings & Reviews
-            _buildSectionHeader('Reviews', 'Recent Feedback'),
-            const SizedBox(height: 12),
-            _buildReviewCard(),
-            const SizedBox(height: 40),
-          ],
+                // 9. Ratings & Reviews
+                _buildSectionHeader('Recent Feedback', 'What customers say'),
+                const SizedBox(height: 16),
+                _buildReviewCard(),
+                const SizedBox(height: 60),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -488,41 +955,51 @@ class _HomeContentState extends State<_HomeContent> {
         Stack(
           children: [
             Container(
-              padding: const EdgeInsets.all(3),
+              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.black, width: 2),
+                gradient: const LinearGradient(
+                  colors: [Colors.blue, Colors.purple, Colors.orange],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: CircleAvatar(
-                radius: 28,
-                backgroundColor: Colors.grey[200],
-                backgroundImage:
-                    widget.technicianData['photoUrl'] != null &&
-                        widget.technicianData['photoUrl'].isNotEmpty
-                    ? NetworkImage(widget.technicianData['photoUrl'])
-                    : const NetworkImage('https://i.pravatar.cc/150?img=11')
-                          as ImageProvider,
+                radius: 32,
+                backgroundColor: Colors.white,
+                child: CircleAvatar(
+                  radius: 30,
+                  backgroundColor: Colors.grey[200],
+                  backgroundImage:
+                      widget.technicianData['photoUrl'] != null &&
+                          widget.technicianData['photoUrl'].isNotEmpty
+                      ? NetworkImage(widget.technicianData['photoUrl']!)
+                      : const NetworkImage('https://i.pravatar.cc/150?img=11')
+                            as ImageProvider,
+                ),
               ),
             ),
             Positioned(
-              bottom: 0,
-              right: 0,
+              bottom: 4,
+              right: 4,
               child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Colors.green,
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: _isOnline ? Colors.green : Colors.grey,
                   shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  LucideIcons.check,
-                  size: 10,
-                  color: Colors.white,
+                  border: Border.all(color: Colors.white, width: 2),
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 20),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -534,17 +1011,18 @@ class _HomeContentState extends State<_HomeContent> {
                     child: Text(
                       widget.technicianData['name'] ?? 'Technician',
                       style: GoogleFonts.poppins(
-                        fontSize: 18,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textHeading,
+                        letterSpacing: -0.5,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 6),
                   const Icon(
                     LucideIcons.badgeCheck,
-                    size: 16,
+                    size: 18,
                     color: Colors.blue,
                   ),
                 ],
@@ -553,70 +1031,113 @@ class _HomeContentState extends State<_HomeContent> {
                 widget.technicianData['experience'] ??
                     'Professional Technician',
                 style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: AppColors.textBody,
+                  fontSize: 14,
+                  color: Colors.grey[600],
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Row(
                 children: [
-                  const Icon(Icons.star_rounded, size: 16, color: Colors.amber),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${widget.technicianData['averageRating'] ?? 0.0}',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.star_rounded,
+                          size: 14,
+                          color: Colors.amber,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${widget.technicianData['averageRating'] ?? 0.0}',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange[800],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Text(
-                    ' (${widget.technicianData['totalReviews'] ?? 0})',
-                    style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                    '${widget.technicianData['totalReviews'] ?? 0} Reviews',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                      decoration: TextDecoration.underline,
+                    ),
                   ),
                 ],
               ),
             ],
           ),
         ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: _isOnline ? Colors.black : Colors.grey[200],
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: _isOnline ? Colors.green : Colors.grey,
-                  shape: BoxShape.circle,
+        _buildOnlineSwitch(),
+      ],
+    );
+  }
+
+  Widget _buildOnlineSwitch() {
+    return GestureDetector(
+      onTap: () => _toggleOnlineStatus(!_isOnline),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: _isOnline ? Colors.black : Colors.grey[100],
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: _isOnline
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : [],
+        ),
+        child: Row(
+          children: [
+            if (_isUpdatingStatus)
+              const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            else
+              Text(
+                _isOnline ? 'ONLINE' : 'OFFLINE',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: _isOnline ? Colors.white : Colors.grey[600],
+                  letterSpacing: 1,
                 ),
               ),
-              const SizedBox(width: 8),
-              if (_isUpdatingStatus)
-                const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              else
-                Switch(
-                  value: _isOnline,
-                  onChanged: (val) => _toggleOnlineStatus(val),
-                  activeColor: Colors.white,
-                  activeTrackColor: Colors.green.withOpacity(0.5),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-            ],
-          ),
+            const SizedBox(width: 8),
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: _isOnline ? Colors.greenAccent : Colors.grey[400],
+                shape: BoxShape.circle,
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -626,61 +1147,83 @@ class _HomeContentState extends State<_HomeContent> {
     return Row(
       children: [
         _buildStatBox(
-          'Today',
+          'Daily Revenue',
           '₹${today.toStringAsFixed(0)}',
           LucideIcons.trendingUp,
           Colors.green,
+          '+₹50 more than yesterday',
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 16),
         _buildStatBox(
-          'This Week',
+          'Weekly Summary',
           '₹${week.toStringAsFixed(0)}',
-          LucideIcons.calendar,
+          LucideIcons.barChart3,
           Colors.blue,
+          '12 bookings completed',
         ),
       ],
     );
   }
 
-  Widget _buildStatBox(String label, String value, IconData icon, Color color) {
+  Widget _buildStatBox(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+    String trend,
+  ) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.grey.shade100),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: color.withOpacity(0.08), width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.02),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              color: color.withOpacity(0.03),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  label,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Icon(icon, size: 16, color: color),
-              ],
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, size: 20, color: color),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
             Text(
               value,
               style: GoogleFonts.poppins(
-                fontSize: 20,
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
+                color: Colors.black,
+                letterSpacing: -1,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              trend,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                color: color.withOpacity(0.8),
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -691,201 +1234,248 @@ class _HomeContentState extends State<_HomeContent> {
 
   Widget _buildAlertBanner() {
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.black,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
-      child: Row(
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              LucideIcons.megaphone,
-              color: Colors.white,
-              size: 18,
+          Positioned(
+            right: -20,
+            bottom: -20,
+            child: Icon(
+              LucideIcons.sparkles,
+              size: 100,
+              color: Colors.white.withOpacity(0.05),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
               children: [
-                Text(
-                  'New Bonus Policy',
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(
+                    LucideIcons.gift,
+                    color: Colors.orange,
+                    size: 24,
                   ),
                 ),
-                Text(
-                  'Complete 5 repairs today and get ₹500 extra!',
-                  style: GoogleFonts.inter(color: Colors.white70, fontSize: 11),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Unlock Daily Bonus! ⚡',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Complete 5 repairs today and get ₹500 extra cashback directly in your wallet.',
+                        style: GoogleFonts.inter(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(
+                  LucideIcons.chevronRight,
+                  color: Colors.white54,
+                  size: 20,
                 ),
               ],
             ),
           ),
-          const Icon(LucideIcons.chevronRight, color: Colors.white54, size: 16),
         ],
       ),
     );
   }
 
   Widget _buildTimeline() {
-    final status = _activeJob?['status'];
+    final status = _activeJob?['status'] ?? 'Assigned';
     final List<Map<String, dynamic>> stages = [
-      {'title': 'Assigned', 'done': true},
-      {
-        'title': 'On way',
-        'done':
-            status == 'On_Way' ||
-            status == 'Arrived' ||
-            status == 'In_Progress' ||
-            status == 'Completed',
-      },
-      {
-        'title': 'Arrived',
-        'done':
-            status == 'Arrived' ||
-            status == 'In_Progress' ||
-            status == 'Completed',
-      },
-      {
-        'title': 'Repair',
-        'done': status == 'In_Progress' || status == 'Completed',
-      },
-      {'title': 'Paid', 'done': status == 'Completed'},
+      {'title': 'Assigned', 'icon': LucideIcons.checkCircle2},
+      {'title': 'On way', 'icon': LucideIcons.truck},
+      {'title': 'Arrived', 'icon': LucideIcons.mapPin},
+      {'title': 'Repairing', 'icon': LucideIcons.wrench},
+      {'title': 'Finished', 'icon': LucideIcons.partyPopper},
     ];
 
+    int currentStageIndex = 0;
+    if (status == 'On_Way') currentStageIndex = 1;
+    if (status == 'Arrived') currentStageIndex = 2;
+    if (status == 'In_Progress') currentStageIndex = 3;
+    if (status == 'Completed') currentStageIndex = 4;
+
     return Container(
-      height: 80,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: stages.map((s) {
-          int idx = stages.indexOf(s);
-          return Expanded(
-            child: Column(
-              children: [
-                Row(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: List.generate(stages.length, (index) {
+              final bool isDone = index <= currentStageIndex;
+              final bool isLast = index == stages.length - 1;
+
+              return Expanded(
+                child: Row(
                   children: [
-                    if (idx != 0)
-                      Expanded(
-                        child: Divider(
-                          color: stages[idx - 1]['done'] && s['done']
-                              ? Colors.black
-                              : Colors.grey[300],
-                          thickness: 2,
-                        ),
+                    Expanded(
+                      child: Container(
+                        height: 3,
+                        color: index == 0
+                            ? Colors.transparent
+                            : (index <= currentStageIndex
+                                  ? Colors.black
+                                  : Colors.grey[200]),
                       ),
-                    Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: s['done'] ? Colors.black : Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: s['done']
-                              ? Colors.black
-                              : Colors.grey.shade300,
-                          width: 2,
-                        ),
-                      ),
-                      child: s['done']
-                          ? const Icon(
-                              Icons.check,
-                              size: 14,
-                              color: Colors.white,
-                            )
-                          : null,
                     ),
-                    if (idx != stages.length - 1)
-                      Expanded(
-                        child: Divider(
-                          color: s['done'] && stages[idx + 1]['done']
-                              ? Colors.black
-                              : Colors.grey[300],
-                          thickness: 2,
+                    Column(
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 500),
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: isDone ? Colors.black : Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isDone ? Colors.black : Colors.grey[300]!,
+                              width: 2,
+                            ),
+                            boxShadow: isDone
+                                ? [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ]
+                                : [],
+                          ),
+                          child: Icon(
+                            stages[index]['icon'],
+                            size: 16,
+                            color: isDone ? Colors.white : Colors.grey[400],
+                          ),
                         ),
+                        const SizedBox(height: 8),
+                        Text(
+                          stages[index]['title'],
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: isDone
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            color: isDone ? Colors.black : Colors.grey[400],
+                          ),
+                        ),
+                      ],
+                    ),
+                    Expanded(
+                      child: Container(
+                        height: 3,
+                        color: isLast
+                            ? Colors.transparent
+                            : (index < currentStageIndex
+                                  ? Colors.black
+                                  : Colors.grey[200]),
                       ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  s['title'],
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    color: s['done'] ? Colors.black : Colors.grey,
-                    fontWeight: s['done'] ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
+              );
+            }),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildComplianceCard() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.green.withOpacity(0.2)),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.green.withOpacity(0.1), width: 1.5),
+        gradient: LinearGradient(
+          colors: [Colors.white, Colors.green.withOpacity(0.02)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.green[50],
-              shape: BoxShape.circle,
+              color: Colors.green.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: const Icon(
               LucideIcons.shieldCheck,
               color: Colors.green,
-              size: 20,
+              size: 24,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'KYC Status: Verified',
-                  style: GoogleFonts.inter(
+                  'Verified Partner',
+                  style: GoogleFonts.poppins(
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    fontSize: 15,
+                    color: Colors.black,
                   ),
                 ),
                 Text(
-                  'All documents approved',
-                  style: GoogleFonts.inter(color: Colors.grey, fontSize: 12),
+                  'Your KYC and documents are fully verified.',
+                  style: GoogleFonts.inter(
+                    color: Colors.grey[600],
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
           ),
-          Text(
-            'View Docs',
-            style: GoogleFonts.inter(
-              color: Colors.blue,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
+          TextButton(
+            onPressed: () {},
+            child: Text(
+              'Details',
+              style: GoogleFonts.inter(
+                color: Colors.blue,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
             ),
           ),
         ],
@@ -896,21 +1486,41 @@ class _HomeContentState extends State<_HomeContent> {
   Widget _buildActiveJobCard() {
     if (_activeJob == null) {
       return Container(
-        padding: const EdgeInsets.all(28),
-        width: double.infinity,
+        height: 180,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.grey.shade100),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: Colors.grey.shade100, width: 2),
+          image: DecorationImage(
+            image: const NetworkImage(
+              'https://www.transparenttextures.com/patterns/cubes.png',
+            ),
+            opacity: 0.05,
+            colorFilter: ColorFilter.mode(Colors.grey[200]!, BlendMode.srcIn),
+          ),
         ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(LucideIcons.clipboardList, size: 40, color: Colors.grey[300]),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                LucideIcons.clipboardList,
+                size: 32,
+                color: Colors.grey[300],
+              ),
+            ),
             const SizedBox(height: 16),
             Text(
-              'No active job right now',
+              'No live jobs at the moment',
               style: GoogleFonts.inter(
-                color: Colors.grey,
+                color: Colors.grey[500],
+                fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -928,138 +1538,232 @@ class _HomeContentState extends State<_HomeContent> {
     final id = _activeJob!['_id'].toString().substring(0, 8);
 
     String statusText = status;
-    if (status == 'On_Way') statusText = 'On the way';
-    if (status == 'Arrived') statusText = 'Arrived';
-    if (status == 'In_Progress') statusText = 'In progress';
+    if (status == 'On_Way') statusText = 'ON THE WAY';
+    if (status == 'Arrived') statusText = 'ARRIVED';
+    if (status == 'In_Progress') statusText = 'IN PROGRESS';
 
     return Container(
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.black,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 25,
+            offset: const Offset(0, 12),
+          ),
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.2),
+            blurRadius: 40,
+            spreadRadius: -10,
+            offset: const Offset(0, 20),
           ),
         ],
       ),
-      child: Column(
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  LucideIcons.smartphone,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
+          Positioned(
+            top: -30,
+            right: -30,
+            child: CircleAvatar(
+              radius: 80,
+              backgroundColor: Colors.white.withOpacity(0.05),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      device,
-                      style: GoogleFonts.inter(
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.1),
+                          width: 1,
+                        ),
+                      ),
+                      child: const Icon(
+                        LucideIcons.smartphone,
                         color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        size: 24,
                       ),
                     ),
-                    Text(
-                      issues,
-                      style: GoogleFonts.inter(
-                        color: Colors.grey[400],
-                        fontSize: 13,
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            device,
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'ORDER #$id',
+                              style: GoogleFonts.inter(
+                                color: Colors.white60,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                    _buildPulseIndicator(statusText),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Divider(color: Colors.white.withOpacity(0.1), height: 1),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'REPORTED ISSUES',
+                            style: GoogleFonts.inter(
+                              color: Colors.white54,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            issues,
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'CUSTOMER',
+                          style: GoogleFonts.inter(
+                            color: Colors.white54,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Text(
+                              _activeJob!['userId']?['name'] ?? 'Customer',
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            CircleAvatar(
+                              radius: 12,
+                              backgroundImage:
+                                  _activeJob!['userId']?['photoUrl'] != null
+                                  ? NetworkImage(
+                                      _activeJob!['userId']['photoUrl'],
+                                    )
+                                  : const NetworkImage(
+                                          'https://i.pravatar.cc/150?img=12',
+                                        )
+                                        as ImageProvider,
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  statusText,
-                  style: GoogleFonts.inter(
-                    color: Colors.blue,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              const Icon(LucideIcons.hash, color: Colors.grey, size: 14),
-              const SizedBox(width: 4),
-              Text(
-                'ORD-#$id',
-                style: GoogleFonts.inter(color: Colors.grey[400], fontSize: 12),
-              ),
-              const Spacer(),
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 10,
-                    backgroundImage: _activeJob!['userId']?['photoUrl'] != null
-                        ? NetworkImage(_activeJob!['userId']['photoUrl'])
-                        : const AssetImage('assets/images/tech_avatar_1.png')
-                              as ImageProvider,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _activeJob!['userId']?['name'] ?? 'Customer',
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              JobDetailsScreen(orderId: _activeJob!['_id']),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      'Manage Repair Session',
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
                     ),
                   ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            JobDetailsScreen(orderId: _activeJob!['_id']),
-                      ),
-                    );
-                  },
-                  icon: const Icon(LucideIcons.eye, size: 16),
-                  label: const Text('View Details'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPulseIndicator(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.blue.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _PulseCircle(),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: GoogleFonts.inter(
+              color: Colors.blue,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),
@@ -1069,11 +1773,22 @@ class _HomeContentState extends State<_HomeContent> {
   Widget _buildNewJobRequest() {
     if (_pendingBookings.isEmpty) {
       return Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         alignment: Alignment.center,
-        child: Text(
-          "No new requests",
-          style: GoogleFonts.inter(color: Colors.grey),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.grey.shade100),
+        ),
+        child: Column(
+          children: [
+            Icon(LucideIcons.mailOpen, size: 32, color: Colors.grey[300]),
+            const SizedBox(height: 12),
+            Text(
+              "No new requests at the moment",
+              style: GoogleFonts.inter(color: Colors.grey[500], fontSize: 13),
+            ),
+          ],
         ),
       );
     }
@@ -1088,57 +1803,85 @@ class _HomeContentState extends State<_HomeContent> {
         final price = "₹${booking['totalPrice']}";
 
         return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.orange.withOpacity(0.3)),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Colors.orange.withOpacity(0.2),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.orange.withOpacity(0.05),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
           child: Column(
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    backgroundColor: Colors.orange.withOpacity(0.1),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
                     child: const Icon(
                       LucideIcons.zap,
                       color: Colors.orange,
                       size: 20,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'New Job Request',
-                          style: GoogleFonts.inter(
+                          'Urgent Request',
+                          style: GoogleFonts.poppins(
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
+                            color: Colors.black,
                           ),
                         ),
                         Text(
                           '$device • $issues',
                           style: GoogleFonts.inter(
-                            color: Colors.grey,
+                            color: Colors.grey[600],
                             fontSize: 12,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
-                  Text(
-                    price,
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      price,
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(
@@ -1146,12 +1889,13 @@ class _HomeContentState extends State<_HomeContent> {
                       onPressed: () => _handleResponse(bookingId, 'reject'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
+                        side: BorderSide(color: Colors.red.withOpacity(0.3)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text('Reject'),
+                      child: const Text('Decline'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1160,11 +1904,14 @@ class _HomeContentState extends State<_HomeContent> {
                       onPressed: () => _handleResponse(bookingId, 'accept'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text('Accept'),
+                      child: const Text('Accept Now'),
                     ),
                   ),
                 ],
@@ -1180,88 +1927,140 @@ class _HomeContentState extends State<_HomeContent> {
     final balance = _walletStats?['balance']?.toDouble() ?? 0.0;
     final pending = _walletStats?['pending']?.toDouble() ?? 0.0;
     return Container(
-      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.grey[900]!, Colors.black],
+          colors: [Colors.indigo[900]!, Colors.black],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Wallet Balance',
-                style: GoogleFonts.inter(color: Colors.grey[400], fontSize: 14),
-              ),
-              const Icon(LucideIcons.wallet, color: Colors.white54, size: 20),
-            ],
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.indigo.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
-          const SizedBox(height: 8),
-          Text(
-            '₹${balance.toStringAsFixed(2)}',
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          Positioned(
+            right: -20,
+            top: -20,
+            child: Icon(
+              LucideIcons.wallet2,
+              size: 120,
+              color: Colors.white.withOpacity(0.05),
             ),
           ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Pending',
-                        style: GoogleFonts.inter(
-                          color: Colors.grey,
-                          fontSize: 11,
-                        ),
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Available Balance',
+                      style: GoogleFonts.inter(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
                       ),
-                      Text(
-                        '₹${pending.toStringAsFixed(0)}',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                    ],
+                      child: const Icon(
+                        LucideIcons.info,
+                        color: Colors.white70,
+                        size: 14,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '₹${balance.toStringAsFixed(2)}',
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -1,
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              ElevatedButton(
-                onPressed: () {
-                  widget.onTabChange(2); // Go to wallet tab
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.1),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'On Hold',
+                              style: GoogleFonts.inter(
+                                color: Colors.white54,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              '₹${pending.toStringAsFixed(0)}',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton(
+                      onPressed: () => widget.onTabChange(2),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: Text(
+                        'Withdraw',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
                 ),
-                child: const Text('Withdraw'),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
-
-  // Removed Inventory and Support as requested
 
   Widget _buildReviewCard() {
     final reviewedBookings = _allBookings
@@ -1269,17 +2068,16 @@ class _HomeContentState extends State<_HomeContent> {
         .toList();
     if (reviewedBookings.isEmpty) {
       return Container(
-        padding: const EdgeInsets.all(20),
+        height: 100,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(color: Colors.grey.shade100),
         ),
-        child: Center(
-          child: Text(
-            'No reviews yet',
-            style: GoogleFonts.inter(color: Colors.grey),
-          ),
+        child: Text(
+          'No reviews yet',
+          style: GoogleFonts.inter(color: Colors.grey),
         ),
       );
     }
@@ -1291,11 +2089,18 @@ class _HomeContentState extends State<_HomeContent> {
     final text = latestReview['reviewText'] ?? 'No comment provided';
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1303,40 +2108,52 @@ class _HomeContentState extends State<_HomeContent> {
           Row(
             children: [
               CircleAvatar(
-                radius: 12,
-                backgroundImage: userImg != null
-                    ? NetworkImage(userImg)
-                    : const NetworkImage('https://i.pravatar.cc/150?img=5')
-                          as ImageProvider,
+                radius: 18,
+                backgroundColor: Colors.grey[100],
+                backgroundImage: userImg != null ? NetworkImage(userImg) : null,
+                child: userImg == null
+                    ? const Icon(LucideIcons.user, size: 18, color: Colors.grey)
+                    : null,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      userName,
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Row(
+                      children: List.generate(
+                        5,
+                        (i) => Icon(
+                          Icons.star_rounded,
+                          size: 14,
+                          color: i < rating ? Colors.amber : Colors.grey[200],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               Text(
-                userName,
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-              const Spacer(),
-              Row(
-                children: List.generate(
-                  5,
-                  (i) => Icon(
-                    Icons.star_rounded,
-                    size: 14,
-                    color: i < rating ? Colors.amber : Colors.grey[300],
-                  ),
-                ),
+                'Yesterday',
+                style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 16),
           Text(
             text,
             style: GoogleFonts.inter(
-              fontSize: 12,
+              fontSize: 13,
               color: Colors.grey[700],
               height: 1.5,
+              fontStyle: FontStyle.italic,
             ),
           ),
         ],
@@ -1356,25 +2173,88 @@ class _HomeContentState extends State<_HomeContent> {
               style: GoogleFonts.poppins(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
+                color: Colors.black,
+                letterSpacing: -0.5,
               ),
             ),
             Text(
               sub,
-              style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+              style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[500]),
             ),
           ],
         ),
-        if (title == 'New Requests')
+        if (title == 'Immediate Action Required' || title == 'New Requests')
           TextButton(
-            onPressed: () {
-              widget.onTabChange(1); // Go to My Jobs
-            },
-            child: const Text(
-              'View All',
-              style: TextStyle(color: Colors.black),
+            onPressed: () => widget.onTabChange(1),
+            child: Row(
+              children: [
+                Text(
+                  'View All',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+                const Icon(
+                  LucideIcons.chevronRight,
+                  size: 16,
+                  color: Colors.blue,
+                ),
+              ],
             ),
           ),
       ],
+    );
+  }
+}
+
+class _PulseCircle extends StatefulWidget {
+  const _PulseCircle();
+
+  @override
+  State<_PulseCircle> createState() => _PulseCircleState();
+}
+
+class _PulseCircleState extends State<_PulseCircle>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.blue,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.blue.withOpacity(1 - _controller.value),
+                spreadRadius: _controller.value * 5,
+                blurRadius: 5,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

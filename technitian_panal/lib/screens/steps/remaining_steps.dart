@@ -884,36 +884,21 @@ class _StatusStepState extends State<StatusStep> {
                           fit: BoxFit.contain,
                         ),
                       ),
-                      // Overlay Text (ZIYONSTAR and Technician Name)
-                      Positioned(
-                        top: 70,
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 0),
-                            if (_isLoadingName)
-                              const SizedBox(
-                                width: 12,
-                                height: 12,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            else
-                              Text(
-                                _techName?.toUpperCase() ?? 'TECHNICIAN',
-                                style: GoogleFonts.inter(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
+                  const SizedBox(height: 12),
+                  if (_isLoadingName)
+                    const SizedBox(height: 20)
+                  else
+                    Text(
+                      _techName?.toUpperCase() ?? 'TECHNICIAN',
+                      style: GoogleFonts.inter(
+                        color: Colors.black87,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
                   const SizedBox(height: 32),
                   Text(
                     'Evaluating Profile',
@@ -953,6 +938,13 @@ class _StatusStepState extends State<StatusStep> {
                     LucideIcons.checkCircle,
                     Colors.blue,
                   ),
+                  const SizedBox(height: 12),
+                  _statusTile(
+                    'Official T-Shirt',
+                    'Pending Delivery',
+                    LucideIcons.shirt,
+                    Colors.red,
+                  ),
                 ],
               ),
             ),
@@ -978,7 +970,7 @@ class _StatusStepState extends State<StatusStep> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('Sign Out & Return to Login'),
+              child: const Text('Application is pending only'),
             ),
           ),
         ),

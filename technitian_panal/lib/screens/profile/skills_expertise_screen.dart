@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../theme.dart';
+import '../../responsive.dart';
 import 'update_expertise_screen.dart';
 
 class SkillsExpertiseScreen extends StatelessWidget {
@@ -25,21 +26,23 @@ class SkillsExpertiseScreen extends StatelessWidget {
         foregroundColor: Colors.black,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionHeader('Brand Expertise', brands.length),
-            const SizedBox(height: 16),
-            _buildBrandsGrid(brands),
-            const SizedBox(height: 32),
-            _buildSectionHeader('Repair Expertise', repairs.length),
-            const SizedBox(height: 16),
-            _buildRepairsList(repairs),
-            const SizedBox(height: 40),
-            _buildUpdateBanner(context),
-          ],
+      body: Responsive(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSectionHeader('Brand Expertise', brands.length),
+              const SizedBox(height: 16),
+              _buildBrandsGrid(brands),
+              const SizedBox(height: 32),
+              _buildSectionHeader('Repair Expertise', repairs.length),
+              const SizedBox(height: 16),
+              _buildRepairsList(repairs),
+              const SizedBox(height: 40),
+              _buildUpdateBanner(context),
+            ],
+          ),
         ),
       ),
     );

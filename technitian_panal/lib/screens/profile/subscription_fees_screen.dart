@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../theme.dart';
+import '../../responsive.dart';
 
 class SubscriptionFeesScreen extends StatelessWidget {
   final Map<String, dynamic> technicianData;
@@ -25,35 +26,37 @@ class SubscriptionFeesScreen extends StatelessWidget {
         foregroundColor: Colors.black,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildCurrentPlanCard(subscriptionPlan),
-            const SizedBox(height: 32),
-            _buildSectionTitle('Platform Fees'),
-            const SizedBox(height: 16),
-            _buildFeeItem(
-              'Commission Rate',
-              '$commissionRate%',
-              'Charged on every successful repair',
-              LucideIcons.percent,
-            ),
-            const SizedBox(height: 16),
-            _buildFeeItem(
-              'Lead Generation Fee',
-              '₹0',
-              'Fee for receiving new repair leads',
-              LucideIcons.users,
-            ),
-            const SizedBox(height: 32),
-            _buildSectionTitle('Payment Cycle'),
-            const SizedBox(height: 16),
-            _buildPaymentCycleCard(),
-            const SizedBox(height: 40),
-            _buildUpgradeBanner(),
-          ],
+      body: Responsive(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildCurrentPlanCard(subscriptionPlan),
+              const SizedBox(height: 32),
+              _buildSectionTitle('Platform Fees'),
+              const SizedBox(height: 16),
+              _buildFeeItem(
+                'Commission Rate',
+                '$commissionRate%',
+                'Charged on every successful repair',
+                LucideIcons.percent,
+              ),
+              const SizedBox(height: 16),
+              _buildFeeItem(
+                'Lead Generation Fee',
+                '₹0',
+                'Fee for receiving new repair leads',
+                LucideIcons.users,
+              ),
+              const SizedBox(height: 32),
+              _buildSectionTitle('Payment Cycle'),
+              const SizedBox(height: 16),
+              _buildPaymentCycleCard(),
+              const SizedBox(height: 40),
+              _buildUpgradeBanner(),
+            ],
+          ),
         ),
       ),
     );
@@ -98,7 +101,10 @@ class SubscriptionFeesScreen extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.primaryButton,
                   borderRadius: BorderRadius.circular(20),
@@ -241,15 +247,15 @@ class SubscriptionFeesScreen extends StatelessWidget {
                 ),
                 Text(
                   'Explore premium plans for high-volume partners.',
-                  style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[700]),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.grey[700],
+                  ),
                 ),
               ],
             ),
           ),
-          TextButton(
-            onPressed: () {},
-            child: const Text('View Plans'),
-          ),
+          TextButton(onPressed: () {}, child: const Text('View Plans')),
         ],
       ),
     );

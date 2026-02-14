@@ -48,6 +48,7 @@ exports.createBooking = async (req, res) => {
             addressDetails: req.body.addressDetails,
             technicianId: assignedTech ? assignedTech._id : null,
             status: assignedTech ? 'Pending_Acceptance' : 'Pending_Assignment',
+            paymentMethod: req.body.paymentMethod || 'Cash',
             otp
         });
 

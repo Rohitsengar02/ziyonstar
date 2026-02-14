@@ -3,6 +3,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../services/api_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class BrandExpertiseStep extends StatefulWidget {
   final VoidCallback onNext;
@@ -66,10 +67,11 @@ class _BrandExpertiseStepState extends State<BrandExpertiseStep> {
         widget.onNext();
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -106,13 +108,14 @@ class _BrandExpertiseStepState extends State<BrandExpertiseStep> {
                   GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2, // 2 columns like the design
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 24,
-                          childAspectRatio: 0.8,
-                        ),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: MediaQuery.of(context).size.width > 600
+                          ? 3
+                          : 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 1.1,
+                    ),
                     itemCount: _brands.length,
                     itemBuilder: (context, index) {
                       final brand = _brands[index];
@@ -129,74 +132,79 @@ class _BrandExpertiseStepState extends State<BrandExpertiseStep> {
                             }
                           });
                         },
-                        child: Column(
-                          children: [
-                            Expanded(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[50],
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? const Color(
-                                            0xFF0F172A,
-                                          ) // Dark/Black border
-                                        : Colors.grey.shade200,
-                                    width: isSelected ? 2 : 1.5,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          decoration: BoxDecoration(
+                            gradient: isSelected
+                                ? const LinearGradient(
+                                    colors: [
+                                      Color(0xFF0F172A),
+                                      Color(0xFF334155),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  )
+                                : LinearGradient(
+                                    colors: [Colors.white, Colors.grey.shade50],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: isSelected
+                                    ? Colors.black.withOpacity(0.1)
+                                    : Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFF0F172A)
+                                  : Colors.grey.shade200,
+                              width: isSelected ? 2 : 1,
+                            ),
+                          ),
+                          child: Stack(
+                            children: [
+                              Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: Text(
+                                    brand['title']?.toString().toUpperCase() ??
+                                        'BRAND',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 14,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : const Color(0xFF0F172A),
+                                      letterSpacing: 1.2,
+                                    ),
                                   ),
                                 ),
-                                child: Stack(
-                                  children: [
-                                    // Image
-                                    Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(20.0),
-                                        child: Image.network(
-                                          brand['imageUrl'] ?? '',
-                                          errorBuilder: (c, e, s) => const Icon(
-                                            Icons.broken_image,
-                                            color: Colors.grey,
-                                          ),
-                                          fit: BoxFit.contain,
-                                        ),
-                                      ),
+                              ),
+                              if (isSelected)
+                                Positioned(
+                                  top: 10,
+                                  right: 10,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
                                     ),
-                                    // Checkmark
-                                    if (isSelected)
-                                      Positioned(
-                                        top: 12,
-                                        right: 12,
-                                        child: Container(
-                                          padding: const EdgeInsets.all(4),
-                                          decoration: const BoxDecoration(
-                                            // color: Colors.black, // Depending on design, icon might be black itself
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(
-                                            LucideIcons
-                                                .checkCircle, // Needs LucideIcons import or use Icons.check_circle_outline
-                                            color: Color(0xFF0F172A),
-                                            size: 24,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
+                                    child: const Icon(
+                                      LucideIcons.checkCircle,
+                                      color: Color(0xFF0F172A),
+                                      size: 18,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              brand['title'] ?? 'Unknown',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                                color: Color(0xFF0F172A),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       );
                     },

@@ -4,6 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/api_service.dart';
 import '../../theme.dart';
+import '../../responsive.dart';
 
 class ServiceAreasScreen extends StatefulWidget {
   final Map<String, dynamic> technicianData;
@@ -26,19 +27,26 @@ class _ServiceAreasScreenState extends State<ServiceAreasScreen> {
     'Home Service',
     'Store Pickup',
     'Mail-in Repair',
-    'On-site Repair'
+    'On-site Repair',
   ];
 
   @override
   void initState() {
     super.initState();
     _pincodes = List<String>.from(
-      (widget.technicianData['coverageAreas'] as List<dynamic>?)?.map((e) => e.toString()) ?? [],
+      (widget.technicianData['coverageAreas'] as List<dynamic>?)?.map(
+            (e) => e.toString(),
+          ) ??
+          [],
     );
     _serviceTypes = List<String>.from(
-      (widget.technicianData['serviceTypes'] as List<dynamic>?)?.map((e) => e.toString()) ?? [],
+      (widget.technicianData['serviceTypes'] as List<dynamic>?)?.map(
+            (e) => e.toString(),
+          ) ??
+          [],
     );
-    _radiusController.text = widget.technicianData['serviceAreaRadius']?.toString() ?? '10';
+    _radiusController.text =
+        widget.technicianData['serviceAreaRadius']?.toString() ?? '10';
   }
 
   @override
@@ -70,9 +78,9 @@ class _ServiceAreasScreenState extends State<ServiceAreasScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -106,49 +114,57 @@ class _ServiceAreasScreenState extends State<ServiceAreasScreen> {
           if (!_isLoading)
             IconButton(
               onPressed: _saveChanges,
-              icon: const Icon(LucideIcons.check, color: AppColors.primaryButton),
+              icon: const Icon(
+                LucideIcons.check,
+                color: AppColors.primaryButton,
+              ),
             ),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionTitle('Service Radius'),
-                  const SizedBox(height: 12),
-                  _buildRadiusInput(),
-                  const SizedBox(height: 32),
-                  _buildSectionTitle('Coverage Pincodes'),
-                  const SizedBox(height: 12),
-                  _buildPincodeInput(),
-                  const SizedBox(height: 16),
-                  _buildPincodeChips(),
-                  const SizedBox(height: 32),
-                  _buildSectionTitle('Service Types'),
-                  const SizedBox(height: 12),
-                  _buildServiceTypeSelection(),
-                  const SizedBox(height: 40),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _saveChanges,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryButton,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+          : Responsive(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionTitle('Service Radius'),
+                    const SizedBox(height: 12),
+                    _buildRadiusInput(),
+                    const SizedBox(height: 32),
+                    _buildSectionTitle('Coverage Pincodes'),
+                    const SizedBox(height: 12),
+                    _buildPincodeInput(),
+                    const SizedBox(height: 16),
+                    _buildPincodeChips(),
+                    const SizedBox(height: 32),
+                    _buildSectionTitle('Service Types'),
+                    const SizedBox(height: 12),
+                    _buildServiceTypeSelection(),
+                    const SizedBox(height: 40),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _saveChanges,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryButton,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Save Changes',
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
-                      child: Text(
-                        'Save Changes',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
     );
@@ -186,7 +202,10 @@ class _ServiceAreasScreenState extends State<ServiceAreasScreen> {
           ),
           Text(
             'KM',
-            style: GoogleFonts.inter(color: Colors.grey, fontWeight: FontWeight.bold),
+            style: GoogleFonts.inter(
+              color: Colors.grey,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),
@@ -217,7 +236,9 @@ class _ServiceAreasScreenState extends State<ServiceAreasScreen> {
           onPressed: _addPincode,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.black,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           ),
           child: const Text('Add', style: TextStyle(color: Colors.white)),
@@ -228,7 +249,10 @@ class _ServiceAreasScreenState extends State<ServiceAreasScreen> {
 
   Widget _buildPincodeChips() {
     if (_pincodes.isEmpty) {
-      return Text('No pincodes added yet', style: GoogleFonts.inter(color: Colors.grey, fontSize: 13));
+      return Text(
+        'No pincodes added yet',
+        style: GoogleFonts.inter(color: Colors.grey, fontSize: 13),
+      );
     }
     return Wrap(
       spacing: 8,
@@ -239,7 +263,9 @@ class _ServiceAreasScreenState extends State<ServiceAreasScreen> {
           onDeleted: () => setState(() => _pincodes.remove(p)),
           deleteIcon: const Icon(LucideIcons.x, size: 14),
           backgroundColor: Colors.grey[100],
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
           side: BorderSide.none,
         );
       }).toList(),
@@ -263,9 +289,17 @@ class _ServiceAreasScreenState extends State<ServiceAreasScreen> {
                 }
               });
             },
-            title: Text(type, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500)),
+            title: Text(
+              type,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
             activeColor: AppColors.primaryButton,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             tileColor: Colors.grey[50],
             contentPadding: const EdgeInsets.symmetric(horizontal: 16),
           ),

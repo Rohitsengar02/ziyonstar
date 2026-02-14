@@ -4,6 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/api_service.dart';
 import '../../theme.dart';
+import '../../responsive.dart';
 
 class BankDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> technicianData;
@@ -29,11 +30,21 @@ class _BankDetailsScreenState extends State<BankDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    _bankNameController = TextEditingController(text: widget.technicianData['bankName'] ?? '');
-    _holderNameController = TextEditingController(text: widget.technicianData['accountHolderName'] ?? '');
-    _accNumberController = TextEditingController(text: widget.technicianData['accountNumber'] ?? '');
-    _ifscController = TextEditingController(text: widget.technicianData['ifscCode'] ?? '');
-    _upiIdController = TextEditingController(text: widget.technicianData['upiId'] ?? '');
+    _bankNameController = TextEditingController(
+      text: widget.technicianData['bankName'] ?? '',
+    );
+    _holderNameController = TextEditingController(
+      text: widget.technicianData['accountHolderName'] ?? '',
+    );
+    _accNumberController = TextEditingController(
+      text: widget.technicianData['accountNumber'] ?? '',
+    );
+    _ifscController = TextEditingController(
+      text: widget.technicianData['ifscCode'] ?? '',
+    );
+    _upiIdController = TextEditingController(
+      text: widget.technicianData['upiId'] ?? '',
+    );
   }
 
   @override
@@ -73,9 +84,9 @@ class _BankDetailsScreenState extends State<BankDetailsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -115,44 +126,77 @@ class _BankDetailsScreenState extends State<BankDetailsScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    _buildBankCard(),
-                    const SizedBox(height: 32),
-                    _buildTextField(_bankNameController, 'Bank Name', LucideIcons.landmark, enabled: _isEditing),
-                    const SizedBox(height: 16),
-                    _buildTextField(_holderNameController, 'Account Holder Name', LucideIcons.user, enabled: _isEditing),
-                    const SizedBox(height: 16),
-                    _buildTextField(_accNumberController, 'Account Number', LucideIcons.hash, enabled: _isEditing, keyboardType: TextInputType.number),
-                    const SizedBox(height: 16),
-                    _buildTextField(_ifscController, 'IFSC Code', LucideIcons.code, enabled: _isEditing),
-                    const SizedBox(height: 16),
-                    _buildTextField(_upiIdController, 'UPI ID', LucideIcons.atSign, enabled: _isEditing),
-                    const SizedBox(height: 48),
-                    _buildDisclaimer(),
-                    if (_isEditing) ...[
+          : Responsive(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      _buildBankCard(),
                       const SizedBox(height: 32),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _saveDetails,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primaryButton,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: Text(
-                            'Save Bank Details',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white),
+                      _buildTextField(
+                        _bankNameController,
+                        'Bank Name',
+                        LucideIcons.landmark,
+                        enabled: _isEditing,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        _holderNameController,
+                        'Account Holder Name',
+                        LucideIcons.user,
+                        enabled: _isEditing,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        _accNumberController,
+                        'Account Number',
+                        LucideIcons.hash,
+                        enabled: _isEditing,
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        _ifscController,
+                        'IFSC Code',
+                        LucideIcons.code,
+                        enabled: _isEditing,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        _upiIdController,
+                        'UPI ID',
+                        LucideIcons.atSign,
+                        enabled: _isEditing,
+                      ),
+                      const SizedBox(height: 48),
+                      _buildDisclaimer(),
+                      if (_isEditing) ...[
+                        const SizedBox(height: 32),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _saveDetails,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryButton,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              'Save Bank Details',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -196,7 +240,9 @@ class _BankDetailsScreenState extends State<BankDetailsScreen> {
           ),
           const SizedBox(height: 32),
           Text(
-            _accNumberController.text.isEmpty ? '•••• •••• ••••' : _accNumberController.text,
+            _accNumberController.text.isEmpty
+                ? '•••• •••• ••••'
+                : _accNumberController.text,
             style: GoogleFonts.inter(
               fontSize: 22,
               color: Colors.white,
@@ -208,8 +254,18 @@ class _BankDetailsScreenState extends State<BankDetailsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildCardInfo('ACCOUNT HOLDER', _holderNameController.text.isEmpty ? 'N/A' : _holderNameController.text),
-              _buildCardInfo('IFSC CODE', _ifscController.text.isEmpty ? 'N/A' : _ifscController.text.toUpperCase()),
+              _buildCardInfo(
+                'ACCOUNT HOLDER',
+                _holderNameController.text.isEmpty
+                    ? 'N/A'
+                    : _holderNameController.text,
+              ),
+              _buildCardInfo(
+                'IFSC CODE',
+                _ifscController.text.isEmpty
+                    ? 'N/A'
+                    : _ifscController.text.toUpperCase(),
+              ),
             ],
           ),
         ],
@@ -223,18 +279,31 @@ class _BankDetailsScreenState extends State<BankDetailsScreen> {
       children: [
         Text(
           label,
-          style: GoogleFonts.inter(fontSize: 10, color: Colors.white.withOpacity(0.5)),
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            color: Colors.white.withOpacity(0.5),
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           value,
-          style: GoogleFonts.inter(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold),
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, IconData icon, {bool enabled = true, TextInputType? keyboardType}) {
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label,
+    IconData icon, {
+    bool enabled = true,
+    TextInputType? keyboardType,
+  }) {
     return TextFormField(
       controller: controller,
       enabled: enabled,

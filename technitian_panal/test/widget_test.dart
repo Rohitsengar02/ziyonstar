@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:technitian_panal/main.dart';
-import 'package:technitian_panal/screens/welcome_screen.dart';
+import 'package:technician_panel/main.dart';
+import 'package:technician_panel/screens/welcome_screen.dart';
 
 void main() {
   testWidgets('App builds and shows welcome screen', (

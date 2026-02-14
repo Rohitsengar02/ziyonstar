@@ -1,6 +1,6 @@
 {
-    "name": "technitian_panal",
-    "short_name": "technitian_panal",
+    "name": "Technician Panel",
+    "short_name": "Technician Panel",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

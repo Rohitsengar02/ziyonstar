@@ -67,53 +67,129 @@ class _MyJobsScreenState extends State<MyJobsScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
-      appBar: AppBar(
-        title: Text(
-          'My Jobs',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 20),
-        ),
-        centerTitle: false,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            onPressed: _fetchJobs,
-            icon: const Icon(LucideIcons.refreshCw, size: 20),
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.black,
-          indicatorWeight: 3,
-          labelColor: Colors.black,
-          unselectedLabelColor: Colors.grey,
-          labelStyle: GoogleFonts.inter(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
-          tabs: [
-            Tab(text: 'Active Jobs (${_activeJobs.length})'),
-            Tab(text: 'History (${_historyJobs.length})'),
-          ],
-        ),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isDesktop = constraints.maxWidth >= 900;
+
+        if (isDesktop) {
+          return Center(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 1000),
+              child: Column(
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 24, left: 24, right: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade100),
+                    ),
+                    child: TabBar(
+                      controller: _tabController,
+                      indicatorColor: Colors.black,
+                      indicatorWeight: 3,
+                      indicatorSize: TabBarIndicatorSize.label,
+                      labelColor: Colors.black,
+                      unselectedLabelColor: Colors.grey,
+                      labelStyle: GoogleFonts.inter(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                      tabs: [
+                        Tab(text: 'Active Jobs (${_activeJobs.length})'),
+                        Tab(text: 'History (${_historyJobs.length})'),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : TabBarView(
+                            controller: _tabController,
+                            children: [
+                              _buildJobsList(
+                                _activeJobs,
+                                isActive: true,
+                                isDesktop: true,
+                              ),
+                              _buildJobsList(
+                                _historyJobs,
+                                isActive: false,
+                                isDesktop: true,
+                              ),
+                            ],
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFF8F9FB),
+          appBar: AppBar(
+            title: Text(
+              'My Jobs',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
+            ),
+            centerTitle: false,
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black,
+            elevation: 0,
+            automaticallyImplyLeading: false,
+            actions: [
+              IconButton(
+                onPressed: _fetchJobs,
+                icon: const Icon(LucideIcons.refreshCw, size: 20),
+              ),
+            ],
+            bottom: TabBar(
               controller: _tabController,
-              children: [
-                _buildJobsList(_activeJobs, isActive: true),
-                _buildJobsList(_historyJobs, isActive: false),
+              indicatorColor: Colors.black,
+              indicatorWeight: 3,
+              labelColor: Colors.black,
+              unselectedLabelColor: Colors.grey,
+              labelStyle: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+              tabs: [
+                Tab(text: 'Active Jobs (${_activeJobs.length})'),
+                Tab(text: 'History (${_historyJobs.length})'),
               ],
             ),
+          ),
+          body: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildJobsList(
+                      _activeJobs,
+                      isActive: true,
+                      isDesktop: false,
+                    ),
+                    _buildJobsList(
+                      _historyJobs,
+                      isActive: false,
+                      isDesktop: false,
+                    ),
+                  ],
+                ),
+        );
+      },
     );
   }
 
-  Widget _buildJobsList(List<dynamic> jobs, {required bool isActive}) {
+  Widget _buildJobsList(
+    List<dynamic> jobs, {
+    required bool isActive,
+    required bool isDesktop,
+  }) {
     if (jobs.isEmpty) {
       return Center(
         child: Column(
@@ -136,46 +212,59 @@ class _MyJobsScreenState extends State<MyJobsScreen>
 
     return RefreshIndicator(
       onRefresh: _fetchJobs,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(20),
-        itemCount: jobs.length,
-        itemBuilder: (context, index) {
-          final job = jobs[index];
-          final issues =
-              (job['issues'] as List?)
-                  ?.map((i) => i['issueName']?.toString() ?? '')
-                  .join(', ') ??
-              'N/A';
-          final user = job['userId'];
-          final customerName = user is Map
-              ? (user['name'] ?? 'Customer')
-              : 'Customer';
+      child: isDesktop
+          ? GridView.builder(
+              padding: const EdgeInsets.all(24),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 20,
+                mainAxisSpacing: 20,
+                mainAxisExtent: 320, // Adjust based on card height
+              ),
+              itemCount: jobs.length,
+              itemBuilder: (context, index) =>
+                  _buildJobItem(jobs[index], isActive),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(20),
+              itemCount: jobs.length,
+              itemBuilder: (context, index) =>
+                  _buildJobItem(jobs[index], isActive),
+            ),
+    );
+  }
 
-          final addressObj = job['address'];
-          String displayAddress =
-              job['addressDetails'] ?? 'Address not provided';
-          if (addressObj is Map) {
-            final full = addressObj['fullAddress'] ?? '';
-            final landmark = addressObj['landmark'] ?? '';
-            displayAddress = landmark.isNotEmpty ? '$full ($landmark)' : full;
-          }
+  Widget _buildJobItem(dynamic job, bool isActive) {
+    final issues =
+        (job['issues'] as List?)
+            ?.map((i) => i['issueName']?.toString() ?? '')
+            .join(', ') ??
+        'N/A';
+    final user = job['userId'];
+    final customerName = user is Map
+        ? (user['name'] ?? 'Customer')
+        : 'Customer';
 
-          return _buildJobCard(
-            booking: job,
-            orderId: job['_id']?.toString().substring(0, 8) ?? 'N/A',
-            device:
-                '${job['deviceBrand'] ?? 'Unknown'} ${job['deviceModel'] ?? ''}',
-            issue: issues,
-            status: job['status'] ?? 'Unknown',
-            date: job['scheduledDate'] ?? 'N/A',
-            price: '₹${job['totalPrice'] ?? 0}',
-            address: displayAddress,
-            customerName: customerName,
-            customerImage: user is Map ? user['photoUrl'] : null,
-            isActive: isActive,
-          );
-        },
-      ),
+    final addressObj = job['address'];
+    String displayAddress = job['addressDetails'] ?? 'Address not provided';
+    if (addressObj is Map) {
+      final full = addressObj['fullAddress'] ?? '';
+      final landmark = addressObj['landmark'] ?? '';
+      displayAddress = landmark.isNotEmpty ? '$full ($landmark)' : full;
+    }
+
+    return _buildJobCard(
+      booking: job,
+      orderId: job['_id']?.toString().substring(0, 8) ?? 'N/A',
+      device: '${job['deviceBrand'] ?? 'Unknown'} ${job['deviceModel'] ?? ''}',
+      issue: issues,
+      status: job['status'] ?? 'Unknown',
+      date: job['scheduledDate'] ?? 'N/A',
+      price: '₹${job['totalPrice'] ?? 0}',
+      address: displayAddress,
+      customerName: customerName,
+      customerImage: user is Map ? user['photoUrl'] : null,
+      isActive: isActive,
     );
   }
 

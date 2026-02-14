@@ -32,159 +32,200 @@ class _InfoScreenOneState extends State<InfoScreenOne>
 
   @override
   Widget build(BuildContext context) {
+    final bool isDesktop = MediaQuery.of(context).size.width >= 1000;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'ZiyonStar',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {},
-                    child: Text(
-                      'Skip',
-                      style: GoogleFonts.inter(
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              Center(
-                child: AnimatedBuilder(
-                  animation: _controller,
-                  builder: (context, child) {
-                    return Container(
-                      height: 280,
-                      width: 280,
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(40),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(
-                              0.3 * _controller.value,
-                            ),
-                            blurRadius: 30,
-                            spreadRadius: 5 * _controller.value,
-                          ),
-                        ],
-                      ),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Transform.rotate(
-                            angle: _controller.value * 3.14159 * 2,
-                            child: Container(
-                              width: 180,
-                              height: 180,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.white24,
-                                  width: 2,
-                                ),
-                                borderRadius: BorderRadius.circular(50),
-                              ),
-                            ),
-                          ),
-                          Transform.rotate(
-                            angle: -_controller.value * 3.14159 * 2,
-                            child: Container(
-                              width: 120,
-                              height: 120,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.white54,
-                                  width: 1,
-                                ),
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                            ),
-                          ),
-                          const Icon(
-                            LucideIcons.shieldCheck,
-                            color: Colors.white,
-                            size: 60,
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const Spacer(),
-              Text(
-                'Complete Control',
-                style: GoogleFonts.poppins(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  height: 1.1,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Manage technicians, bookings, and payments from a single unified workspace designed for efficiency.',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  color: AppColors.textSecondary,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 48),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
+        child: Center(
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: isDesktop ? 1200 : double.infinity,
+            ),
+            padding: EdgeInsets.symmetric(
+              horizontal: isDesktop ? 60 : 30,
+              vertical: 20,
+            ),
+            child: isDesktop
+                ? Row(
                     children: [
-                      _buildDot(true),
-                      const SizedBox(width: 8),
-                      _buildDot(false),
+                      Expanded(flex: 5, child: _buildVisualSection()),
+                      const SizedBox(width: 80),
+                      Expanded(flex: 4, child: _buildContentSection(isDesktop)),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTopBar(),
+                      const Spacer(),
+                      _buildVisualSection(),
+                      const Spacer(),
+                      _buildContentSection(isDesktop),
+                      const SizedBox(height: 20),
                     ],
                   ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const InfoScreenTwo(),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        LucideIcons.arrowRight,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-            ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTopBar() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'ZiyonStar',
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1,
+          ),
+        ),
+        TextButton(
+          onPressed: () {},
+          child: Text(
+            'Skip',
+            style: GoogleFonts.inter(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVisualSection() {
+    return Center(
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Container(
+            height: 280,
+            width: 280,
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(40),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3 * _controller.value),
+                  blurRadius: 30,
+                  spreadRadius: 5 * _controller.value,
+                ),
+              ],
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Transform.rotate(
+                  angle: _controller.value * 3.14159 * 2,
+                  child: Container(
+                    width: 180,
+                    height: 180,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.white24, width: 2),
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                  ),
+                ),
+                Transform.rotate(
+                  angle: -_controller.value * 3.14159 * 2,
+                  child: Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.white54, width: 1),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                ),
+                const Icon(
+                  LucideIcons.shieldCheck,
+                  color: Colors.white,
+                  size: 60,
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildContentSection(bool isDesktop) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: isDesktop
+          ? MainAxisAlignment.center
+          : MainAxisAlignment.start,
+      children: [
+        if (isDesktop) ...[
+          Text(
+            'ZiyonStar',
+            style: GoogleFonts.poppins(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 48),
+        ],
+        Text(
+          'Complete Control',
+          style: GoogleFonts.poppins(
+            fontSize: isDesktop ? 48 : 32,
+            fontWeight: FontWeight.bold,
+            height: 1.1,
+          ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Manage technicians, bookings, and payments from a single unified workspace designed for efficiency.',
+          style: GoogleFonts.inter(
+            fontSize: isDesktop ? 18 : 16,
+            color: AppColors.textSecondary,
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 60),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                _buildDot(true),
+                const SizedBox(width: 8),
+                _buildDot(false),
+              ],
+            ),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const InfoScreenTwo(),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  LucideIcons.arrowRight,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 

@@ -608,6 +608,94 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                         Colors.blue,
                       ),
                       const SizedBox(height: 24),
+
+                      // OTP Section
+                      if (_selectedBooking!['otp'] != null &&
+                          _selectedBooking!['otp'].toString().isNotEmpty &&
+                          !_selectedBooking!['otpVerified'])
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 24),
+                          child: Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.orange.shade200),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.orange.withOpacity(0.1),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.orange.shade100,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    LucideIcons.shieldCheck,
+                                    color: Colors.orange,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Service OTP',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.orange.shade900,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Share this with technician',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          color: Colors.orange.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.orange.shade100,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    _selectedBooking!['otp'],
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.orange.shade900,
+                                      letterSpacing: 2,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
                       _buildSidebarInfoSection(
                         LucideIcons.mapPin,
                         'Service Address',

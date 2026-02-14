@@ -7,6 +7,7 @@ import 'map_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'chat_screen.dart';
 import '../services/api_service.dart';
+import '../responsive.dart';
 
 class JobDetailsScreen extends StatefulWidget {
   final String orderId;
@@ -277,456 +278,461 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Status Banner
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              color: _getStatusColor(status),
-              child: Center(
-                child: Text(
-                  _getStatusText(status),
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 11,
-                    letterSpacing: 1,
+      body: Responsive(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Status Banner
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                color: _getStatusColor(status),
+                child: Center(
+                  child: Text(
+                    _getStatusText(status),
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                      letterSpacing: 1,
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 1. Device Info
-                  _buildSectionHeader('Device Details'),
-                  const SizedBox(height: 16),
-                  _buildInfoCard(
-                    LucideIcons.smartphone,
-                    '$deviceBrand $deviceModel',
-                    'Price: ₹$totalPrice',
-                  ),
-                  if (issuesList.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 1. Device Info
+                    _buildSectionHeader('Device Details'),
                     const SizedBox(height: 16),
-                    SizedBox(
-                      height: 100,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: issuesList.length,
-                        itemBuilder: (context, i) {
-                          final rawImg = issuesList[i]['issueImage']
-                              ?.toString();
-                          final name = issuesList[i]['issueName'] ?? 'Issue';
-                          final img = _getIssueImagePath(name, rawImg);
-
-                          return Container(
-                            width: 120,
-                            margin: const EdgeInsets.only(right: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[50],
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.grey.shade100),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                if (img.isNotEmpty)
-                                  Container(
-                                    width: 50,
-                                    height: 50,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(8),
-                                      image: DecorationImage(
-                                        image: img.startsWith('http')
-                                            ? NetworkImage(img)
-                                            : AssetImage(
-                                                    img.startsWith('assets')
-                                                        ? img
-                                                        : 'assets/images/issues/$img',
-                                                  )
-                                                  as ImageProvider,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  Icon(
-                                    LucideIcons.wrench,
-                                    size: 30,
-                                    color: Colors.grey[400],
-                                  ),
-                                const SizedBox(height: 8),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                  ),
-                                  child: Text(
-                                    name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
+                    _buildInfoCard(
+                      LucideIcons.smartphone,
+                      '$deviceBrand $deviceModel',
+                      'Price: ₹$totalPrice',
                     ),
-                  ],
+                    if (issuesList.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        height: 100,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: issuesList.length,
+                          itemBuilder: (context, i) {
+                            final rawImg = issuesList[i]['issueImage']
+                                ?.toString();
+                            final name = issuesList[i]['issueName'] ?? 'Issue';
+                            final img = _getIssueImagePath(name, rawImg);
 
-                  const SizedBox(height: 24),
-
-                  // Schedule Info
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blue.shade100),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          LucideIcons.calendar,
-                          color: Colors.blue.shade700,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Scheduled: ${scheduledDate.split('T').first} • $timeSlot',
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.blue.shade800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // 2. Customer Info
-                  _buildSectionHeader('Customer Information'),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.grey.shade100),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.02),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 30,
-                              backgroundImage:
-                                  user is Map &&
-                                      user['photoUrl'] != null &&
-                                      user['photoUrl'].toString().isNotEmpty
-                                  ? NetworkImage(user['photoUrl'])
-                                  : const AssetImage(
-                                          'assets/images/tech_avatar_1.png',
-                                        )
-                                        as ImageProvider,
-                              backgroundColor: Colors.grey[100],
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
+                            return Container(
+                              width: 120,
+                              margin: const EdgeInsets.only(right: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[50],
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.grey.shade100),
+                              ),
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text(
-                                    customerName,
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
+                                  if (img.isNotEmpty)
+                                    Container(
+                                      width: 50,
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        image: DecorationImage(
+                                          image: img.startsWith('http')
+                                              ? NetworkImage(img)
+                                              : AssetImage(
+                                                      img.startsWith('assets')
+                                                          ? img
+                                                          : 'assets/images/issues/$img',
+                                                    )
+                                                    as ImageProvider,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    Icon(
+                                      LucideIcons.wrench,
+                                      size: 30,
+                                      color: Colors.grey[400],
                                     ),
-                                  ),
-                                  Text(
-                                    'Verified Customer',
-                                    style: GoogleFonts.inter(
-                                      color: Colors.green,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
+                                  const SizedBox(height: 8),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                    ),
+                                    child: Text(
+                                      name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                            IconButton(
-                              onPressed: () {
-                                final user = FirebaseAuth.instance.currentUser;
-                                if (user != null) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => ChatScreen(
-                                        bookingId: widget.orderId,
-                                        currentUserId: user.uid,
-                                        otherUserName: customerName,
-                                        senderRole: 'technician',
-                                      ),
-                                    ),
-                                  );
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('User not authenticated'),
-                                    ),
-                                  );
-                                }
-                              },
-                              icon: const Icon(
-                                LucideIcons.messageSquare,
-                                color: Colors.blue,
-                              ),
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.blue.shade50,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        _buildContactRow(
-                          context,
-                          LucideIcons.phone,
-                          'Contact Number',
-                          customerPhone,
-                          onTap: () => _copyPhoneNumber(customerPhone),
-                        ),
-                        const Divider(height: 32),
-                        _buildContactRow(
-                          context,
-                          LucideIcons.mapPin,
-                          'Address',
-                          addressDetails,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => MapScreen(
-                                  orderId: widget.orderId,
-                                  destination: addressDetails,
-                                ),
-                              ),
                             );
                           },
                         ),
-                      ],
+                      ),
+                    ],
+
+                    const SizedBox(height: 24),
+
+                    // Schedule Info
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue.shade100),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            LucideIcons.calendar,
+                            color: Colors.blue.shade700,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Scheduled: ${scheduledDate.split('T').first} • $timeSlot',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue.shade800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
-                  // 3. Timeline
-                  _buildSectionHeader('Job Timeline'),
-                  const SizedBox(height: 20),
-                  _buildTimelineItem(
-                    'Order Placed',
-                    scheduledDate.isNotEmpty
-                        ? scheduledDate.split('T').first
-                        : 'N/A',
-                    true,
-                  ),
-                  _buildTimelineItem(
-                    'Assigned to You',
-                    status != 'Pending_Acceptance' ? 'Accepted' : 'Pending',
-                    status != 'Pending_Acceptance',
-                  ),
-                  _buildTimelineItem(
-                    'In Progress',
-                    status == 'In_Progress' ||
-                            status == 'Completed' ||
-                            status == 'On_Way' ||
-                            status == 'Arrived'
-                        ? 'Started'
-                        : 'Upcoming',
-                    status == 'In_Progress' ||
-                        status == 'Completed' ||
-                        status == 'On_Way' ||
-                        status == 'Arrived',
-                  ),
-                  _buildTimelineItem(
-                    'Completed',
-                    status == 'Completed' ? 'Done' : 'Upcoming',
-                    status == 'Completed',
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // 3.5. User Review Section
-                  if (_booking!['reviewed'] == true) ...[
-                    _buildSectionHeader('Customer Review'),
+                    // 2. Customer Info
+                    _buildSectionHeader('Customer Information'),
                     const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.amber.shade50, Colors.white],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.amber.shade100),
+                        border: Border.all(color: Colors.grey.shade100),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Row(
-                                children: List.generate(5, (index) {
-                                  return Icon(
-                                    index < (_booking!['rating'] ?? 0)
-                                        ? Icons.star_rounded
-                                        : Icons.star_outline_rounded,
-                                    color: Colors.amber,
-                                    size: 20,
-                                  );
-                                }),
+                              CircleAvatar(
+                                radius: 30,
+                                backgroundImage:
+                                    user is Map &&
+                                        user['photoUrl'] != null &&
+                                        user['photoUrl'].toString().isNotEmpty
+                                    ? NetworkImage(user['photoUrl'])
+                                    : const AssetImage(
+                                            'assets/images/tech_avatar_1.png',
+                                          )
+                                          as ImageProvider,
+                                backgroundColor: Colors.grey[100],
                               ),
-                              const SizedBox(width: 12),
-                              Text(
-                                '${_booking!['rating']}.0',
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.amber.shade900,
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      customerName,
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Verified Customer',
+                                      style: GoogleFonts.inter(
+                                        color: Colors.green,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () {
+                                  final user =
+                                      FirebaseAuth.instance.currentUser;
+                                  if (user != null) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ChatScreen(
+                                          bookingId: widget.orderId,
+                                          currentUserId: user.uid,
+                                          otherUserName: customerName,
+                                          senderRole: 'technician',
+                                        ),
+                                      ),
+                                    );
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('User not authenticated'),
+                                      ),
+                                    );
+                                  }
+                                },
+                                icon: const Icon(
+                                  LucideIcons.messageSquare,
+                                  color: Colors.blue,
+                                ),
+                                style: IconButton.styleFrom(
+                                  backgroundColor: Colors.blue.shade50,
                                 ),
                               ),
                             ],
                           ),
-                          if (_booking!['reviewText']?.toString().isNotEmpty ==
-                              true) ...[
-                            const SizedBox(height: 12),
-                            Text(
-                              _booking!['reviewText'],
-                              style: GoogleFonts.inter(
-                                height: 1.5,
-                                color: Colors.grey[800],
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ],
+                          const SizedBox(height: 24),
+                          _buildContactRow(
+                            context,
+                            LucideIcons.phone,
+                            'Contact Number',
+                            customerPhone,
+                            onTap: () => _copyPhoneNumber(customerPhone),
+                          ),
+                          const Divider(height: 32),
+                          _buildContactRow(
+                            context,
+                            LucideIcons.mapPin,
+                            'Address',
+                            addressDetails,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => MapScreen(
+                                    orderId: widget.orderId,
+                                    destination: addressDetails,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         ],
                       ),
                     ),
+
                     const SizedBox(height: 32),
-                  ],
 
-                  const SizedBox(height: 32),
+                    // 3. Timeline
+                    _buildSectionHeader('Job Timeline'),
+                    const SizedBox(height: 20),
+                    _buildTimelineItem(
+                      'Order Placed',
+                      scheduledDate.isNotEmpty
+                          ? scheduledDate.split('T').first
+                          : 'N/A',
+                      true,
+                    ),
+                    _buildTimelineItem(
+                      'Assigned to You',
+                      status != 'Pending_Acceptance' ? 'Accepted' : 'Pending',
+                      status != 'Pending_Acceptance',
+                    ),
+                    _buildTimelineItem(
+                      'In Progress',
+                      status == 'In_Progress' ||
+                              status == 'Completed' ||
+                              status == 'On_Way' ||
+                              status == 'Arrived'
+                          ? 'Started'
+                          : 'Upcoming',
+                      status == 'In_Progress' ||
+                          status == 'Completed' ||
+                          status == 'On_Way' ||
+                          status == 'Arrived',
+                    ),
+                    _buildTimelineItem(
+                      'Completed',
+                      status == 'Completed' ? 'Done' : 'Upcoming',
+                      status == 'Completed',
+                    ),
 
-                  // 4. Parts Logged
-                  _buildSectionHeader(
-                    'Parts & Inventory',
-                    trailing: GestureDetector(
-                      onTap: _showAddPartDialog,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
+                    const SizedBox(height: 32),
+
+                    // 3.5. User Review Section
+                    if (_booking!['reviewed'] == true) ...[
+                      _buildSectionHeader('Customer Review'),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: Colors.black,
-                          borderRadius: BorderRadius.circular(8),
+                          gradient: LinearGradient(
+                            colors: [Colors.amber.shade50, Colors.white],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.amber.shade100),
                         ),
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(
-                              LucideIcons.plus,
-                              color: Colors.white,
-                              size: 14,
+                            Row(
+                              children: [
+                                Row(
+                                  children: List.generate(5, (index) {
+                                    return Icon(
+                                      index < (_booking!['rating'] ?? 0)
+                                          ? Icons.star_rounded
+                                          : Icons.star_outline_rounded,
+                                      color: Colors.amber,
+                                      size: 20,
+                                    );
+                                  }),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  '${_booking!['rating']}.0',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.amber.shade900,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Add Part',
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
+                            if (_booking!['reviewText']
+                                    ?.toString()
+                                    .isNotEmpty ==
+                                true) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                _booking!['reviewText'],
+                                style: GoogleFonts.inter(
+                                  height: 1.5,
+                                  color: Colors.grey[800],
+                                  fontStyle: FontStyle.italic,
+                                ),
                               ),
-                            ),
+                            ],
                           ],
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (_usedParts.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'No parts added yet',
-                          style: GoogleFonts.inter(color: Colors.grey),
-                        ),
-                      ),
-                    )
-                  else
-                    ..._usedParts
-                        .map(
-                          (part) => _buildPartItem(
-                            part['name']!,
-                            '₹${part['price']}',
-                          ),
-                        )
-                        .toList(),
+                      const SizedBox(height: 32),
+                    ],
 
-                  if (_usedParts.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Total Parts Selling Price',
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: Colors.grey[700],
+                    const SizedBox(height: 32),
+
+                    // 4. Parts Logged
+                    _buildSectionHeader(
+                      'Parts & Inventory',
+                      trailing: GestureDetector(
+                        onTap: _showAddPartDialog,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
                           ),
-                        ),
-                        Text(
-                          '₹${_totalPartsCost.toStringAsFixed(0)}',
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                          decoration: BoxDecoration(
                             color: Colors.black,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                LucideIcons.plus,
+                                color: Colors.white,
+                                size: 14,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Add Part',
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ],
+                    const SizedBox(height: 16),
+                    if (_usedParts.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'No parts added yet',
+                            style: GoogleFonts.inter(color: Colors.grey),
+                          ),
+                        ),
+                      )
+                    else
+                      ..._usedParts
+                          .map(
+                            (part) => _buildPartItem(
+                              part['name']!,
+                              '₹${part['price']}',
+                            ),
+                          )
+                          .toList(),
 
-                  const SizedBox(height: 48),
-                ],
+                    if (_usedParts.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Total Parts Selling Price',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                          Text(
+                            '₹${_totalPartsCost.toStringAsFixed(0)}',
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+
+                    const SizedBox(height: 48),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: _buildActionPanel(status),

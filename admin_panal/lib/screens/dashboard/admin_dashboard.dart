@@ -32,11 +32,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
   final PageController _pageController = PageController();
   bool _isLoading = true;
   Map<String, dynamic>? _data;
+  List<dynamic> _notifications = [];
 
   @override
   void initState() {
     super.initState();
     _fetchDashboardData();
+    _fetchNotifications();
   }
 
   Future<void> _fetchDashboardData() async {
@@ -55,224 +57,839 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
+  Future<void> _fetchNotifications() async {
+    try {
+      final notifications = await _apiService.getAdminNotifications();
+      if (mounted) {
+        setState(() {
+          _notifications = notifications;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching notifications: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bool isDesktop = MediaQuery.of(context).size.width >= 1200;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FA),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SafeArea(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
+          : Row(
+              children: [
+                if (isDesktop) _buildSidebar(context),
+                Expanded(
+                  child: SafeArea(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isDesktop ? 40 : 20,
+                        vertical: isDesktop ? 30 : 16,
+                      ),
+                      child: Center(
+                        child: Container(
+                          constraints: const BoxConstraints(maxWidth: 1200),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 1. Header / Profile Section
+                              _buildHeader(context, isDesktop),
+                              const SizedBox(height: 28),
+
+                              if (isDesktop)
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      flex: 2,
+                                      child: Column(
+                                        children: [
+                                          _buildSectionHeader(
+                                            context,
+                                            'Overall Performance',
+                                            'Financial Overview',
+                                          ),
+                                          const SizedBox(height: 12),
+                                          _buildOverallPerformanceCarousel(),
+                                          const SizedBox(height: 28),
+                                          _buildSectionHeader(
+                                            context,
+                                            'Orders Overview',
+                                            'Growth & Volume',
+                                          ),
+                                          const SizedBox(height: 12),
+                                          _buildOrdersOverview(),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 28),
+                                    Expanded(
+                                      child: Column(
+                                        children: [
+                                          _buildSectionHeader(
+                                            context,
+                                            'Revenue Summary',
+                                            'Financial Health',
+                                          ),
+                                          const SizedBox(height: 12),
+                                          _buildRevenueSummary(),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              else ...[
+                                // Overall Performance
+                                _buildSectionHeader(
+                                  context,
+                                  'Overall Performance',
+                                  'Financial Overview',
+                                ),
+                                const SizedBox(height: 12),
+                                _buildOverallPerformanceCarousel(),
+                                const SizedBox(height: 28),
+
+                                // 3. Orders Overview
+                                _buildSectionHeader(
+                                  context,
+                                  'Orders Overview',
+                                  'Growth & Volume',
+                                ),
+                                const SizedBox(height: 12),
+                                _buildOrdersOverview(),
+                                const SizedBox(height: 28),
+
+                                // 6. Revenue Summary
+                                _buildSectionHeader(
+                                  context,
+                                  'Revenue Summary',
+                                  'Financial Health',
+                                ),
+                                const SizedBox(height: 12),
+                                _buildRevenueSummary(),
+                                const SizedBox(height: 28),
+                              ],
+
+                              const SizedBox(height: 28),
+
+                              if (isDesktop)
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: _buildDashboardGridSection(
+                                        context,
+                                        'Technicians Workforce',
+                                        'Onboarding & Presence',
+                                        _buildTechniciansOverview(),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 20),
+                                    Expanded(
+                                      child: _buildDashboardGridSection(
+                                        context,
+                                        'Customer Base',
+                                        'Growth & retention',
+                                        _buildUsersOverview(),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 20),
+                                    Expanded(
+                                      child: _buildDashboardGridSection(
+                                        context,
+                                        'Disputes & Resolutions',
+                                        'Platform Quality',
+                                        _buildDisputesOverview(),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              else ...[
+                                // 11. Active Jobs
+                                _buildSectionHeader(
+                                  context,
+                                  'Ongoing Repairs',
+                                  'Live Tracking',
+                                ),
+                                const SizedBox(height: 12),
+                                _buildActiveJobsList(),
+                                const SizedBox(height: 28),
+
+                                // 4. Technicians Overview
+                                _buildSectionHeader(
+                                  context,
+                                  'Technicians Workforce',
+                                  'Onboarding & Presence',
+                                ),
+                                const SizedBox(height: 12),
+                                _buildTechniciansOverview(),
+                                const SizedBox(height: 28),
+
+                                // 5. Users Overview
+                                _buildSectionHeader(
+                                  context,
+                                  'Customer Base',
+                                  'Growth & retention',
+                                ),
+                                const SizedBox(height: 12),
+                                _buildUsersOverview(),
+                                const SizedBox(height: 28),
+
+                                // 8. Disputes Overview
+                                _buildSectionHeader(
+                                  context,
+                                  'Disputes & Resolutions',
+                                  'Platform Quality',
+                                ),
+                                const SizedBox(height: 12),
+                                _buildDisputesOverview(),
+                              ],
+
+                              const SizedBox(height: 28),
+
+                              if (isDesktop)
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      flex: 2,
+                                      child: _buildDashboardGridSection(
+                                        context,
+                                        'Ongoing Repairs',
+                                        'Live Tracking',
+                                        _buildActiveJobsList(),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 20),
+                                    Expanded(
+                                      child: _buildDashboardGridSection(
+                                        context,
+                                        'Onboarding Pipeline',
+                                        'Compliance Checks',
+                                        _buildVerificationStatus(),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              else ...[
+                                // 9. Verification Status
+                                _buildSectionHeader(
+                                  context,
+                                  'Onboarding Pipeline',
+                                  'Compliance Checks',
+                                ),
+                                const SizedBox(height: 12),
+                                _buildVerificationStatus(),
+                                const SizedBox(height: 28),
+                              ],
+
+                              const SizedBox(height: 28),
+
+                              // 15. Announcements / Alerts
+                              _buildSectionHeader(
+                                context,
+                                'System Alerts',
+                                'Critical Notifications',
+                              ),
+                              const SizedBox(height: 12),
+                              _buildAlertBanner(),
+                              const SizedBox(height: 28),
+
+                              // 20. Technician Leaderboard
+                              _buildSectionHeader(
+                                context,
+                                'Leaderboard',
+                                'Top Performers',
+                              ),
+                              const SizedBox(height: 12),
+                              _buildLeaderboard(),
+                              const SizedBox(height: 28),
+
+                              // 16. Charts & Analytics
+                              _buildSectionHeader(
+                                context,
+                                'Business Analytics',
+                                'Trends & Data',
+                              ),
+                              const SizedBox(height: 12),
+                              _buildChartsSection(),
+                              const SizedBox(height: 28),
+
+                              // 13. Recent Transactions
+                              _buildSectionHeader(
+                                context,
+                                'Recent Transactions',
+                                'Financial Ledger',
+                              ),
+                              const SizedBox(height: 12),
+                              _buildTransactionList(),
+                              const SizedBox(height: 28),
+
+                              // 14. Recent Orders
+                              _buildSectionHeader(
+                                context,
+                                'Latest Orders',
+                                'Recent Activity',
+                              ),
+                              const SizedBox(height: 12),
+                              _buildRecentOrders(),
+                              const SizedBox(height: 40),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 1. Header / Profile Section
-                    _buildHeader(context),
-                    const SizedBox(height: 28),
-
-                    // Overall Performance
-                    _buildSectionHeader(
-                      context,
-                      'Overall Performance',
-                      'Financial Overview',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildOverallPerformanceCarousel(),
-                    const SizedBox(height: 28),
-
-
-                    // 3. Orders Overview
-                    _buildSectionHeader(
-                      context,
-                      'Orders Overview',
-                      'Growth & Volume',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildOrdersOverview(),
-                    const SizedBox(height: 28),
-
-                    // 6. Revenue Summary
-                    _buildSectionHeader(
-                      context,
-                      'Revenue Summary',
-                      'Financial Health',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildRevenueSummary(),
-                    const SizedBox(height: 28),
-
-                    // 11. Active Jobs
-                    _buildSectionHeader(
-                      context,
-                      'Ongoing Repairs',
-                      'Live Tracking',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildActiveJobsList(),
-                    const SizedBox(height: 28),
-
-                    // 4. Technicians Overview
-                    _buildSectionHeader(
-                      context,
-                      'Technicians Workforce',
-                      'Onboarding & Presence',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildTechniciansOverview(),
-                    const SizedBox(height: 28),
-
-                    // 5. Users Overview
-                    _buildSectionHeader(
-                      context,
-                      'Customer Base',
-                      'Growth & retention',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildUsersOverview(),
-                    const SizedBox(height: 28),
-
-                    // 8. Disputes Overview
-                    _buildSectionHeader(
-                      context,
-                      'Disputes & Resolutions',
-                      'Platform Quality',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildDisputesOverview(),
-                    const SizedBox(height: 28),
-
-                    // 9. Verification Status
-                    _buildSectionHeader(
-                      context,
-                      'Onboarding Pipeline',
-                      'Compliance Checks',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildVerificationStatus(),
-                    const SizedBox(height: 28),
-
-                    // 15. Announcements / Alerts
-                    _buildSectionHeader(
-                      context,
-                      'System Alerts',
-                      'Critical Notifications',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildAlertBanner(),
-                    const SizedBox(height: 28),
-
-                    // 20. Technician Leaderboard
-                    _buildSectionHeader(
-                      context,
-                      'Leaderboard',
-                      'Top Performers',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildLeaderboard(),
-                    const SizedBox(height: 28),
-
-                    // 16. Charts & Analytics
-                    _buildSectionHeader(
-                      context,
-                      'Business Analytics',
-                      'Trends & Data',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildChartsSection(),
-                    const SizedBox(height: 28),
-
-                    // 13. Recent Transactions
-                    _buildSectionHeader(
-                      context,
-                      'Recent Transactions',
-                      'Financial Ledger',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildTransactionList(),
-                    const SizedBox(height: 28),
-
-                    // 14. Recent Orders
-                    _buildSectionHeader(
-                      context,
-                      'Latest Orders',
-                      'Recent Activity',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildRecentOrders(),
-                    const SizedBox(height: 40),
-                  ],
-                ),
-              ),
+                if (isDesktop) _buildRightSidebar(context),
+              ],
             ),
-      bottomNavigationBar: _buildBottomNav(context),
+      bottomNavigationBar: isDesktop ? null : _buildBottomNav(context),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildRightSidebar(BuildContext context) {
+    return Container(
+      width: 320,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(left: BorderSide(color: Colors.grey.shade200)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Notifications',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: _fetchNotifications,
+                  child: const Icon(
+                    LucideIcons.refreshCw,
+                    size: 16,
+                    color: Colors.blue,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _notifications.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          LucideIcons.bellOff,
+                          size: 48,
+                          color: Colors.grey.shade200,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No notifications',
+                          style: GoogleFonts.inter(
+                            color: Colors.grey,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: _notifications.length,
+                    itemBuilder: (context, index) {
+                      final n = _notifications[index];
+                      return _buildNotificationItem(n);
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationItem(dynamic n) {
+    bool isSeen = n['seen'] ?? false;
+    String type = n['type'] ?? 'info';
+    Color color = Colors.blue;
+    IconData icon = LucideIcons.bell;
+
+    switch (type) {
+      case 'error':
+        color = Colors.red;
+        icon = LucideIcons.alertCircle;
+        break;
+      case 'warning':
+        color = Colors.orange;
+        icon = LucideIcons.alertTriangle;
+        break;
+      case 'success':
+        color = Colors.green;
+        icon = LucideIcons.checkCircle;
+        break;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isSeen ? Colors.transparent : color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSeen ? Colors.grey.shade100 : color.withOpacity(0.1),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 14, color: color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  n['title'] ?? 'Notification',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: isSeen ? FontWeight.w500 : FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  n['message'] ?? '',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: Colors.grey.shade600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _formatTime(n['createdAt']),
+                  style: GoogleFonts.inter(
+                    fontSize: 9,
+                    color: Colors.grey.shade400,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatTime(String? dateStr) {
+    if (dateStr == null) return '';
+    try {
+      final date = DateTime.parse(dateStr).toLocal();
+      final now = DateTime.now();
+      final difference = now.difference(date);
+
+      if (difference.inMinutes < 1) return 'Just now';
+      if (difference.inHours < 1) return '${difference.inMinutes}m ago';
+      if (difference.inDays < 1) return '${difference.inHours}h ago';
+      return '${difference.inDays}d ago';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  Widget _buildDashboardGridSection(
+    BuildContext context,
+    String title,
+    String sub,
+    Widget child,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, title, sub),
+        const SizedBox(height: 12),
+        child,
+      ],
+    );
+  }
+
+  Widget _buildSidebar(BuildContext context) {
+    return Container(
+      width: 280,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(right: BorderSide(color: Colors.grey.shade200)),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 24),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    LucideIcons.shield,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  'ZiyonStar',
+                  style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                _buildSidebarItem(
+                  icon: LucideIcons.layoutDashboard,
+                  label: 'Dashboard',
+                  isActive: true,
+                ),
+                _buildSidebarItem(
+                  icon: LucideIcons.shoppingBag,
+                  label: 'Orders',
+                  isActive: false,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const OrdersScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildSidebarItem(
+                  icon: LucideIcons.wrench,
+                  label: 'Services',
+                  isActive: false,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ServicesScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildSidebarItem(
+                  icon: LucideIcons.hardHat,
+                  label: 'Technicians',
+                  isActive: false,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const TechniciansScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildSidebarItem(
+                  icon: LucideIcons.users,
+                  label: 'Users',
+                  isActive: false,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const UsersScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: Divider(),
+                ),
+                _buildSidebarItem(
+                  icon: LucideIcons.alertCircle,
+                  label: 'Disputes',
+                  isActive: false,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const DisputesScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildSidebarItem(
+                  icon: LucideIcons.wallet,
+                  label: 'Payouts',
+                  isActive: false,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PayoutsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildSidebarItem(
+                  icon: LucideIcons.percent,
+                  label: 'Commissions',
+                  isActive: false,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CommissionScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildSidebarItem(
+                  icon: LucideIcons.ticket,
+                  label: 'Promos',
+                  isActive: false,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PromosScreen(),
+                      ),
+                    );
+                  },
+                ),
+                if (widget.user != null &&
+                    widget.user!['role'] == 'master_admin')
+                  _buildSidebarItem(
+                    icon: LucideIcons.userCheck,
+                    label: 'Approve Admins',
+                    isActive: false,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ApproveAdminsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: Divider(),
+                ),
+                _buildSidebarItem(
+                  icon: LucideIcons.barChart3,
+                  label: 'Analytics',
+                  isActive: false,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AnalyticsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildSidebarItem(
+                  icon: LucideIcons.helpCircle,
+                  label: 'Support',
+                  isActive: false,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SupportScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildSidebarItem(
+                  icon: LucideIcons.settings,
+                  label: 'Settings',
+                  isActive: false,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProfileScreen(user: widget.user),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: _buildSidebarItem(
+              icon: LucideIcons.logOut,
+              label: 'Logout',
+              isActive: false,
+              onTap: () => _handleLogout(context),
+              color: Colors.red,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebarItem({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    VoidCallback? onTap,
+    Color? color,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: isActive ? Colors.black : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 20,
+                  color: isActive
+                      ? Colors.white
+                      : (color ?? Colors.grey.shade600),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                    color: isActive
+                        ? Colors.white
+                        : (color ?? Colors.grey.shade700),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, bool isDesktop) {
     final user = widget.user;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ProfileScreen(user: widget.user),
-              ),
-            );
-          },
-          child: Row(
+        if (!isDesktop)
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProfileScreen(user: widget.user),
+                ),
+              );
+            },
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.black, width: 2),
+                  ),
+                  child: CircleAvatar(
+                    radius: 24,
+                    backgroundImage:
+                        (user?['profileImage'] != null &&
+                            user?['profileImage'].toString().isNotEmpty == true)
+                        ? NetworkImage(user?['profileImage'].toString() ?? '')
+                        : const NetworkImage(
+                            'https://i.pravatar.cc/150?img=11',
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user?['name'] ?? 'Super Admin',
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    Text(
+                      (user?['role'] == 'master_admin')
+                          ? 'Master Admin'
+                          : 'Operations Control',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          )
+        else
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.black, width: 2),
-                ),
-                child: CircleAvatar(
-                  radius: 24,
-                  backgroundImage:
-                      (user?['profileImage'] != null &&
-                          user!['profileImage'].toString().isNotEmpty)
-                      ? NetworkImage(user!['profileImage'])
-                      : const NetworkImage('https://i.pravatar.cc/150?img=11'),
+              Text(
+                'Dashboard Overview',
+                style: GoogleFonts.poppins(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(width: 14),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    user?['name'] ?? 'Super Admin',
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                  Text(
-                    (user?['role'] == 'master_admin')
-                        ? 'Master Admin'
-                        : 'Operations Control',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+              Text(
+                'Welcome back, ${user?['name'] ?? 'Admin'}',
+                style: GoogleFonts.inter(fontSize: 14, color: Colors.grey),
               ),
             ],
           ),
-        ),
         Row(
           children: [
+            if (isDesktop) ...[
+              _buildIconButton(LucideIcons.search, onPressed: () {}),
+              const SizedBox(width: 8),
+            ],
             _buildIconButton(
               LucideIcons.bell,
               onPressed: () {
@@ -285,23 +902,89 @@ class _AdminDashboardState extends State<AdminDashboard> {
               },
             ),
             const SizedBox(width: 8),
-            _buildIconButton(
-              LucideIcons.settings,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ProfileScreen(user: widget.user),
+            if (!isDesktop) ...[
+              _buildIconButton(
+                LucideIcons.settings,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProfileScreen(user: widget.user),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
+              _buildIconButton(
+                LucideIcons.logOut,
+                onPressed: () => _handleLogout(context),
+                color: Colors.red,
+              ),
+            ] else
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProfileScreen(user: widget.user),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
                   ),
-                );
-              },
-            ),
-            const SizedBox(width: 8),
-            _buildIconButton(
-              LucideIcons.logOut,
-              onPressed: () => _handleLogout(context),
-              color: Colors.red,
-            ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade100),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundImage:
+                            (user?['profileImage'] != null &&
+                                user?['profileImage'].toString().isNotEmpty ==
+                                    true)
+                            ? NetworkImage(
+                                user?['profileImage'].toString() ?? '',
+                              )
+                            : const NetworkImage(
+                                'https://i.pravatar.cc/150?img=11',
+                              ),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user?['name'] ?? 'Super Admin',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Admin Profile',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(
+                        LucideIcons.chevronDown,
+                        size: 14,
+                        color: Colors.grey,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ],

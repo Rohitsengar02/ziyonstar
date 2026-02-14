@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/api_service.dart';
 import '../../theme.dart';
+import '../../responsive.dart';
 
 class PersonalInformationScreen extends StatefulWidget {
   final Map<String, dynamic> technicianData;
@@ -153,205 +154,211 @@ class _PersonalInformationScreenState extends State<PersonalInformationScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSectionTitle('Basic Details'),
-                    const SizedBox(height: 20),
+          : Responsive(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSectionTitle('Basic Details'),
+                      const SizedBox(height: 20),
 
-                    // Avatar Selection Section
-                    Center(
-                      child: GestureDetector(
-                        onTap: _pickImage,
-                        child: Stack(
-                          children: [
-                            Container(
-                              width: 100,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[100],
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.black.withValues(alpha: 0.1),
-                                  width: 2,
-                                ),
-                              ),
-                              child: _selectedImage != null
-                                  ? ClipOval(
-                                      child: FutureBuilder<Uint8List>(
-                                        future: _selectedImage!.readAsBytes(),
-                                        builder: (context, snapshot) {
-                                          if (snapshot.hasData) {
-                                            return Image.memory(
-                                              snapshot.data!,
-                                              fit: BoxFit.cover,
-                                              width: 100,
-                                              height: 100,
-                                            );
-                                          }
-                                          return const CircularProgressIndicator();
-                                        },
-                                      ),
-                                    )
-                                  : (_photoUrl != null && _photoUrl!.isNotEmpty
-                                        ? ClipOval(
-                                            child: Image.network(
-                                              _photoUrl!,
-                                              fit: BoxFit.cover,
-                                              width: 100,
-                                              height: 100,
-                                              errorBuilder: (c, e, s) =>
-                                                  const Icon(LucideIcons.user),
-                                            ),
-                                          )
-                                        : const Icon(
-                                            LucideIcons.user,
-                                            size: 50,
-                                            color: Colors.grey,
-                                          )),
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: const BoxDecoration(
-                                  color: Colors.black,
+                      // Avatar Selection Section
+                      Center(
+                        child: GestureDetector(
+                          onTap: _pickImage,
+                          child: Stack(
+                            children: [
+                              Container(
+                                width: 100,
+                                height: 100,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
                                   shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                    width: 2,
+                                  ),
                                 ),
-                                child: const Icon(
-                                  LucideIcons.camera,
-                                  color: Colors.white,
-                                  size: 16,
+                                child: _selectedImage != null
+                                    ? ClipOval(
+                                        child: FutureBuilder<Uint8List>(
+                                          future: _selectedImage!.readAsBytes(),
+                                          builder: (context, snapshot) {
+                                            if (snapshot.hasData) {
+                                              return Image.memory(
+                                                snapshot.data!,
+                                                fit: BoxFit.cover,
+                                                width: 100,
+                                                height: 100,
+                                              );
+                                            }
+                                            return const CircularProgressIndicator();
+                                          },
+                                        ),
+                                      )
+                                    : (_photoUrl != null &&
+                                              _photoUrl!.isNotEmpty
+                                          ? ClipOval(
+                                              child: Image.network(
+                                                _photoUrl!,
+                                                fit: BoxFit.cover,
+                                                width: 100,
+                                                height: 100,
+                                                errorBuilder: (c, e, s) =>
+                                                    const Icon(
+                                                      LucideIcons.user,
+                                                    ),
+                                              ),
+                                            )
+                                          : const Icon(
+                                              LucideIcons.user,
+                                              size: 50,
+                                              color: Colors.grey,
+                                            )),
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    LucideIcons.camera,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 32),
+                      const SizedBox(height: 32),
 
-                    _buildTextField(
-                      controller: _nameController,
-                      label: 'Full Name',
-                      icon: LucideIcons.user,
-                      validator: (v) => v!.isEmpty ? 'Name is required' : null,
-                    ),
-                    const SizedBox(height: 20),
-                    _buildTextField(
-                      controller: _emailController,
-                      label: 'Email Address',
-                      icon: LucideIcons.mail,
-                      enabled: false, // Email usually read-only
-                    ),
-                    const SizedBox(height: 20),
-                    _buildTextField(
-                      controller: _phoneController,
-                      label: 'Phone Number',
-                      icon: LucideIcons.phone,
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 32),
-                    _buildSectionTitle('Additional Info'),
-                    const SizedBox(height: 20),
-                    _buildTextField(
-                      controller: _dobController,
-                      label: 'Date of Birth',
-                      icon: LucideIcons.calendar,
-                      readOnly: true,
-                      onTap: () async {
-                        DateTime? picked = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime.now().subtract(
-                            const Duration(days: 365 * 20),
-                          ),
-                          firstDate: DateTime(1960),
-                          lastDate: DateTime.now(),
-                        );
-                        if (picked != null) {
-                          setState(
-                            () => _dobController.text = picked.toString().split(
-                              ' ',
-                            )[0],
+                      _buildTextField(
+                        controller: _nameController,
+                        label: 'Full Name',
+                        icon: LucideIcons.user,
+                        validator: (v) =>
+                            v!.isEmpty ? 'Name is required' : null,
+                      ),
+                      const SizedBox(height: 20),
+                      _buildTextField(
+                        controller: _emailController,
+                        label: 'Email Address',
+                        icon: LucideIcons.mail,
+                        enabled: false, // Email usually read-only
+                      ),
+                      const SizedBox(height: 20),
+                      _buildTextField(
+                        controller: _phoneController,
+                        label: 'Phone Number',
+                        icon: LucideIcons.phone,
+                        keyboardType: TextInputType.phone,
+                      ),
+                      const SizedBox(height: 32),
+                      _buildSectionTitle('Additional Info'),
+                      const SizedBox(height: 20),
+                      _buildTextField(
+                        controller: _dobController,
+                        label: 'Date of Birth',
+                        icon: LucideIcons.calendar,
+                        readOnly: true,
+                        onTap: () async {
+                          DateTime? picked = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now().subtract(
+                              const Duration(days: 365 * 20),
+                            ),
+                            firstDate: DateTime(1960),
+                            lastDate: DateTime.now(),
                           );
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'Gender',
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[700],
+                          if (picked != null) {
+                            setState(
+                              () => _dobController.text = picked
+                                  .toString()
+                                  .split(' ')[0],
+                            );
+                          }
+                        },
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: ['Male', 'Female', 'Other'].map((g) {
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: ChoiceChip(
-                            label: Text(g),
-                            selected: _selectedGender == g,
-                            onSelected: (val) {
-                              if (val) setState(() => _selectedGender = g);
-                            },
-                            selectedColor: AppColors.primaryButton.withValues(
-                              alpha: 0.2,
-                            ),
-                            labelStyle: GoogleFonts.inter(
-                              color: _selectedGender == g
-                                  ? AppColors.primaryButton
-                                  : Colors.black,
-                              fontWeight: _selectedGender == g
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 32),
-                    _buildSectionTitle('Location & Service'),
-                    const SizedBox(height: 20),
-                    _buildTextField(
-                      controller: _cityController,
-                      label: 'City',
-                      icon: LucideIcons.mapPin,
-                    ),
-                    const SizedBox(height: 20),
-                    _buildTextField(
-                      controller: _radiusController,
-                      label: 'Service Radius (km)',
-                      icon: LucideIcons.navigation,
-                    ),
-                    const SizedBox(height: 40),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _updateProfile,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: AppColors.primaryButton,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          'Save Changes',
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Gender',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 12),
+                      Row(
+                        children: ['Male', 'Female', 'Other'].map((g) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: ChoiceChip(
+                              label: Text(g),
+                              selected: _selectedGender == g,
+                              onSelected: (val) {
+                                if (val) setState(() => _selectedGender = g);
+                              },
+                              selectedColor: AppColors.primaryButton.withValues(
+                                alpha: 0.2,
+                              ),
+                              labelStyle: GoogleFonts.inter(
+                                color: _selectedGender == g
+                                    ? AppColors.primaryButton
+                                    : Colors.black,
+                                fontWeight: _selectedGender == g
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 32),
+                      _buildSectionTitle('Location & Service'),
+                      const SizedBox(height: 20),
+                      _buildTextField(
+                        controller: _cityController,
+                        label: 'City',
+                        icon: LucideIcons.mapPin,
+                      ),
+                      const SizedBox(height: 20),
+                      _buildTextField(
+                        controller: _radiusController,
+                        label: 'Service Radius (km)',
+                        icon: LucideIcons.navigation,
+                      ),
+                      const SizedBox(height: 40),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _updateProfile,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: AppColors.primaryButton,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'Save Changes',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

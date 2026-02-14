@@ -38,123 +38,214 @@ class _WalletScreenState extends State<WalletScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFF8F9FB),
-        appBar: _buildAppBar(),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isDesktop = constraints.maxWidth >= 900;
 
-    final balance = _walletData?['balance']?.toDouble() ?? 0.0;
-    final today = _walletData?['today']?.toDouble() ?? 0.0;
-    final week = _walletData?['week']?.toDouble() ?? 0.0;
-    final month = _walletData?['month']?.toDouble() ?? 0.0;
-    final pending = _walletData?['pending']?.toDouble() ?? 0.0;
-    final activities = (_walletData?['activities'] as List?) ?? [];
+        if (_isLoading) {
+          return Scaffold(
+            backgroundColor: const Color(0xFFF8F9FB),
+            appBar: isDesktop ? null : _buildAppBar(),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
-      appBar: _buildAppBar(),
-      body: RefreshIndicator(
-        onRefresh: _fetchWalletData,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Balance Card
-              _buildBalanceCard(balance),
-              const SizedBox(height: 24),
+        final balance = _walletData?['balance']?.toDouble() ?? 0.0;
+        final today = _walletData?['today']?.toDouble() ?? 0.0;
+        final week = _walletData?['week']?.toDouble() ?? 0.0;
+        final month = _walletData?['month']?.toDouble() ?? 0.0;
+        final pending = _walletData?['pending']?.toDouble() ?? 0.0;
+        final activities = (_walletData?['activities'] as List?) ?? [];
 
-              // Earnings Snapshot
-              Text(
-                'Earnings Snapshot',
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+        return Scaffold(
+          backgroundColor: const Color(0xFFF6F8FA),
+          appBar: isDesktop ? null : _buildAppBar(),
+          body: RefreshIndicator(
+            onRefresh: _fetchWalletData,
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Center(
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 1000),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isDesktop ? 40 : 24,
+                    vertical: isDesktop ? 40 : 24,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (isDesktop)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: _buildBalanceCard(balance)),
+                            const SizedBox(width: 40),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Earnings Snapshot',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  GridView.count(
+                                    crossAxisCount: 2,
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    mainAxisSpacing: 12,
+                                    crossAxisSpacing: 12,
+                                    childAspectRatio: 1.8,
+                                    children: [
+                                      _buildEarningsItem(
+                                        'Today',
+                                        '₹${today.toStringAsFixed(0)}',
+                                        Colors.green,
+                                      ),
+                                      _buildEarningsItem(
+                                        'This Week',
+                                        '₹${week.toStringAsFixed(0)}',
+                                        Colors.blue,
+                                      ),
+                                      _buildEarningsItem(
+                                        'This Month',
+                                        '₹${month.toStringAsFixed(0)}',
+                                        Colors.orange,
+                                      ),
+                                      _buildEarningsItem(
+                                        'Pending',
+                                        '₹${pending.toStringAsFixed(0)}',
+                                        Colors.grey,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        )
+                      else ...[
+                        _buildBalanceCard(balance),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Earnings Snapshot',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            _buildEarningsItem(
+                              'Today',
+                              '₹${today.toStringAsFixed(0)}',
+                              Colors.green,
+                            ),
+                            const SizedBox(width: 12),
+                            _buildEarningsItem(
+                              'This Week',
+                              '₹${week.toStringAsFixed(0)}',
+                              Colors.blue,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            _buildEarningsItem(
+                              'This Month',
+                              '₹${month.toStringAsFixed(0)}',
+                              Colors.orange,
+                            ),
+                            const SizedBox(width: 12),
+                            _buildEarningsItem(
+                              'Pending',
+                              '₹${pending.toStringAsFixed(0)}',
+                              Colors.grey,
+                            ),
+                          ],
+                        ),
+                      ],
+
+                      const SizedBox(height: 48),
+
+                      // Recent Transactions header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Recent Activities',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {},
+                            child: Text(
+                              'View All',
+                              style: GoogleFonts.inter(
+                                color: Colors.blue,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      if (activities.isEmpty)
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(48),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(color: Colors.grey.shade100),
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  LucideIcons.history,
+                                  size: 48,
+                                  color: Colors.grey[200],
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No recent activities',
+                                  style: GoogleFonts.inter(color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: activities.length,
+                          itemBuilder: (context, index) {
+                            final a = activities[index];
+                            return _buildTransactionItem(
+                              a['device'] ?? 'Repair Earnings',
+                              'ORD-#${a['orderId']}',
+                              '₹${a['amount'].toStringAsFixed(0)}',
+                              a['type'] == 'payout',
+                            );
+                          },
+                        ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  _buildEarningsItem(
-                    'Today',
-                    '₹${today.toStringAsFixed(0)}',
-                    Colors.green,
-                  ),
-                  const SizedBox(width: 12),
-                  _buildEarningsItem(
-                    'This Week',
-                    '₹${week.toStringAsFixed(0)}',
-                    Colors.blue,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  _buildEarningsItem(
-                    'This Month',
-                    '₹${month.toStringAsFixed(0)}',
-                    Colors.orange,
-                  ),
-                  const SizedBox(width: 12),
-                  _buildEarningsItem(
-                    'Pending',
-                    '₹${pending.toStringAsFixed(0)}',
-                    Colors.grey,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 32),
-
-              // Recent Transactions
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Recent Activities',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {},
-                    child: const Text(
-                      'View All',
-                      style: TextStyle(color: Colors.black),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              if (activities.isEmpty)
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Text(
-                      'No recent activities',
-                      style: GoogleFonts.inter(color: Colors.grey),
-                    ),
-                  ),
-                )
-              else
-                ...activities.map((a) {
-                  return _buildTransactionItem(
-                    a['device'] ?? 'Repair Earnings',
-                    'ORD-#${a['orderId']}',
-                    '₹${a['amount'].toStringAsFixed(0)}',
-                    a['type'] == 'payout',
-                  );
-                }).toList(),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

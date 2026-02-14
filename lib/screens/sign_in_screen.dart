@@ -5,10 +5,9 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ziyonstar/screens/home_screen.dart';
 import 'package:ziyonstar/services/api_service.dart';
-import 'package:ziyonstar/screens/sign_up_screen.dart';
+import 'package:ziyonstar/screens/profile_setup_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -19,11 +18,7 @@ class SignInScreen extends StatefulWidget {
 
 class _SignInScreenState extends State<SignInScreen> {
   final ApiService _apiService = ApiService();
-  bool _isSigningIn = false;
   bool _isGoogleLoading = false;
-
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
 
   // Real Google Sign In Logic
   Future<void> _handleGoogleSignIn() async {
@@ -39,7 +34,6 @@ class _SignInScreenState extends State<SignInScreen> {
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
       if (googleUser == null) {
-        // User canceled
         setState(() => _isGoogleLoading = false);
         return;
       }
@@ -71,7 +65,6 @@ class _SignInScreenState extends State<SignInScreen> {
           phone: firebaseUser.phoneNumber,
         );
       } else {
-        // Fallback
         await _loginAndNavigate(
           name: googleUser.displayName ?? 'Google User',
           email: googleUser.email,
@@ -96,32 +89,6 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
-  Future<void> _handleEmailSignIn() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
-      return;
-    }
-
-    setState(() => _isSigningIn = true);
-    try {
-      // Using Mock Email Login as per earlier steps, but saving data consistently
-      await Future.delayed(const Duration(seconds: 1));
-      final String uid = "email_user_${_emailController.text.hashCode}";
-
-      await _loginAndNavigate(
-        name: 'App User', // Default name
-        email: _emailController.text,
-        uid: uid,
-      );
-    } catch (e) {
-      debugPrint("Email Login Error: $e");
-    } finally {
-      if (mounted) setState(() => _isSigningIn = false);
-    }
-  }
-
   Future<void> _loginAndNavigate({
     required String name,
     required String email,
@@ -129,42 +96,79 @@ class _SignInScreenState extends State<SignInScreen> {
     String? photoUrl,
     String? phone,
   }) async {
-    final Map<String, dynamic> userData = {
-      'name': name,
-      'email': email,
-      'firebaseUid': uid,
-      'photoUrl': photoUrl,
-      'phone': phone,
-      'role': 'user',
-      'createdAt': DateTime.now().toIso8601String(),
-    };
+    setState(() => _isGoogleLoading = true);
 
-    // 1. Backend Upsert
-    await _apiService.registerUser(userData);
-
-    // 2. Firestore Sync
     try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .set(userData);
+      final existingUser = await _apiService.getUser(uid);
+
+      bool isProfileIncomplete =
+          existingUser == null ||
+          existingUser['phone'] == null ||
+          existingUser['phone'].toString().isEmpty;
+
+      if (isProfileIncomplete) {
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (_) => ProfileSetupScreen(
+                name: existingUser?['name'] ?? name,
+                email: email,
+                uid: uid,
+                photoUrl: existingUser?['photoUrl'] ?? photoUrl,
+              ),
+            ),
+            (route) => false,
+          );
+        }
+        return;
+      }
+
+      final Map<String, dynamic> userData = {
+        'name': existingUser['name'] ?? name,
+        'email': email,
+        'firebaseUid': uid,
+        'photoUrl': existingUser['photoUrl'] ?? photoUrl,
+        'phone': existingUser['phone'] ?? phone,
+        'role': existingUser['role'] ?? 'user',
+        'createdAt':
+            existingUser['createdAt'] ?? DateTime.now().toIso8601String(),
+      };
+
+      if (mounted) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('has_onboarded', true);
+        await prefs.setString('user_uid', uid);
+        await prefs.setString('user_name', userData['name']);
+        await prefs.setString('user_email', email);
+        if (userData['photoUrl'] != null) {
+          await prefs.setString('user_photo', userData['photoUrl']);
+        }
+        if (userData['phone'] != null) {
+          await prefs.setString('user_phone', userData['phone']);
+        }
+
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          (route) => false,
+        );
+      }
     } catch (e) {
-      debugPrint("Firestore Error ignored: $e");
-    }
-
-    if (mounted) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('has_onboarded', true);
-      await prefs.setString('user_uid', uid);
-      await prefs.setString('user_name', name);
-      await prefs.setString('user_email', email);
-      if (photoUrl != null) await prefs.setString('user_photo', photoUrl);
-      if (phone != null) await prefs.setString('user_phone', phone);
-
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-        (route) => false,
-      );
+      debugPrint("Login/Navigate Error: $e");
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => ProfileSetupScreen(
+              name: name,
+              email: email,
+              uid: uid,
+              photoUrl: photoUrl,
+            ),
+          ),
+          (route) => false,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
     }
   }
 
@@ -178,7 +182,6 @@ class _SignInScreenState extends State<SignInScreen> {
       body: isDesktop
           ? Row(
               children: [
-                // Left Side - Hero Image (Desktop only)
                 Expanded(
                   flex: 1,
                   child: Container(
@@ -188,9 +191,9 @@ class _SignInScreenState extends State<SignInScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Image.asset(
-                            'assets/images/hero_user.png', // Ensure this asset exists or use a network placeholder
+                            'assets/images/hero_user.png',
                             height: 400,
-                            errorBuilder: (c, e, s) => Icon(
+                            errorBuilder: (c, e, s) => const Icon(
                               LucideIcons.smartphone,
                               size: 100,
                               color: Colors.blue,
@@ -210,7 +213,6 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ),
                 ),
-                // Right Side - Form
                 Expanded(
                   flex: 1,
                   child: Center(
@@ -244,12 +246,10 @@ class _SignInScreenState extends State<SignInScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Logo (Mobile usually, or small on desktop form side?)
-        // Let's keep it clean
         Center(
           child: Container(
-            height: 80,
-            width: 80,
+            height: 100,
+            width: 100,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -257,16 +257,14 @@ class _SignInScreenState extends State<SignInScreen> {
             ),
             child: const Icon(
               LucideIcons.smartphone,
-              size: 40,
+              size: 50,
               color: Colors.blue,
             ),
           ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
         ),
-
         const SizedBox(height: 32),
-
         Text(
-          'Sign In',
+          'Welcome to ZiyonStar',
           style: GoogleFonts.outfit(
             fontSize: 32,
             fontWeight: FontWeight.bold,
@@ -274,197 +272,62 @@ class _SignInScreenState extends State<SignInScreen> {
           ),
           textAlign: TextAlign.center,
         ).animate().fadeIn().slideY(begin: 0.3),
-
-        const SizedBox(height: 8),
-
+        const SizedBox(height: 12),
         Text(
-          'Welcome back to ZiyonStar',
-          style: GoogleFonts.inter(fontSize: 16, color: Colors.grey),
+          'Your one-stop destination for quick and reliable mobile repairs.',
+          style: GoogleFonts.inter(fontSize: 16, color: Colors.grey[600]),
           textAlign: TextAlign.center,
         ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.3),
-
-        const SizedBox(height: 40),
-
-        // Fields
-        _buildTextField(
-          label: 'Email',
-          controller: _emailController,
-          icon: LucideIcons.mail,
-          type: TextInputType.emailAddress,
-        ),
-        const SizedBox(height: 16),
-        _buildTextField(
-          label: 'Password',
-          controller: _passwordController,
-          icon: LucideIcons.lock,
-          isPassword: true,
-        ),
-
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton(
-            onPressed: () {},
-            child: Text(
-              'Forgot Password?',
-              style: GoogleFonts.inter(color: Colors.grey[600], fontSize: 12),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 20),
-
-        // Sign In Button
+        const SizedBox(height: 60),
         ElevatedButton(
-          onPressed: (_isSigningIn || _isGoogleLoading)
-              ? null
-              : _handleEmailSignIn,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFFACC15), // Yellow
-            foregroundColor: Colors.black,
-            padding: const EdgeInsets.symmetric(vertical: 20), // Taller button
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 0,
-          ),
-          child: _isSigningIn
-              ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(
-                  'Sign In',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-        ).animate().fadeIn(delay: 400.ms),
-
-        const SizedBox(height: 24),
-
-        Row(
-          children: [
-            const Expanded(child: Divider()),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'OR',
-                style: GoogleFonts.inter(color: Colors.grey, fontSize: 12),
-              ),
-            ),
-            const Expanded(child: Divider()),
-          ],
-        ),
-
-        const SizedBox(height: 24),
-
-        // Google Button
-        ElevatedButton(
-          onPressed: (_isSigningIn || _isGoogleLoading)
-              ? null
-              : _handleGoogleSignIn,
+          onPressed: _isGoogleLoading ? null : _handleGoogleSignIn,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.white,
             foregroundColor: Colors.black87,
-            elevation: 1,
-            padding: const EdgeInsets.symmetric(vertical: 20),
+            elevation: 2,
+            shadowColor: Colors.black12,
+            padding: const EdgeInsets.symmetric(vertical: 22),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
               side: BorderSide(color: Colors.grey.shade200),
             ),
           ),
           child: _isGoogleLoading
               ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  height: 24,
+                  width: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
                 )
               : Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Image.asset(
                       'assets/images/brand_google.png',
-                      height: 24,
+                      height: 28,
                       errorBuilder: (context, error, stackTrace) => const Icon(
                         LucideIcons.chrome,
                         color: Colors.blue,
-                        size: 24,
+                        size: 28,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 16),
                     Text(
-                      'Sign in with Google',
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
+                      'Continue with Google',
+                      style: GoogleFonts.outfit(
+                        fontSize: 18,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
                 ),
-        ).animate().fadeIn(delay: 500.ms),
-
+        ).animate().fadeIn(delay: 400.ms).scale(begin: const Offset(0.9, 0.9)),
         const SizedBox(height: 40),
-
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Don\'t have an account? ',
-              style: GoogleFonts.inter(color: Colors.grey[600]),
-            ),
-            GestureDetector(
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (c) => const SignUpScreen()),
-                );
-              },
-              child: Text(
-                'Sign Up',
-                style: GoogleFonts.inter(
-                  color: Colors.blue[600],
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
+        Text(
+          'By continuing, you agree to our Terms of Service and Privacy Policy',
+          style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[500]),
+          textAlign: TextAlign.center,
+        ).animate().fadeIn(delay: 600.ms),
       ],
-    );
-  }
-
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    required IconData icon,
-    bool isPassword = false,
-    TextInputType type = TextInputType.text,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: isPassword,
-        keyboardType: type,
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(icon, color: Colors.grey[400], size: 20),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 16,
-          ),
-          labelStyle: GoogleFonts.inter(color: Colors.grey[500]),
-        ),
-        style: GoogleFonts.inter(color: Colors.black87),
-      ),
     );
   }
 }

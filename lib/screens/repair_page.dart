@@ -13,6 +13,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'booking_success_screen.dart';
 import 'address_picker_screen.dart';
 import 'sign_in_screen.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:js' as js;
 
 class RepairPage extends StatefulWidget {
   final String deviceBrand;
@@ -317,26 +321,33 @@ class _RepairPageState extends State<RepairPage> {
         'address': _selectedAddress?['_id'],
         'paymentStatus': 'Pending',
         'status': 'Pending_Assignment',
+        'paymentMethod': _currentPaymentMethod == 'Online Payment'
+            ? 'UPI'
+            : 'Cash',
       };
 
       final result = await _apiService.createBooking(bookingData);
 
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => BookingSuccessScreen(
-              deviceName: '$_currentBrand $_currentModel',
-              technicianName: technician['name'] ?? 'Technician',
-              technicianImage: technician['photoUrl'] ?? '',
-              selectedIssues: _selectedIssues.toList(),
-              timeSlot: _selectedTimeSlot!,
-              date: _selectedDate,
-              amount: _calculateTotal().toDouble(),
-              otp: result?['otp']?.toString() ?? '000000',
+        if (_currentPaymentMethod == 'Online Payment' && result != null) {
+          await _showPaymentDialog(result, technician);
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BookingSuccessScreen(
+                deviceName: '$_currentBrand $_currentModel',
+                technicianName: technician['name'] ?? 'Technician',
+                technicianImage: technician['photoUrl'] ?? '',
+                selectedIssues: _selectedIssues.toList(),
+                timeSlot: _selectedTimeSlot!,
+                date: _selectedDate,
+                amount: _calculateTotal().toDouble(),
+                otp: result?['otp']?.toString() ?? '000000',
+              ),
             ),
-          ),
-        );
+          );
+        }
       }
     } catch (e) {
       debugPrint('Booking confirmation failed: $e');
@@ -351,6 +362,42 @@ class _RepairPageState extends State<RepairPage> {
     } finally {
       if (mounted) setState(() => _isBookingLoading = false);
     }
+  }
+
+  Future<void> _showPaymentDialog(
+    Map<String, dynamic> booking,
+    Map<String, dynamic> technician,
+  ) async {
+    // Show dialog immediately
+    // Show dialog immediately
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return _PaymentDialogContent(
+          booking: booking,
+          technician: technician,
+          apiService: _apiService,
+          onSuccess: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => BookingSuccessScreen(
+                  deviceName: '$_currentBrand $_currentModel',
+                  technicianName: technician['name'] ?? 'Technician',
+                  technicianImage: technician['photoUrl'] ?? '',
+                  selectedIssues: _selectedIssues.toList(),
+                  timeSlot: _selectedTimeSlot!,
+                  date: _selectedDate,
+                  amount: double.parse(booking['totalPrice'].toString()),
+                  otp: booking['otp']?.toString() ?? '000000',
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _fetchModelData() async {
@@ -2968,6 +3015,327 @@ class _IssueCardState extends State<_IssueCard> {
                 ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentDialogContent extends StatefulWidget {
+  final Map<String, dynamic> booking;
+  final Map<String, dynamic> technician;
+  final ApiService apiService;
+  final VoidCallback onSuccess;
+
+  const _PaymentDialogContent({
+    required this.booking,
+    required this.technician,
+    required this.apiService,
+    required this.onSuccess,
+  });
+
+  @override
+  _PaymentDialogContentState createState() => _PaymentDialogContentState();
+}
+
+class _PaymentDialogContentState extends State<_PaymentDialogContent> {
+  String _upiUrl = '';
+  String _txnId = '';
+  bool _isPaymentSuccessful = false;
+  bool _isLoading = true;
+  String _errorMessage = '';
+  Timer? _statusTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _initiatePayment();
+  }
+
+  @override
+  void dispose() {
+    _statusTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _initiatePayment() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final amount = double.parse(widget.booking['totalPrice'].toString());
+    final bookingId = widget.booking['_id'];
+
+    final paymentOrderResponse = await widget.apiService.createPaymentOrder(
+      bookingId: bookingId,
+      amount: amount,
+      customerName: user?.displayName ?? 'Customer',
+      customerMobile: user?.phoneNumber ?? '9999999999',
+    );
+
+    if (!mounted) return;
+
+    debugPrint('Payment Initiation Response: $paymentOrderResponse');
+
+    if (paymentOrderResponse == null ||
+        paymentOrderResponse['success'] != true) {
+      debugPrint(
+        'Payment Initiation Failed: ${paymentOrderResponse?['message']}',
+      );
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              paymentOrderResponse?['message'] ??
+              'Failed to generate payment QR. Please try again.';
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
+    final orderData = paymentOrderResponse['orderData'];
+    if (orderData == null) {
+      debugPrint('Payment Order Data is null');
+      setState(() {
+        _errorMessage = 'Invalid payment data.';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    // Try various fields for UPI URL
+    final upiUrl = (orderData['upi_url'] ?? '').toString();
+    final txnId = (orderData['client_txn_id'] ?? '').toString();
+
+    debugPrint('UPI URL generated: $upiUrl');
+    debugPrint('Transaction ID: $txnId');
+
+    if (txnId.isEmpty) {
+      setState(() {
+        _errorMessage = 'Transaction ID missing.';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _upiUrl = upiUrl;
+      _txnId = txnId;
+      _isLoading = false;
+    });
+
+    // Enterprise Plan: Trigger official Popup SDK on Web
+    if (kIsWeb && orderData['session_id'] != null) {
+      _triggerWebPayment(orderData['session_id'].toString());
+    }
+
+    _startStatusPolling();
+  }
+
+  void _triggerWebPayment(String sessionId) {
+    try {
+      debugPrint('Triggering UPIGateway SDK with Session ID: $sessionId');
+      final paymentSDK = js.JsObject(js.context['EKQR'], [
+        js.JsObject.jsify({
+          'sessionId': sessionId,
+          'callbacks': {
+            'onSuccess': (response) {
+              debugPrint('SDK Success Callback: $response');
+              setState(() => _isPaymentSuccessful = true);
+              _statusTimer?.cancel();
+              Future.delayed(const Duration(seconds: 2), () {
+                if (mounted) {
+                  Navigator.pop(context); // Close dialog
+                  widget.onSuccess();
+                }
+              });
+            },
+            'onError': (response) {
+              debugPrint('SDK Error Callback: $response');
+              if (mounted) {
+                setState(
+                  () => _errorMessage = 'Payment failed. Please try again.',
+                );
+              }
+            },
+            'onCancelled': (response) {
+              debugPrint('SDK Cancelled Callback');
+              if (mounted) {
+                Navigator.pop(context);
+              }
+            },
+          },
+        }),
+      ]);
+      paymentSDK.callMethod('pay');
+    } catch (e) {
+      debugPrint('Error calling EKQR SDK: $e');
+    }
+  }
+
+  void _startStatusPolling() {
+    debugPrint('Starting status polling for: $_txnId');
+    _statusTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+      if (_txnId.isEmpty) return;
+
+      debugPrint('Checking status for: $_txnId...');
+      final statusResponse = await widget.apiService.checkPaymentStatus(_txnId);
+      if (!mounted) return;
+
+      if (statusResponse != null && statusResponse['success']) {
+        debugPrint('Status Response Status: ${statusResponse['status']}');
+        if (statusResponse['status'] == 'success') {
+          debugPrint('Payment Successful! Closing dialog...');
+          setState(() => _isPaymentSuccessful = true);
+          timer.cancel();
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              Navigator.pop(context); // Close dialog
+              widget.onSuccess();
+            }
+          });
+        }
+      } else {
+        debugPrint('Status Check Failed or Pending: $statusResponse');
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: () async => false,
+      child: AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Scan & Pay',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Amount: ₹${widget.booking['totalPrice']}',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                color: AppColors.primaryButton,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 24),
+            if (_errorMessage.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  _errorMessage,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(color: Colors.red),
+                ),
+              )
+            else if (_isPaymentSuccessful)
+              Column(
+                children: [
+                  const Icon(
+                    LucideIcons.checkCircle,
+                    color: Colors.green,
+                    size: 80,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Payment Successful!',
+                    style: GoogleFonts.inter(
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              )
+            else if (_upiUrl.isNotEmpty)
+              Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                        ),
+                      ],
+                    ),
+                    child: SizedBox(
+                      width: 200,
+                      height: 200,
+                      child: Center(
+                        child: QrImageView(
+                          data: _upiUrl,
+                          version: QrVersions.auto,
+                          size: 200.0,
+                          backgroundColor: Colors.white,
+                          errorStateBuilder: (ctx, err) {
+                            return const Center(
+                              child: Text(
+                                'Could not generate QR code',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const CircularProgressIndicator(strokeWidth: 2),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Waiting for payment...',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.grey,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              )
+            else
+              const Column(
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Generating QR code...'),
+                ],
+              ),
+            const SizedBox(height: 24),
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(LucideIcons.smartphone, size: 20, color: Colors.grey),
+                SizedBox(width: 8),
+                Text(
+                  'GPay / PhonePe / Paytm',
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            if (!_isPaymentSuccessful)
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text(
+                  'Cancel Payment',
+                  style: GoogleFonts.inter(color: Colors.red),
+                ),
+              ),
+          ],
         ),
       ),
     );

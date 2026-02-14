@@ -12,6 +12,8 @@ import '../services/api_service.dart';
 import '../services/socket_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'dart:async';
 
 class MobileRepairPage extends StatefulWidget {
   final String? initialIssue;
@@ -448,16 +450,24 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
         'addressLat': _addressLat,
         'addressLng': _addressLng,
         'technicianId': _apiTechnicians[_selectedTechIndex]['_id'],
+        'paymentMethod': _paymentMethod == 0
+            ? 'UPI'
+            : (_paymentMethod == 1 ? 'Card' : 'Cash'),
       };
 
-      await api.createBooking(bookingData);
+      final bookingResponse = await api.createBooking(bookingData);
 
       if (mounted) {
-        setState(() => _isBookingLoading = false);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (c) => const MyBookingsScreen()),
-        );
+        if (_paymentMethod == 0 && bookingResponse != null) {
+          // Trigger Online Payment (UPI)
+          await _showPaymentDialog(bookingResponse);
+        } else {
+          setState(() => _isBookingLoading = false);
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (c) => const MyBookingsScreen()),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -483,6 +493,206 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), duration: const Duration(seconds: 1)),
     );
+  }
+
+  Future<void> _showPaymentDialog(Map<String, dynamic> booking) async {
+    final api = ApiService();
+    final user = FirebaseAuth.instance.currentUser;
+    final amount = double.parse(booking['totalPrice'].toString());
+    final bookingId = booking['_id'];
+
+    // 1. Create Payment Order
+    final paymentOrderResponse = await api.createPaymentOrder(
+      bookingId: bookingId,
+      amount: amount,
+      customerName: user?.displayName ?? 'Customer',
+      customerMobile: user?.phoneNumber ?? '9999999999',
+    );
+
+    if (paymentOrderResponse == null || !paymentOrderResponse['success']) {
+      _showSnack(
+        'Failed to generate payment QR. Please try again or choose cash.',
+      );
+      setState(() => _isBookingLoading = false);
+      return;
+    }
+
+    final orderData = paymentOrderResponse['orderData'];
+    final upiUrl =
+        orderData['upi_url'] ??
+        ''; // Assuming API returns upi_url (e.g. upi://pay?...)
+    final txnId = orderData['client_txn_id'];
+
+    if (!mounted) return;
+
+    Timer? statusTimer;
+    bool isPaymentSuccessful = false;
+
+    await showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      pageBuilder: (ctx, anim1, anim2) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            // Start polling for status
+            statusTimer ??= Timer.periodic(const Duration(seconds: 5), (
+              timer,
+            ) async {
+              final statusResponse = await api.checkPaymentStatus(txnId);
+              if (statusResponse != null && statusResponse['success']) {
+                if (statusResponse['status'] == 'success') {
+                  setDialogState(() => isPaymentSuccessful = true);
+                  timer.cancel();
+                  Future.delayed(const Duration(seconds: 2), () {
+                    Navigator.pop(ctx);
+                  });
+                }
+              }
+            });
+
+            return WillPopScope(
+              onWillPop: () async => false, // Prevent accidental close
+              child: AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Scan & Pay',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Amount: ₹$amount',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        color: AppColors.primaryButton,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    if (isPaymentSuccessful)
+                      Column(
+                        children: [
+                          const Icon(
+                            LucideIcons.checkCircle,
+                            color: Colors.green,
+                            size: 80,
+                          ).animate().scale(duration: 400.ms),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Payment Successful!',
+                            style: GoogleFonts.inter(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      )
+                    else if (upiUrl.isNotEmpty)
+                      Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 10,
+                                ),
+                              ],
+                            ),
+                            child: QrImageView(
+                              data: upiUrl,
+                              version: QrVersions.auto,
+                              size: 200.0,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          const CircularProgressIndicator(strokeWidth: 2),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Waiting for payment...',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Colors.grey,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      const Text('Generating QR code...'),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.network(
+                          'https://img.icons8.com/color/48/000000/google-pay.png',
+                          width: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Image.network(
+                          'https://img.icons8.com/color/48/000000/phone-pe.png',
+                          width: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Image.network(
+                          'https://img.icons8.com/color/48/000000/paytm.png',
+                          width: 24,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    if (!isPaymentSuccessful)
+                      TextButton(
+                        onPressed: () {
+                          statusTimer?.cancel();
+                          Navigator.pop(ctx);
+                          _showSnack(
+                            'Payment cancelled. Please go to "My Bookings" to try again.',
+                          );
+                        },
+                        child: Text(
+                          'Cancel Payment',
+                          style: GoogleFonts.inter(color: Colors.red),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    statusTimer?.cancel();
+    if (isPaymentSuccessful) {
+      if (mounted) {
+        setState(() => _isBookingLoading = false);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (c) => const MyBookingsScreen()),
+        );
+      }
+    } else {
+      if (mounted) {
+        setState(() => _isBookingLoading = false);
+        // We still created the booking, but payment failed/cancelled
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (c) => const MyBookingsScreen()),
+        );
+      }
+    }
   }
 
   void _prevStep() {
