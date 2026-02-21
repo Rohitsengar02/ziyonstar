@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:go_router/go_router.dart';
 
-import 'package:ziyonstar/screens/my_bookings_screen.dart';
 import 'package:ziyonstar/theme.dart';
 import '../widgets/navbar.dart';
 import '../widgets/app_drawer.dart';
@@ -93,7 +93,7 @@ class _BookingSuccessScreenState extends State<BookingSuccessScreen>
           Expanded(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(40),
+                padding: EdgeInsets.all(isDesktop ? 40 : 20),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -157,23 +157,19 @@ class _BookingSuccessScreenState extends State<BookingSuccessScreen>
                           const SizedBox(height: 40),
                           _buildSummaryCard(),
                           const SizedBox(height: 40),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 16,
+                            runSpacing: 12,
                             children: [
                               OutlinedButton(
                                 onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const MyBookingsScreen(),
-                                    ),
-                                  );
+                                  context.go('/bookings');
                                 },
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 32,
-                                    vertical: 20,
+                                    horizontal: 28,
+                                    vertical: 18,
                                   ),
                                   side: const BorderSide(color: Colors.grey),
                                   shape: RoundedRectangleBorder(
@@ -183,25 +179,21 @@ class _BookingSuccessScreenState extends State<BookingSuccessScreen>
                                 child: Text(
                                   'View Bookings',
                                   style: GoogleFonts.inter(
-                                    fontSize: 16,
+                                    fontSize: 15,
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.textHeading,
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 20),
                               ElevatedButton(
                                 onPressed: () {
-                                  // Assuming HomeScreen exists and is valid routing target
-                                  Navigator.of(
-                                    context,
-                                  ).popUntil((route) => route.isFirst);
+                                  context.go('/home');
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primaryButton,
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 40,
-                                    vertical: 20,
+                                    horizontal: 36,
+                                    vertical: 18,
                                   ),
                                   elevation: 8,
                                   shadowColor: AppColors.primaryButton
@@ -213,7 +205,7 @@ class _BookingSuccessScreenState extends State<BookingSuccessScreen>
                                 child: Text(
                                   'Continue',
                                   style: GoogleFonts.inter(
-                                    fontSize: 16,
+                                    fontSize: 15,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
                                   ),
@@ -265,182 +257,187 @@ class _BookingSuccessScreenState extends State<BookingSuccessScreen>
   }
 
   Widget _buildSummaryCard() {
-    return Container(
-      width: 500,
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: Colors.grey[50], // Slightly off-white
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey[200]!),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // OTP Section
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-            margin: const EdgeInsets.only(bottom: 24),
-            decoration: BoxDecoration(
-              color: AppColors.primaryButton.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppColors.primaryButton.withOpacity(0.2),
-              ),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 500),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.grey[50], // Slightly off-white
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.grey[200]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             ),
-            child: Column(
-              children: [
-                Text(
-                  'Job Verification OTP',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primaryButton,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  widget.otp,
-                  style: GoogleFonts.poppins(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primaryButton,
-                    letterSpacing: 8,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Share this code with the technician to start the job',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Repair Service',
-                style: GoogleFonts.inter(color: Colors.grey[600]),
-              ),
-              Text(
-                widget.deviceName,
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textHeading,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Issues Images Row
-          if (widget.selectedIssues.isNotEmpty)
+          ],
+        ),
+        child: Column(
+          children: [
+            // OTP Section
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Row(
-                children: widget.selectedIssues.map((issue) {
-                  final asset = _getIssueImagePath(issue);
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: Tooltip(
-                      message: issue,
-                      child: Container(
-                        width: 48,
-                        height: 48,
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey[300]!),
-                        ),
-                        child: asset.isNotEmpty
-                            ? Image.asset('assets/images/issues/$asset')
-                            : const Icon(LucideIcons.wrench, size: 24),
-                      ),
-                    ),
-                  );
-                }).toList(),
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(
+                color: AppColors.primaryButton.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.primaryButton.withOpacity(0.2),
+                ),
               ),
-            ),
-          const Divider(),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Technician',
-                style: GoogleFonts.inter(color: Colors.grey[600]),
-              ),
-              Row(
+              child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundImage: AssetImage(widget.technicianImage),
-                    backgroundColor: Colors.grey[200],
-                  ),
-                  const SizedBox(width: 12),
                   Text(
-                    widget.technicianName,
+                    'Job Verification OTP',
                     style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primaryButton,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.otp,
+                    style: GoogleFonts.poppins(
+                      fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.textHeading,
+                      color: AppColors.primaryButton,
+                      letterSpacing: 8,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Share this code with the technician to start the job',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: Colors.grey[600],
                     ),
                   ),
                 ],
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Date & Time',
-                style: GoogleFonts.inter(color: Colors.grey[600]),
-              ),
-              Text(
-                '${widget.date.day}/${widget.date.month}, ${widget.timeSlot}',
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textHeading,
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Repair Service',
+                  style: GoogleFonts.inter(color: Colors.grey[600]),
+                ),
+                Text(
+                  widget.deviceName,
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textHeading,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Issues Images Row
+            if (widget.selectedIssues.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: widget.selectedIssues.map((issue) {
+                      final asset = _getIssueImagePath(issue);
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: Tooltip(
+                          message: issue,
+                          child: Container(
+                            width: 48,
+                            height: 48,
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey[300]!),
+                            ),
+                            child: asset.isNotEmpty
+                                ? Image.asset('assets/images/issues/$asset')
+                                : const Icon(LucideIcons.wrench, size: 24),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          const Divider(),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Amount to be Paid',
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textHeading,
+            const Divider(),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Technician',
+                  style: GoogleFonts.inter(color: Colors.grey[600]),
                 ),
-              ),
-              Text(
-                '₹${widget.amount.toStringAsFixed(0)}',
-                style: GoogleFonts.poppins(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF10B981),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundImage: AssetImage(widget.technicianImage),
+                      backgroundColor: Colors.grey[200],
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      widget.technicianName,
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textHeading,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Date & Time',
+                  style: GoogleFonts.inter(color: Colors.grey[600]),
+                ),
+                Text(
+                  '${widget.date.day}/${widget.date.month}, ${widget.timeSlot}',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textHeading,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Amount to be Paid',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textHeading,
+                  ),
+                ),
+                Text(
+                  '₹${widget.amount.toStringAsFixed(0)}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF10B981),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'api_service.dart';
 
 class LocationService {
   /// Get user's current location
@@ -52,7 +53,7 @@ class LocationService {
     try {
       // Use Nominatim reverse geocoding (free and works on web)
       final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng&zoom=18&addressdetails=1',
+        '${ApiService.baseUrl}/location/reverse?lat=$lat&lon=$lng',
       );
 
       final response = await http.get(
@@ -101,7 +102,7 @@ class LocationService {
   ) async {
     try {
       final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(address)}&limit=1',
+        '${ApiService.baseUrl}/location/search?q=${Uri.encodeComponent(address)}',
       );
 
       final response = await http.get(
@@ -135,7 +136,7 @@ class LocationService {
   ) async {
     try {
       final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng&zoom=18&addressdetails=1',
+        '${ApiService.baseUrl}/location/reverse?lat=$lat&lon=$lng',
       );
 
       final response = await http.get(

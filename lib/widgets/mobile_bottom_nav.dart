@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:go_router/go_router.dart';
 import '../theme.dart';
-import '../screens/mobile_home_screen.dart';
-import '../screens/my_bookings_screen.dart';
-import '../screens/mobile_about_page.dart';
-import '../screens/mobile_profile_page.dart';
-import '../screens/mobile_repair_page.dart';
 
 class MobileBottomNav extends StatelessWidget {
   final int currentIndex;
@@ -16,36 +12,22 @@ class MobileBottomNav extends StatelessWidget {
   void _onTap(BuildContext context, int index) {
     if (index == currentIndex) return;
 
-    Widget page;
     switch (index) {
       case 0:
-        page = const MobileHomeScreen();
+        context.go('/home');
         break;
       case 1:
-        page = const MyBookingsScreen();
+        context.go('/bookings');
         break;
       case 2:
-        page = const MobileRepairPage();
+        context.go('/repair');
         break;
       case 3:
-        page = const MobileAboutPage();
+        context.go('/about');
         break;
       case 4:
-        page = const MobileProfilePage();
+        context.go('/profile');
         break;
-      default:
-        return; // TODO: Implement other pages
-    }
-
-    // Use pushAndRemoveUntil for Home to clear stack, or push for others
-    if (index == 0) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (c) => page),
-        (r) => false,
-      );
-    } else {
-      Navigator.push(context, MaterialPageRoute(builder: (c) => page));
     }
   }
 
@@ -79,15 +61,15 @@ class MobileBottomNav extends StatelessWidget {
             icon: Icon(LucideIcons.home),
             label: 'Home',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(LucideIcons.calendar),
             label: 'Bookings',
           ),
           BottomNavigationBarItem(
             icon: Container(
-              padding: EdgeInsets.all(12),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
+                gradient: const LinearGradient(
                   colors: [AppColors.primaryButton, Color(0xFF8B5CF6)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -97,16 +79,23 @@ class MobileBottomNav extends StatelessWidget {
                   BoxShadow(
                     color: AppColors.primaryButton.withOpacity(0.4),
                     blurRadius: 10,
-                    offset: Offset(0, 4),
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              child: Icon(LucideIcons.wrench, color: Colors.white, size: 24),
+              child: const Icon(
+                LucideIcons.wrench,
+                color: Colors.white,
+                size: 24,
+              ),
             ),
             label: 'Repair',
           ),
-          BottomNavigationBarItem(icon: Icon(LucideIcons.info), label: 'About'),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
+            icon: Icon(LucideIcons.info),
+            label: 'About',
+          ),
+          const BottomNavigationBarItem(
             icon: Icon(LucideIcons.user),
             label: 'Profile',
           ),

@@ -3,15 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme.dart';
-import 'mobile_profile_page.dart';
-import 'mobile_repair_page.dart';
 import '../widgets/mobile_bottom_nav.dart';
 import '../services/api_service.dart';
 import '../services/notification_service.dart';
-import 'notifications_page.dart';
+import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'address_page.dart';
 
 class MobileHomeScreen extends StatefulWidget {
   const MobileHomeScreen({super.key});
@@ -294,10 +291,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
             // Left: Address Pill
             GestureDetector(
               onTap: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (c) => const AddressPage()),
-                );
+                final result = await context.push<bool>('/addresses');
                 if (result == true) {
                   _fetchUserData();
                 }
@@ -359,10 +353,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
             // Right: Icons
             GestureDetector(
               onTap: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (c) => const NotificationsPage()),
-                );
+                await context.push('/notifications');
                 _loadNotificationCount();
               },
               child: Stack(
@@ -402,10 +393,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
             const SizedBox(width: 12),
             GestureDetector(
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (c) => const MobileProfilePage()),
-                ).then((_) => _fetchUserData());
+                context.push('/profile').then((_) => _fetchUserData());
               },
               child: CircleAvatar(
                 radius: 16,
@@ -547,17 +535,11 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
         return GestureDetector(
           onTap: () {
             if (isMore) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (c) => const MobileRepairPage()),
-              );
+              context.go('/repair');
             } else {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (c) =>
-                      MobileRepairPage(initialIssue: item['name'] as String),
-                ),
+              context.go(
+                '/repair',
+                extra: {'initialIssue': item['name'] as String},
               );
             }
           },
@@ -790,14 +772,12 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (c) => MobileRepairPage(
-                        initialBrand: _selectedBrand,
-                        initialModel: _selectedModel,
-                      ),
-                    ),
+                  context.go(
+                    '/repair',
+                    extra: {
+                      'initialBrand': _selectedBrand,
+                      'initialModel': _selectedModel,
+                    },
                   );
                 },
                 style: ElevatedButton.styleFrom(

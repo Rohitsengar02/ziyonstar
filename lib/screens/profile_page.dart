@@ -1,21 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../theme.dart';
 import '../responsive.dart';
 import '../widgets/navbar.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/footer.dart';
-import 'edit_profile_page.dart';
-import 'my_bookings_screen.dart';
-import 'repair_page.dart';
-import 'about_page.dart';
-import 'contact_page.dart';
 import '../widgets/mobile_bottom_nav.dart';
-import 'notifications_page.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
-import 'sign_in_screen.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -42,12 +37,10 @@ class _ProfilePageState extends State<ProfilePage> {
       final String? uid = prefs.getString('user_uid');
 
       if (uid != null) {
-        // Try fetching from backend
         final profile = await _apiService.getUser(uid);
         if (profile != null) {
           if (mounted) setState(() => _userProfile = profile);
         } else {
-          // Fallback to local
           if (mounted) {
             setState(() {
               _userProfile = {
@@ -80,7 +73,6 @@ class _ProfilePageState extends State<ProfilePage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Navbar
             if (isDesktop)
               Container(
                 color: Colors.white,
@@ -90,16 +82,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 child: Navbar(scaffoldKey: _scaffoldKey),
               ),
-
-            // Profile Header
             _buildProfileHeader(isDesktop),
-
-            // Profile Actions Grid
             _buildProfileActions(isDesktop),
-
-            // Account Settings
             _buildAccountSettings(isDesktop),
-
             if (isDesktop) const Footer(),
             if (!isDesktop) const SizedBox(height: 20),
           ],
@@ -127,11 +112,9 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       child: Column(
         children: [
-          // Avatar with Animated Glow
           Stack(
             alignment: Alignment.center,
             children: [
-              // Glow effect
               Container(
                 width: 140,
                 height: 140,
@@ -142,7 +125,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
               ),
-              // Avatar with gradient border
               Container(
                 width: 120,
                 height: 120,
@@ -200,7 +182,6 @@ class _ProfilePageState extends State<ProfilePage> {
             ],
           ),
           const SizedBox(height: 32),
-          // Name
           _isLoading
               ? const CircularProgressIndicator(color: Colors.white)
               : Text(
@@ -213,7 +194,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
           const SizedBox(height: 12),
-          // Email
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
@@ -244,49 +224,9 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ),
           ),
-          const SizedBox(height: 10),
-          // Phone
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  LucideIcons.phone,
-                  size: 16,
-                  color: Colors.white.withOpacity(0.9),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _userProfile?['phone'] ?? '+1 (555) 000-0000',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: Colors.white.withOpacity(0.95),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const EditProfilePage()),
-              );
-              if (result == true) {
-                _loadUserProfile();
-              }
-            },
+            onPressed: () => context.go('/profile-setup'),
             icon: const Icon(LucideIcons.edit, size: 16),
             label: const Text("Edit Profile"),
             style: ElevatedButton.styleFrom(
@@ -310,35 +250,35 @@ class _ProfilePageState extends State<ProfilePage> {
         'title': 'My Bookings',
         'subtitle': 'View all your repair bookings',
         'gradient': [const Color(0xFF667eea), const Color(0xFF764ba2)],
-        'page': const MyBookingsScreen(),
+        'path': '/bookings',
       },
       {
         'icon': LucideIcons.wrench,
         'title': 'Repair Services',
         'subtitle': 'Book a new repair service',
         'gradient': [const Color(0xFFf093fb), const Color(0xFFF5576c)],
-        'page': const RepairPage(),
+        'path': '/repair',
       },
       {
         'icon': LucideIcons.info,
         'title': 'About Us',
         'subtitle': 'Learn more about Ziyonstar',
         'gradient': [const Color(0xFF4facfe), const Color(0xFF00f2fe)],
-        'page': const AboutPage(),
+        'path': '/about',
       },
       {
         'icon': LucideIcons.bell,
         'title': 'Notifications',
         'subtitle': 'Check updates and alerts',
         'gradient': [const Color(0xFFf6d365), const Color(0xFFfda085)],
-        'page': const NotificationsPage(),
+        'path': '/notifications',
       },
       {
         'icon': LucideIcons.messageCircle,
         'title': 'Contact Us',
         'subtitle': 'Get in touch with support',
         'gradient': [const Color(0xFF43e97b), const Color(0xFF38f9d7)],
-        'page': const ContactPage(),
+        'path': '/contact',
       },
     ];
 
@@ -371,14 +311,7 @@ class _ProfilePageState extends State<ProfilePage> {
             itemCount: actions.length,
             itemBuilder: (context, index) {
               return InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => actions[index]['page'] as Widget,
-                    ),
-                  );
-                },
+                onTap: () => context.go(actions[index]['path'] as String),
                 borderRadius: BorderRadius.circular(24),
                 child: Container(
                   decoration: BoxDecoration(
@@ -507,15 +440,13 @@ class _ProfilePageState extends State<ProfilePage> {
                   subtitle: 'Sign out of your account',
                   onTap: () async {
                     final prefs = await SharedPreferences.getInstance();
-                    await prefs.clear(); // Clear all data
-                    if (context.mounted) {
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(
-                          builder: (context) => const SignInScreen(),
-                        ),
-                        (route) => false,
-                      );
+                    await prefs.clear();
+                    try {
+                      await FirebaseAuth.instance.signOut();
+                    } catch (e) {
+                      debugPrint('Sign out error: $e');
                     }
+                    if (context.mounted) context.go('/login');
                   },
                   isDestructive: true,
                 ),

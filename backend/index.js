@@ -7,25 +7,54 @@ const app = express();
 // Connect Database
 connectDB();
 
-// Middleware
-app.use((req, res, next) => {
-    const origin = req.headers.origin || '*';
-    console.log(`[CORS DEBUG] ${req.method} ${req.url} - Origin: ${origin}`);
+const cors = require('cors');
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'access-control-request-private-network'],
+    credentials: true,
+}));
 
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, access-control-request-private-network');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
+// Nominatim Proxy to fix CORS issues on Flutter Web
+const axios = require('axios');
+app.get('/api/location/reverse', async (req, res) => {
+    try {
+        const { lat, lon } = req.query;
+        if (!lat || !lon) {
+            return res.status(400).json({ success: false, message: 'Latitude and longitude are required' });
+        }
 
-    // Private Network Access (PNA)
-    if (req.headers['access-control-request-private-network']) {
-        res.setHeader('Access-Control-Allow-Private-Network', 'true');
+        console.log(`[PROXY] Reverse geocoding for ${lat}, ${lon}`);
+        const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`, {
+            headers: { 'User-Agent': 'ZiyonStarApp/1.0' },
+            timeout: 10000
+        });
+
+        res.json(response.data);
+    } catch (error) {
+        console.error('[PROXY ERROR]', error.message);
+        res.status(500).json({ success: false, message: 'Failed to fetch address from Nominatim', error: error.message });
     }
+});
 
-    if (req.method === 'OPTIONS') {
-        return res.sendStatus(200);
+app.get('/api/location/search', async (req, res) => {
+    try {
+        const { q } = req.query;
+        if (!q) {
+            return res.status(400).json({ success: false, message: 'Search query is required' });
+        }
+
+        console.log(`[PROXY] Searching for ${q}`);
+        const response = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5`, {
+            headers: { 'User-Agent': 'ZiyonStarApp/1.0' },
+            timeout: 10000
+        });
+
+        res.json(response.data);
+    } catch (error) {
+        console.error('[PROXY ERROR]', error.message);
+        res.status(500).json({ success: false, message: 'Failed to search address from Nominatim', error: error.message });
     }
-    next();
 });
 
 app.use(express.json());

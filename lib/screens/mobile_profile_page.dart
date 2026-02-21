@@ -3,17 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
 import '../services/api_service.dart';
-import 'sign_up_screen.dart';
 import '../theme.dart';
 import '../widgets/mobile_bottom_nav.dart';
-import 'edit_profile_page.dart';
-import 'my_bookings_screen.dart';
-import 'about_page.dart';
-import 'address_page.dart';
-import 'contact_page.dart';
-import 'privacy_policy_page.dart';
-import 'return_refund_page.dart';
 
 class MobileProfilePage extends StatefulWidget {
   const MobileProfilePage({super.key});
@@ -189,15 +182,7 @@ class _MobileProfilePageState extends State<MobileProfilePage> {
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const EditProfilePage(),
-                ),
-              );
-              if (result == true) {
-                _loadUserProfile();
-              }
+              context.push('/profile-setup');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white.withOpacity(0.2),
@@ -227,10 +212,7 @@ class _MobileProfilePageState extends State<MobileProfilePage> {
             title: 'My Bookings',
             subtitle: 'Check repair status',
             color: Colors.blue,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MyBookingsScreen()),
-            ),
+            onTap: () => context.push('/bookings'),
           ),
           const SizedBox(height: 16),
           _buildMenuTile(
@@ -239,10 +221,7 @@ class _MobileProfilePageState extends State<MobileProfilePage> {
             title: 'Saved Addresses',
             subtitle: 'Manage home & office',
             color: Colors.orange,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AddressPage()),
-            ),
+            onTap: () => context.push('/addresses'),
           ),
           const SizedBox(height: 16),
           _buildMenuTile(
@@ -251,10 +230,7 @@ class _MobileProfilePageState extends State<MobileProfilePage> {
             title: 'About Us',
             subtitle: 'Know more about Ziyonstar',
             color: Colors.teal,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AboutPage()),
-            ),
+            onTap: () => context.push('/about'),
           ),
           const SizedBox(height: 16),
           _buildMenuTile(
@@ -263,10 +239,7 @@ class _MobileProfilePageState extends State<MobileProfilePage> {
             title: 'Contact Us',
             subtitle: 'Get in touch',
             color: Colors.orange,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ContactPage()),
-            ),
+            onTap: () => context.push('/contact'),
           ),
           const SizedBox(height: 16),
           _buildMenuTile(
@@ -275,10 +248,7 @@ class _MobileProfilePageState extends State<MobileProfilePage> {
             title: 'Privacy Policy',
             subtitle: 'Data protection',
             color: Colors.purple,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const PrivacyPolicyPage()),
-            ),
+            onTap: () => context.push('/privacy-policy'),
           ),
           const SizedBox(height: 16),
           _buildMenuTile(
@@ -287,10 +257,7 @@ class _MobileProfilePageState extends State<MobileProfilePage> {
             title: 'Return & Refund',
             subtitle: 'Policy details',
             color: Colors.redAccent,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ReturnRefundPage()),
-            ),
+            onTap: () => context.push('/return-refund'),
           ),
         ],
       ),
@@ -373,23 +340,17 @@ class _MobileProfilePageState extends State<MobileProfilePage> {
           color: Colors.transparent,
           child: InkWell(
             onTap: () async {
-              // 1. Clear Local Storage
               final prefs = await SharedPreferences.getInstance();
               await prefs.clear();
 
-              // 2. Sign Out from Firebase
               try {
                 await FirebaseAuth.instance.signOut();
               } catch (e) {
                 debugPrint("Firebase SignOut Error: $e");
               }
 
-              // 3. Navigate to Sign Up Screen
               if (context.mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const SignUpScreen()),
-                  (route) => false,
-                );
+                context.go('/register');
               }
             },
             borderRadius: BorderRadius.circular(16),

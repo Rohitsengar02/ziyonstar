@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:go_router/go_router.dart';
 import '../services/notification_service.dart';
-import 'my_bookings_screen.dart';
 import '../services/api_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -111,10 +111,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
 
     // Navigate to My Bookings page
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const MyBookingsScreen()),
-    );
+    context.go('/bookings');
   }
 
   String _formatNotifTime(dynamic notif) {

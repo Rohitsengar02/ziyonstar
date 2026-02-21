@@ -8,12 +8,12 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ziyonstar/responsive.dart';
 
+import 'package:go_router/go_router.dart';
 import 'package:ziyonstar/widgets/navbar.dart';
 import 'package:ziyonstar/widgets/footer.dart';
 import 'package:ziyonstar/widgets/app_drawer.dart';
 import 'package:ziyonstar/screens/mobile_home_screen.dart';
 import 'package:ziyonstar/services/api_service.dart';
-import 'package:ziyonstar/screens/repair_page.dart';
 
 // Scroll-triggered animation wrapper for cards
 class FadeInScaleCard extends StatefulWidget {
@@ -315,10 +315,7 @@ class _TextContent extends StatelessWidget {
           children: [
             ElevatedButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const RepairPage()),
-                );
+                context.go('/repair');
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryButton,
@@ -345,10 +342,7 @@ class _TextContent extends StatelessWidget {
             SizedBox(width: isDesktop ? 32 : 16),
             TextButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const RepairPage()),
-                );
+                context.go('/repair');
               },
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -1655,16 +1649,14 @@ class _InstantQuoteSectionState extends State<_InstantQuoteSection> {
             child: ElevatedButton(
               onPressed: (selectedBrand != null && selectedModel != null)
                   ? () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => RepairPage(
-                            deviceBrand: selectedBrand!,
-                            deviceModel: selectedModel!,
-                            modelData: selectedModelData,
-                            initialIssue: selectedIssue,
-                          ),
-                        ),
+                      context.go(
+                        '/repair',
+                        extra: {
+                          'deviceBrand': selectedBrand!,
+                          'deviceModel': selectedModel!,
+                          'modelData': selectedModelData,
+                          'initialIssue': selectedIssue,
+                        },
                       );
                     }
                   : null,
@@ -3672,15 +3664,13 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
               child: ElevatedButton(
                 onPressed: selectedBrand != null && selectedModel != null
                     ? () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => RepairPage(
-                              deviceBrand: selectedBrand!,
-                              deviceModel: selectedModel!,
-                              modelData: selectedModelData,
-                            ),
-                          ),
+                        context.go(
+                          '/repair',
+                          extra: {
+                            'deviceBrand': selectedBrand!,
+                            'deviceModel': selectedModel!,
+                            'modelData': selectedModelData,
+                          },
                         );
                       }
                     : null,

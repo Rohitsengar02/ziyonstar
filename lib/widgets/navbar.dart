@@ -2,18 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:go_router/go_router.dart';
 import '../theme.dart';
 import '../responsive.dart';
-import '../screens/repair_page.dart';
-import '../screens/my_bookings_screen.dart';
-import '../screens/about_page.dart';
-import '../screens/contact_page.dart';
-import '../screens/mobile_profile_page.dart';
-import '../screens/home_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../screens/sign_in_screen.dart';
 import '../services/api_service.dart';
-import '../screens/address_picker_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Navbar extends StatefulWidget {
@@ -85,10 +78,8 @@ class _NavbarState extends State<Navbar> {
 
     setState(() => _isLoadingLocation = true);
     try {
-      // Use Firebase UID directly if the backend supports it, or consistent with AddressPickerScreen
       final addresses = await _apiService.getAddresses(user.uid);
 
-      // If that returns empty, try the Mongo ID lookup fallback (just in case)
       if (addresses.isEmpty) {
         final mongoUser = await _apiService.getUser(user.uid);
         if (mongoUser != null) {
@@ -275,21 +266,10 @@ class _NavbarState extends State<Navbar> {
                     Navigator.pop(context);
                     final user = FirebaseAuth.instance.currentUser;
                     if (user != null) {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              AddressPickerScreen(userId: user.uid),
-                        ),
-                      );
+                      await context.push('/address-picker?userId=${user.uid}');
                       _fetchUserAddresses();
                     } else {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SignInScreen(),
-                        ),
-                      );
+                      context.push('/login');
                     }
                   },
                   icon: const Icon(LucideIcons.plus, size: 18),
@@ -336,11 +316,7 @@ class _NavbarState extends State<Navbar> {
             children: [
               InkWell(
                 onTap: () {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (context) => const HomeScreen()),
-                    (route) => false,
-                  );
+                  context.go('/');
                 },
                 child: Row(
                   children: [
@@ -441,51 +417,15 @@ class _NavbarState extends State<Navbar> {
           if (isDesktop)
             Row(
               children: [
-                _navLink('Home', active: true),
                 _navLink(
-                  'Repair',
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const RepairPage(),
-                      ),
-                    );
-                  },
+                  'Home',
+                  active: true,
+                  onPressed: () => context.go('/'),
                 ),
-                _navLink(
-                  'About',
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AboutPage(),
-                      ),
-                    );
-                  },
-                ),
-                _navLink(
-                  'Bookings',
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const MyBookingsScreen(),
-                      ),
-                    );
-                  },
-                ),
-                _navLink(
-                  'Contact',
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ContactPage(),
-                      ),
-                    );
-                  },
-                ),
+                _navLink('Repair', onPressed: () => context.go('/repair')),
+                _navLink('About', onPressed: () => context.go('/about')),
+                _navLink('Bookings', onPressed: () => context.go('/bookings')),
+                _navLink('Contact', onPressed: () => context.go('/contact')),
               ],
             ),
           StreamBuilder<User?>(
@@ -499,12 +439,7 @@ class _NavbarState extends State<Navbar> {
                   if (isLoggedIn) ...[
                     InkWell(
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const MobileProfilePage(),
-                          ),
-                        );
+                        context.push('/profile');
                       },
                       child: Container(
                         width: 40,
@@ -543,14 +478,7 @@ class _NavbarState extends State<Navbar> {
                     ),
                   ] else ...[
                     TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SignInScreen(),
-                          ),
-                        );
-                      },
+                      onPressed: () => context.push('/login'),
                       child: Text(
                         'Sign In',
                         style: GoogleFonts.inter(
@@ -565,19 +493,9 @@ class _NavbarState extends State<Navbar> {
                     ElevatedButton(
                       onPressed: () {
                         if (isLoggedIn) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const RepairPage(),
-                            ),
-                          );
+                          context.push('/repair');
                         } else {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SignInScreen(),
-                            ),
-                          );
+                          context.push('/login');
                         }
                       },
                       style: ElevatedButton.styleFrom(

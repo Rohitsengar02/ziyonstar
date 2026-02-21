@@ -5,10 +5,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ziyonstar/services/api_service.dart';
-import 'package:ziyonstar/screens/home_screen.dart';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:go_router/go_router.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   final String name;
@@ -122,10 +123,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       await prefs.setString('user_phone', _phoneController.text.trim());
 
       if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-          (route) => false,
-        );
+        context.go('/home');
       }
     } catch (e) {
       ScaffoldMessenger.of(

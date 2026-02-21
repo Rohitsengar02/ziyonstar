@@ -3,8 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ziyonstar/screens/sign_in_screen.dart';
-import 'package:ziyonstar/screens/profile_setup_screen.dart';
+import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -16,15 +15,12 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
-  // Unused ApiService removed as logic moved to ProfileSetupScreen
   bool _isGoogleLoading = false;
 
-  // Real Google Sign In
   Future<void> _handleGoogleSignUp() async {
     setState(() => _isGoogleLoading = true);
 
     try {
-      // 1. Configure and Trigger Google Sign In
       final GoogleSignIn googleSignIn = GoogleSignIn(
         clientId:
             '1038243894712-7919cpcl7j7v0oa282boj4vru1u33hng.apps.googleusercontent.com',
@@ -34,33 +30,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
       if (googleUser == null) {
-        // User canceled operation
         setState(() => _isGoogleLoading = false);
         return;
       }
 
-      // 2. Authentication
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
-
       final OAuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // 3. Firebase Sign In (Attempt)
       User? firebaseUser;
       try {
         final UserCredential userCredential = await FirebaseAuth.instance
             .signInWithCredential(credential);
         firebaseUser = userCredential.user;
       } catch (e) {
-        debugPrint(
-          "Firebase Auth execution failed (Proceeding with Google User): $e",
-        );
+        debugPrint("Firebase Auth execution failed: $e");
       }
 
-      // 4. Register to Backend (Using Firebase User or Raw Google User)
       if (firebaseUser != null) {
         await _registerAndNavigate(
           name: firebaseUser.displayName ?? 'Google User',
@@ -70,11 +59,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
           phone: firebaseUser.phoneNumber,
         );
       } else {
-        // Fallback: Use Google Account Data directly
         await _registerAndNavigate(
           name: googleUser.displayName ?? 'Google User',
           email: googleUser.email,
-          uid: googleUser.id, // Use Google ID as fallback UID
+          uid: googleUser.id,
           photoUrl: googleUser.photoUrl,
           phone: null,
         );
@@ -102,24 +90,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
     String? photoUrl,
     String? phone,
   }) async {
-    // For Google Sign-Up, we always redirect to ProfileSetupScreen first
-    // because mobile number and profile setup are required.
-
     if (mounted) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_onboarded', true);
-      // We don't save everything yet, let ProfileSetupScreen handle the final save
-
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => ProfileSetupScreen(
-            name: name,
-            email: email,
-            uid: uid,
-            photoUrl: photoUrl,
-          ),
-        ),
-        (route) => false,
+      context.go(
+        '/profile-setup?name=$name&email=$email&uid=$uid&photoUrl=${photoUrl ?? ''}',
       );
     }
   }
@@ -138,13 +113,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
               elevation: 0,
               leading: IconButton(
                 icon: const Icon(LucideIcons.arrowLeft, color: Colors.black),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => context.pop(),
               ),
             ),
       body: isDesktop
           ? Row(
               children: [
-                // Left Side - Hero Image (Desktop only)
                 Expanded(
                   flex: 1,
                   child: Container(
@@ -153,14 +127,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Image.asset(
-                            'assets/images/signup_hero.png', // Ensure this asset exists or use a network placeholder
-                            height: 400,
-                            errorBuilder: (c, e, s) => Icon(
-                              LucideIcons.userPlus,
-                              size: 100,
-                              color: Colors.orange,
-                            ),
+                          const Icon(
+                            LucideIcons.userPlus,
+                            size: 100,
+                            color: Colors.orange,
                           ),
                           const SizedBox(height: 32),
                           Text(
@@ -176,7 +146,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                   ),
                 ),
-                // Right Side - Form
                 Expanded(
                   flex: 1,
                   child: Center(
@@ -204,7 +173,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (!isDesktop) ...[const Spacer()],
         Center(
           child: Container(
             height: 100,
@@ -222,7 +190,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
           ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
         ),
         const SizedBox(height: 32),
-
         Text(
           'Create Account',
           style: GoogleFonts.outfit(
@@ -232,19 +199,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
           ),
           textAlign: TextAlign.center,
         ).animate().fadeIn().slideY(begin: 0.2),
-
         const SizedBox(height: 8),
-
         Text(
           'Join ZiyonStar for fast mobile repairs.',
           style: GoogleFonts.inter(fontSize: 16, color: Colors.grey),
           textAlign: TextAlign.center,
         ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.2),
-
-        if (!isDesktop) const Spacer(),
-        if (isDesktop) const SizedBox(height: 40),
-
-        // Google Button
+        const SizedBox(height: 40),
         ElevatedButton(
           onPressed: (_isGoogleLoading) ? null : _handleGoogleSignUp,
           style: ElevatedButton.styleFrom(
@@ -266,14 +227,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
               : Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Image.asset(
-                      'assets/images/brand_google.png',
-                      height: 24,
-                      errorBuilder: (context, error, stackTrace) => const Icon(
-                        LucideIcons.chrome,
-                        color: Colors.blue,
-                        size: 24,
-                      ),
+                    const Icon(
+                      LucideIcons.chrome,
+                      color: Colors.blue,
+                      size: 24,
                     ),
                     const SizedBox(width: 12),
                     Text(
@@ -286,9 +243,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ],
                 ),
         ).animate().fadeIn(delay: 400.ms),
-
         const SizedBox(height: 32),
-
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -297,12 +252,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               style: GoogleFonts.inter(color: Colors.grey[600]),
             ),
             GestureDetector(
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (c) => const SignInScreen()),
-                );
-              },
+              onTap: () => context.go('/login'),
               child: Text(
                 'Sign In',
                 style: GoogleFonts.inter(

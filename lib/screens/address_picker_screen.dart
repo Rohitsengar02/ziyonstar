@@ -97,8 +97,9 @@ class _AddressPickerScreenState extends State<AddressPickerScreen> {
 
     setState(() => _isFetchingAddress = true);
     try {
+      // Use the proxy endpoint for Nominatim
       final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/reverse?format=json&lat=${location.latitude}&lon=${location.longitude}&zoom=18&addressdetails=1',
+        '${ApiService.baseUrl}/location/reverse?lat=${location.latitude}&lon=${location.longitude}',
       );
 
       final response = await http.get(

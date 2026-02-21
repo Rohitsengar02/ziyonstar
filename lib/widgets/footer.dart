@@ -1,15 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:go_router/go_router.dart';
 import '../responsive.dart';
-import '../screens/about_page.dart';
-import '../screens/contact_page.dart';
-import '../screens/my_bookings_screen.dart';
-import '../screens/repair_page.dart';
-import '../screens/privacy_policy_page.dart';
-import '../screens/terms_conditions_page.dart';
-import '../screens/return_refund_page.dart';
-import '../screens/child_protection_page.dart';
 
 class Footer extends StatelessWidget {
   const Footer({super.key});
@@ -82,19 +75,19 @@ class Footer extends StatelessWidget {
                           _buildFooterLink(
                             context,
                             'Privacy Policy',
-                            const PrivacyPolicyPage(),
+                            '/privacy-policy',
                           ),
                           const SizedBox(width: 24),
                           _buildFooterLink(
                             context,
                             'Terms & Conditions',
-                            const TermsConditionsPage(),
+                            '/terms-conditions',
                           ),
                           const SizedBox(width: 24),
                           _buildFooterLink(
                             context,
                             'Return & Refund',
-                            const ReturnRefundPage(),
+                            '/return-refund',
                           ),
                         ],
                       ),
@@ -118,18 +111,14 @@ class Footer extends StatelessWidget {
                           _buildFooterLink(
                             context,
                             'Privacy',
-                            const PrivacyPolicyPage(),
+                            '/privacy-policy',
                           ),
                           _buildFooterLink(
                             context,
                             'Terms',
-                            const TermsConditionsPage(),
+                            '/terms-conditions',
                           ),
-                          _buildFooterLink(
-                            context,
-                            'Refund',
-                            const ReturnRefundPage(),
-                          ),
+                          _buildFooterLink(context, 'Refund', '/return-refund'),
                         ],
                       ),
                     ],
@@ -212,11 +201,11 @@ class Footer extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        _buildClickableLink(context, 'Home', null),
-        _buildClickableLink(context, 'Repair Services', const RepairPage()),
-        _buildClickableLink(context, 'About Us', const AboutPage()),
-        _buildClickableLink(context, 'My Bookings', const MyBookingsScreen()),
-        _buildClickableLink(context, 'Contact Us', const ContactPage()),
+        _buildClickableLink(context, 'Home', '/'),
+        _buildClickableLink(context, 'Repair Services', '/repair'),
+        _buildClickableLink(context, 'About Us', '/about'),
+        _buildClickableLink(context, 'My Bookings', '/bookings'),
+        _buildClickableLink(context, 'Contact Us', '/contact'),
       ],
     );
   }
@@ -256,26 +245,10 @@ class Footer extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        _buildClickableLink(
-          context,
-          'Privacy Policy',
-          const PrivacyPolicyPage(),
-        ),
-        _buildClickableLink(
-          context,
-          'Terms & Conditions',
-          const TermsConditionsPage(),
-        ),
-        _buildClickableLink(
-          context,
-          'Return & Refund',
-          const ReturnRefundPage(),
-        ),
-        _buildClickableLink(
-          context,
-          'Child Protection',
-          const ChildProtectionPage(),
-        ),
+        _buildClickableLink(context, 'Privacy Policy', '/privacy-policy'),
+        _buildClickableLink(context, 'Terms & Conditions', '/terms-conditions'),
+        _buildClickableLink(context, 'Return & Refund', '/return-refund'),
+        _buildClickableLink(context, 'Child Protection', '/child-protection'),
       ],
     );
   }
@@ -294,16 +267,15 @@ class Footer extends StatelessWidget {
     );
   }
 
-  Widget _buildClickableLink(BuildContext context, String text, Widget? page) {
+  Widget _buildClickableLink(BuildContext context, String text, String? path) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: () {
-          if (page != null) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => page),
-            );
+          if (path != null) {
+            context.go(path);
+          } else {
+            context.go('/');
           }
         },
         child: Text(
@@ -330,10 +302,10 @@ class Footer extends StatelessWidget {
     );
   }
 
-  Widget _buildFooterLink(BuildContext context, String text, Widget page) {
+  Widget _buildFooterLink(BuildContext context, String text, String path) {
     return InkWell(
       onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (context) => page));
+        context.push(path);
       },
       child: Text(
         text,

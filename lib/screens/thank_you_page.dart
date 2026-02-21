@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:go_router/go_router.dart';
 import '../theme.dart';
-import 'mobile_home_screen.dart';
-import 'my_bookings_screen.dart';
 
 class ThankYouPage extends StatelessWidget {
   const ThankYouPage({super.key});
@@ -58,12 +57,7 @@ class ThankYouPage extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const MyBookingsScreen(),
-                      ),
-                    );
+                    context.go('/bookings');
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryButton,
@@ -87,13 +81,7 @@ class ThankYouPage extends StatelessWidget {
                 width: double.infinity,
                 child: OutlinedButton(
                   onPressed: () {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const MobileHomeScreen(),
-                      ),
-                      (route) => false,
-                    );
+                    context.go('/home');
                   },
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),

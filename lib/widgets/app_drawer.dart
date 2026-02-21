@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:go_router/go_router.dart';
 import '../theme.dart';
-import '../screens/repair_page.dart';
-import '../screens/my_bookings_screen.dart';
-import '../screens/about_page.dart';
-import '../screens/contact_page.dart';
-import '../screens/notifications_page.dart';
-import '../screens/mobile_profile_page.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -82,20 +77,17 @@ class AppDrawer extends StatelessWidget {
                     _buildDrawerItem(
                       icon: LucideIcons.home,
                       title: 'Home',
-                      isActive: true,
-                      onTap: () => Navigator.pop(context),
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.go('/');
+                      },
                     ),
                     _buildDrawerItem(
                       icon: LucideIcons.wrench,
                       title: 'Repair Services',
                       onTap: () {
                         Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const RepairPage(),
-                          ),
-                        );
+                        context.go('/repair');
                       },
                     ),
                     _buildDrawerItem(
@@ -103,12 +95,7 @@ class AppDrawer extends StatelessWidget {
                       title: 'My Bookings',
                       onTap: () {
                         Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const MyBookingsScreen(),
-                          ),
-                        );
+                        context.go('/bookings');
                       },
                     ),
                     _buildDrawerItem(
@@ -116,12 +103,7 @@ class AppDrawer extends StatelessWidget {
                       title: 'My Profile',
                       onTap: () {
                         Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const MobileProfilePage(),
-                          ),
-                        );
+                        context.go('/profile');
                       },
                     ),
                     _buildDrawerItem(
@@ -129,12 +111,7 @@ class AppDrawer extends StatelessWidget {
                       title: 'Notifications',
                       onTap: () {
                         Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const NotificationsPage(),
-                          ),
-                        );
+                        context.go('/notifications');
                       },
                     ),
                     _buildDrawerItem(
@@ -142,12 +119,7 @@ class AppDrawer extends StatelessWidget {
                       title: 'About Us',
                       onTap: () {
                         Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AboutPage(),
-                          ),
-                        );
+                        context.go('/about');
                       },
                     ),
                     _buildDrawerItem(
@@ -155,12 +127,7 @@ class AppDrawer extends StatelessWidget {
                       title: 'Contact Us',
                       onTap: () {
                         Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ContactPage(),
-                          ),
-                        );
+                        context.go('/contact');
                       },
                     ),
                     const SizedBox(height: 16),
@@ -175,7 +142,10 @@ class AppDrawer extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.pop(context);
+                          context.go('/login');
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: AppColors.primaryButton,
@@ -202,7 +172,7 @@ class AppDrawer extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      '© 2024 Ziyonstar',
+                      '© 2026 Ziyonstar',
                       style: GoogleFonts.inter(
                         color: Colors.white.withAlpha(180),
                         fontSize: 12,

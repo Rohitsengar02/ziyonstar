@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ziyonstar/screens/home_screen.dart';
 import 'package:ziyonstar/services/api_service.dart';
-import 'package:ziyonstar/screens/profile_setup_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -108,16 +107,8 @@ class _SignInScreenState extends State<SignInScreen> {
 
       if (isProfileIncomplete) {
         if (mounted) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (_) => ProfileSetupScreen(
-                name: existingUser?['name'] ?? name,
-                email: email,
-                uid: uid,
-                photoUrl: existingUser?['photoUrl'] ?? photoUrl,
-              ),
-            ),
-            (route) => false,
+          context.go(
+            '/profile-setup?name=${existingUser?['name'] ?? name}&email=$email&uid=$uid&photoUrl=${existingUser?['photoUrl'] ?? photoUrl ?? ''}',
           );
         }
         return;
@@ -147,24 +138,13 @@ class _SignInScreenState extends State<SignInScreen> {
           await prefs.setString('user_phone', userData['phone']);
         }
 
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-          (route) => false,
-        );
+        context.go('/home');
       }
     } catch (e) {
       debugPrint("Login/Navigate Error: $e");
       if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (_) => ProfileSetupScreen(
-              name: name,
-              email: email,
-              uid: uid,
-              photoUrl: photoUrl,
-            ),
-          ),
-          (route) => false,
+        context.go(
+          '/profile-setup?name=$name&email=$email&uid=$uid&photoUrl=${photoUrl ?? ''}',
         );
       }
     } finally {

@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme.dart';
 import 'mobile_profile_page.dart';
-import 'my_bookings_screen.dart';
 import 'location_picker_page.dart';
 import '../services/location_service.dart';
-
-import 'technician_profile_page.dart';
 import '../services/api_service.dart';
 import '../services/socket_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -462,10 +460,22 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
           // Trigger Online Payment (UPI)
           await _showPaymentDialog(bookingResponse);
         } else {
-          setState(() => _isBookingLoading = false);
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (c) => const MyBookingsScreen()),
+          context.go(
+            '/booking-success',
+            extra: {
+              'deviceName': '$_selectedBrand $_selectedModel',
+              'technicianName': _selectedTechIndex != -1
+                  ? _apiTechnicians[_selectedTechIndex]['name']
+                  : 'Technician',
+              'technicianImage': _selectedTechIndex != -1
+                  ? _apiTechnicians[_selectedTechIndex]['photoUrl']
+                  : '',
+              'selectedIssues': _selectedIssues.toList(),
+              'timeSlot': _selectedTimeSlot!,
+              'date': _selectedDate,
+              'amount': _calculateTotal().toDouble(),
+              'otp': bookingResponse?['otp']?.toString() ?? '000000',
+            },
           );
         }
       }
@@ -677,19 +687,42 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
     statusTimer?.cancel();
     if (isPaymentSuccessful) {
       if (mounted) {
-        setState(() => _isBookingLoading = false);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (c) => const MyBookingsScreen()),
+        context.go(
+          '/booking-success',
+          extra: {
+            'deviceName': '$_selectedBrand $_selectedModel',
+            'technicianName': _selectedTechIndex != -1
+                ? _apiTechnicians[_selectedTechIndex]['name']
+                : 'Technician',
+            'technicianImage': _selectedTechIndex != -1
+                ? _apiTechnicians[_selectedTechIndex]['photoUrl']
+                : '',
+            'selectedIssues': _selectedIssues.toList(),
+            'timeSlot': _selectedTimeSlot!,
+            'date': _selectedDate,
+            'amount': _calculateTotal().toDouble(),
+            'otp': booking['otp']?.toString() ?? '000000',
+          },
         );
       }
     } else {
       if (mounted) {
-        setState(() => _isBookingLoading = false);
-        // We still created the booking, but payment failed/cancelled
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (c) => const MyBookingsScreen()),
+        context.go(
+          '/booking-success',
+          extra: {
+            'deviceName': '$_selectedBrand $_selectedModel',
+            'technicianName': _selectedTechIndex != -1
+                ? _apiTechnicians[_selectedTechIndex]['name']
+                : 'Technician',
+            'technicianImage': _selectedTechIndex != -1
+                ? _apiTechnicians[_selectedTechIndex]['photoUrl']
+                : '',
+            'selectedIssues': _selectedIssues.toList(),
+            'timeSlot': _selectedTimeSlot!,
+            'date': _selectedDate,
+            'amount': _calculateTotal().toDouble(),
+            'otp': booking['otp']?.toString() ?? '000000',
+          },
         );
       }
     }
@@ -1747,14 +1780,9 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
                                       ),
                                       GestureDetector(
                                         onTap: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (c) =>
-                                                  TechnicianProfilePage(
-                                                    technician: tech,
-                                                  ),
-                                            ),
+                                          context.push(
+                                            '/technician-profile',
+                                            extra: tech,
                                           );
                                         },
                                         child: Container(

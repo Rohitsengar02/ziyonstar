@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme.dart';
 import '../responsive.dart';
@@ -10,9 +11,7 @@ import '../widgets/app_drawer.dart';
 import '../services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'booking_success_screen.dart';
-import 'address_picker_screen.dart';
-import 'sign_in_screen.dart';
+
 import 'package:qr_flutter/qr_flutter.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -208,10 +207,7 @@ class _RepairPageState extends State<RepairPage> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SignInScreen()),
-              );
+              context.push('/login');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryButton,
@@ -332,20 +328,18 @@ class _RepairPageState extends State<RepairPage> {
         if (_currentPaymentMethod == 'Online Payment' && result != null) {
           await _showPaymentDialog(result, technician);
         } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => BookingSuccessScreen(
-                deviceName: '$_currentBrand $_currentModel',
-                technicianName: technician['name'] ?? 'Technician',
-                technicianImage: technician['photoUrl'] ?? '',
-                selectedIssues: _selectedIssues.toList(),
-                timeSlot: _selectedTimeSlot!,
-                date: _selectedDate,
-                amount: _calculateTotal().toDouble(),
-                otp: result?['otp']?.toString() ?? '000000',
-              ),
-            ),
+          context.go(
+            '/booking-success',
+            extra: {
+              'deviceName': '$_currentBrand $_currentModel',
+              'technicianName': technician['name'] ?? 'Technician',
+              'technicianImage': technician['photoUrl'] ?? '',
+              'selectedIssues': _selectedIssues.toList(),
+              'timeSlot': _selectedTimeSlot!,
+              'date': _selectedDate,
+              'amount': _calculateTotal().toDouble(),
+              'otp': result?['otp']?.toString() ?? '000000',
+            },
           );
         }
       }
@@ -379,20 +373,18 @@ class _RepairPageState extends State<RepairPage> {
           technician: technician,
           apiService: _apiService,
           onSuccess: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => BookingSuccessScreen(
-                  deviceName: '$_currentBrand $_currentModel',
-                  technicianName: technician['name'] ?? 'Technician',
-                  technicianImage: technician['photoUrl'] ?? '',
-                  selectedIssues: _selectedIssues.toList(),
-                  timeSlot: _selectedTimeSlot!,
-                  date: _selectedDate,
-                  amount: double.parse(booking['totalPrice'].toString()),
-                  otp: booking['otp']?.toString() ?? '000000',
-                ),
-              ),
+            context.go(
+              '/booking-success',
+              extra: {
+                'deviceName': '$_currentBrand $_currentModel',
+                'technicianName': technician['name'] ?? 'Technician',
+                'technicianImage': technician['photoUrl'] ?? '',
+                'selectedIssues': _selectedIssues.toList(),
+                'timeSlot': _selectedTimeSlot!,
+                'date': _selectedDate,
+                'amount': double.parse(booking['totalPrice'].toString()),
+                'otp': booking['otp']?.toString() ?? '000000',
+              },
             );
           },
         );
@@ -1973,12 +1965,7 @@ class _RepairPageState extends State<RepairPage> {
       _showLoginPrompt();
       return;
     }
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AddressPickerScreen(userId: _userId),
-      ),
-    );
+    final result = await context.push('/address-picker?userId=$_userId');
 
     if (result != null && result is Map<String, dynamic>) {
       setState(() {
