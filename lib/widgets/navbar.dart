@@ -321,29 +321,14 @@ class _NavbarState extends State<Navbar> {
                 child: Row(
                   children: [
                     Container(
-                      width: 40,
-                      height: 40,
+                      height: 80,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
-                        ),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Center(
-                        child: Icon(
-                          LucideIcons.smartphone,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Ziyonstar',
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textHeading,
+                      clipBehavior: Clip.antiAlias,
+                      child: Image.asset(
+                        'assets/images/app_logo.png',
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ],

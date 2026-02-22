@@ -227,19 +227,10 @@ class _SignInScreenState extends State<SignInScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Center(
-          child: Container(
-            height: 100,
-            width: 100,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.blue.shade50,
-            ),
-            child: const Icon(
-              LucideIcons.smartphone,
-              size: 50,
-              color: Colors.blue,
-            ),
+          child: Image.asset(
+            'assets/images/app_logo.png',
+            height: 240,
+            fit: BoxFit.contain,
           ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
         ),
         const SizedBox(height: 32),
