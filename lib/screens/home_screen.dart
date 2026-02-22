@@ -206,6 +206,23 @@ class _HeroSection extends StatelessWidget {
 class _TextContent extends StatelessWidget {
   const _TextContent();
 
+  void _showDeviceSelectModal(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: const _DeviceSearchWidget(),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isDesktop = ResponsiveLayout.isDesktop(context);
@@ -315,7 +332,7 @@ class _TextContent extends StatelessWidget {
           children: [
             ElevatedButton(
               onPressed: () {
-                context.go('/repair');
+                _showDeviceSelectModal(context);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryButton,
@@ -342,7 +359,7 @@ class _TextContent extends StatelessWidget {
             SizedBox(width: isDesktop ? 32 : 16),
             TextButton(
               onPressed: () {
-                context.go('/repair');
+                _showDeviceSelectModal(context);
               },
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -1086,7 +1103,7 @@ class _RepairCategoriesSectionState extends State<_RepairCategoriesSection> {
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 16,
                                 ),
-                                child: _buildCategoryCard(cat),
+                                child: _buildCategoryCard(cat, context),
                               );
                             },
                           ),
@@ -1100,9 +1117,33 @@ class _RepairCategoriesSectionState extends State<_RepairCategoriesSection> {
     );
   }
 
-  Widget _buildCategoryCard(Map<String, dynamic> cat) {
-    return Container(
-      width: 260,
+  void _showDeviceSelectModal(BuildContext context, {String? initialIssue, String? initialBrand}) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: _DeviceSearchWidget(
+              initialIssue: initialIssue,
+              initialBrand: initialBrand,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCategoryCard(Map<String, dynamic> cat, BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        _showDeviceSelectModal(context, initialIssue: cat['label'] as String);
+      },
+      child: Container(
+        width: 260,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -1186,7 +1227,7 @@ class _RepairCategoriesSectionState extends State<_RepairCategoriesSection> {
           ),
         ],
       ),
-    ).animate().scale(
+    )).animate().scale(
       delay: 100.ms,
       duration: 400.ms,
       curve: Curves.easeOutBack,
@@ -1952,7 +1993,7 @@ class _CarouselSectionState extends State<_CarouselSection> {
                           final item = _items[index % _items.length];
                           return Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: _carouselCard(item),
+                            child: _carouselCard(item, context),
                           );
                         },
                       ),
@@ -2010,7 +2051,27 @@ class _CarouselSectionState extends State<_CarouselSection> {
     return 'assets/images/issues/issue_screen.png';
   }
 
-  Widget _carouselCard(dynamic item) {
+  void _showDeviceSelectModal(BuildContext context, {String? initialIssue, String? initialBrand}) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: _DeviceSearchWidget(
+              initialIssue: initialIssue,
+              initialBrand: initialBrand,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _carouselCard(dynamic item, BuildContext context) {
     // Dynamic data mapping
     final String title = item['name'] ?? item['category'] ?? 'Issue';
     final String subtitle = item['description'] ?? 'Expert repair service';
@@ -2019,8 +2080,12 @@ class _CarouselSectionState extends State<_CarouselSection> {
     // Get the appropriate issue image based on the title
     final String issueImagePath = _getIssueImagePath(title);
 
-    return Container(
-      width: 420, // Slightly wider for better content
+    return GestureDetector(
+      onTap: () {
+        _showDeviceSelectModal(context, initialIssue: title);
+      },
+      child: Container(
+        width: 420, // Slightly wider for better content
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
@@ -2109,7 +2174,7 @@ class _CarouselSectionState extends State<_CarouselSection> {
           ],
         ),
       ),
-    );
+    ));
   }
 }
 
@@ -2234,7 +2299,7 @@ class _BrandSelectionSectionState extends State<_BrandSelectionSection> {
                                     padding: EdgeInsets.symmetric(
                                       horizontal: isDesktop ? 16 : 10,
                                     ),
-                                    child: _brandCard(brand, index, isDesktop),
+                                    child: _brandCard(brand, index, isDesktop, context),
                                   );
                                 },
                               ),
@@ -2265,15 +2330,39 @@ class _BrandSelectionSectionState extends State<_BrandSelectionSection> {
     return colors[index % colors.length];
   }
 
-  Widget _brandCard(dynamic brand, int index, bool isDesktop) {
+  void _showDeviceSelectModal(BuildContext context, {String? initialIssue, String? initialBrand}) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: _DeviceSearchWidget(
+              initialIssue: initialIssue,
+              initialBrand: initialBrand,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _brandCard(dynamic brand, int index, bool isDesktop, BuildContext context) {
     final String name = brand['title'] ?? brand['name'] ?? '';
     final String firstLetter = name.isNotEmpty
         ? name.substring(0, 1).toUpperCase()
         : '?';
     final Color color = _getColor(index);
 
-    return Container(
-      width: isDesktop ? 220 : 180,
+    return GestureDetector(
+      onTap: () {
+        _showDeviceSelectModal(context, initialBrand: name);
+      },
+      child: Container(
+        width: isDesktop ? 220 : 180,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -2353,7 +2442,7 @@ class _BrandSelectionSectionState extends State<_BrandSelectionSection> {
           ),
         ],
       ),
-    ).animate().scale(
+    )).animate().scale(
       delay: 100.ms,
       duration: 400.ms,
       curve: Curves.easeOutBack,
@@ -3351,7 +3440,9 @@ class _DeliveryOptionsSectionState extends State<_DeliveryOptionsSection> {
 
 // Device Search Widget for Hero Section
 class _DeviceSearchWidget extends StatefulWidget {
-  const _DeviceSearchWidget();
+  final String? initialIssue;
+  final String? initialBrand;
+  const _DeviceSearchWidget({super.key, this.initialIssue, this.initialBrand});
 
   @override
   State<_DeviceSearchWidget> createState() => _DeviceSearchWidgetState();
@@ -3372,6 +3463,9 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
   void initState() {
     super.initState();
     _fetchBrands();
+    if (widget.initialBrand != null) {
+      selectedBrand = widget.initialBrand;
+    }
   }
 
   Future<void> _fetchBrands() async {
@@ -3382,6 +3476,17 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
           _apiBrands = brands;
           _isLoadingBrands = false;
         });
+        
+        // If initialBrand is provided, we need to fetch models for it once brands load
+        if (widget.initialBrand != null) {
+          final brand = _apiBrands.firstWhere(
+            (b) => b['title'] == widget.initialBrand,
+            orElse: () => null,
+          );
+          if (brand != null) {
+             _fetchModels(brand['_id']);
+          }
+        }
       }
     } catch (e) {
       debugPrint('Error fetching brands: $e');
@@ -3664,15 +3769,16 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
               child: ElevatedButton(
                 onPressed: selectedBrand != null && selectedModel != null
                     ? () {
-                        context.go(
-                          '/repair',
-                          extra: {
-                            'deviceBrand': selectedBrand!,
-                            'deviceModel': selectedModel!,
-                            'modelData': selectedModelData,
-                          },
-                        );
-                      }
+            final extraMap = <String, dynamic>{
+              'deviceBrand': selectedBrand!,
+              'deviceModel': selectedModel!,
+              'modelData': selectedModelData,
+            };
+            if (widget.initialIssue != null) {
+              extraMap['initialIssue'] = widget.initialIssue;
+            }
+            context.go('/repair', extra: extraMap);
+          }
                     : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryButton,

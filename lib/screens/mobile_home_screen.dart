@@ -340,14 +340,10 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
             ),
             const Spacer(),
             // Center: Title
-            Text(
-              'ZiyonStar',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w900,
-                fontSize: 20,
-                color: Colors.black,
-                letterSpacing: -0.5,
-              ),
+            Image.asset(
+              'assets/images/app_logo.png',
+              height: 80,
+              fit: BoxFit.contain,
             ),
             const Spacer(),
             // Right: Icons
@@ -516,6 +512,42 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
     );
   }
 
+  void _showDeviceSelectModal({String? initialIssue}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        margin: const EdgeInsets.only(top: 100),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: _buildDeviceSelector(initialIssue: initialIssue),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildMenuGrid() {
     return GridView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -534,14 +566,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
 
         return GestureDetector(
           onTap: () {
-            if (isMore) {
-              context.go('/repair');
-            } else {
-              context.go(
-                '/repair',
-                extra: {'initialIssue': item['name'] as String},
-              );
-            }
+            _showDeviceSelectModal(initialIssue: isMore ? null : item['name'] as String);
           },
           child: Column(
             children: [
@@ -668,7 +693,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
     );
   }
 
-  Widget _buildDeviceSelector() {
+  Widget _buildDeviceSelector({String? initialIssue}) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(24),
@@ -772,13 +797,14 @@ class _MobileHomeScreenState extends State<MobileHomeScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  context.go(
-                    '/repair',
-                    extra: {
-                      'initialBrand': _selectedBrand,
-                      'initialModel': _selectedModel,
-                    },
-                  );
+                  final extraMap = <String, dynamic>{
+                    'initialBrand': _selectedBrand,
+                    'initialModel': _selectedModel,
+                  };
+                  if (initialIssue != null) {
+                    extraMap['initialIssue'] = initialIssue;
+                  }
+                  context.go('/repair', extra: extraMap);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryButton,
