@@ -387,7 +387,33 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
 
-        const SizedBox(height: 32),
+        const SizedBox(height: 16),
+
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              "By continuing, you agree to our ",
+              style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
+            ),
+            GestureDetector(
+              onTap: () {
+                Navigator.pushNamed(context, '/privacy-policy');
+              },
+              child: Text(
+                "Privacy Policy",
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  decoration: TextDecoration.underline,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 24),
 
         Row(
           mainAxisAlignment: MainAxisAlignment.center,

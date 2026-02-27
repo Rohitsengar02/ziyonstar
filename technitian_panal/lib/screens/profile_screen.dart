@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
 import 'contact_admin_page.dart';
+import 'notifications_screen.dart';
 import 'login_screen.dart';
 import 'profile/personal_info_screen.dart';
 import 'profile/kyc_documents_screen.dart';
@@ -14,6 +15,7 @@ import 'profile/bank_details_screen.dart';
 import 'profile/subscription_fees_screen.dart';
 import 'profile/notifications_prefs_screen.dart';
 import 'profile/terms_conditions_screen.dart';
+import 'profile/privacy_policy_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -433,7 +435,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) =>
-                                    const NotificationsPrefsScreen(),
+                                    const NotificationsScreen(),
                               ),
                             ),
                           ),
@@ -468,6 +470,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               MaterialPageRoute(
                                 builder: (context) =>
                                     const TermsConditionsScreen(),
+                              ),
+                            ),
+                          ),
+                          _buildMenuItem(
+                            LucideIcons.shield,
+                            'Privacy Policy',
+                            'How we handle your data',
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const PrivacyPolicyScreen(),
                               ),
                             ),
                           ),

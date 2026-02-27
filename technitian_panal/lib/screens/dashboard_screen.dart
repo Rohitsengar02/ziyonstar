@@ -10,6 +10,7 @@ import 'profile_screen.dart';
 import 'job_details_screen.dart';
 import '../services/api_service.dart';
 import '../services/socket_service.dart';
+import 'notifications_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Map<String, dynamic>?
@@ -103,6 +104,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _playNotificationSound() async {
+    if (_globalPlayer.playing) return;
     try {
       await _globalPlayer.setAsset('assets/notification.mp3');
       await _globalPlayer.setVolume(1.0);
@@ -221,14 +223,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.technicianData == null) {
-      return const Scaffold(
-        body: Center(child: Text("Error: No Technician Data")),
-      );
-    }
-
-    final String techId = widget.technicianData!['_id'];
-
+    // Build main UI
     return LayoutBuilder(
       builder: (context, constraints) {
         final bool isDesktop = MediaQuery.of(context).size.width >= 1200;
@@ -290,7 +285,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               IconButton(
                 icon: const Icon(LucideIcons.bell),
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationsScreen(),
+                    ),
+                  );
+                },
                 color: Colors.grey[600],
               ),
               const SizedBox(width: 16),

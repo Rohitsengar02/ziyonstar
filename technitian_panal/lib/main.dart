@@ -12,6 +12,7 @@ import 'screens/pending_approval_screen.dart';
 import 'services/notification_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'screens/profile/privacy_policy_screen.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -84,6 +85,7 @@ class TechnicianApp extends StatelessWidget {
       title: 'ZiyonStar Technician',
       theme: AppTheme.lightTheme,
       home: const TechAuthWrapper(),
+      routes: {'/privacy-policy': (context) => const PrivacyPolicyScreen()},
     );
   }
 }
@@ -139,12 +141,16 @@ class _TechnicianRouterState extends State<TechnicianRouter> {
     try {
       final token = await NotificationService.getToken();
       if (token != null) {
-        debugPrint("Technician: Syncing FCM token to backend...");
+        debugPrint("Technician: FCM Token retrieved: $token");
+        debugPrint("Technician: Syncing token to backend...");
         await apiService.updateTechnicianProfile(
           firebaseUid: widget.user.uid,
           data: {}, // Just syncing token
           fcmToken: token,
         );
+        debugPrint("Technician: FCM token sync successful");
+      } else {
+        debugPrint("Technician: FCM token is null");
       }
     } catch (e) {
       debugPrint("Technician: Failed to sync FCM token: $e");

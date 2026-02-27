@@ -443,7 +443,10 @@ class _MyJobsScreenState extends State<MyJobsScreen>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (img.isNotEmpty)
+                          if (img.isNotEmpty &&
+                              (img.startsWith('http') ||
+                                  name.toLowerCase().contains('battery') ||
+                                  name.toLowerCase().contains('screen')))
                             Container(
                               width: 20,
                               height: 20,
@@ -459,6 +462,9 @@ class _MyJobsScreenState extends State<MyJobsScreen>
                                             )
                                             as ImageProvider,
                                   fit: BoxFit.cover,
+                                  onError: (exception, stackTrace) {
+                                    debugPrint('Image load failed: $img');
+                                  },
                                 ),
                               ),
                             )

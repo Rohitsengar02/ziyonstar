@@ -105,9 +105,7 @@ class NotificationService {
           notification?.body ??
           'Click to see details and accept.';
 
-      // Save to Firestore history (backup)
-      await saveNotificationToFirestore(title, body, data);
-
+      // Note: Backend now handles Firestore sync to prevent duplicates
       const String channelId = 'technician_high_importance';
 
       await _localNotifications.show(
@@ -171,18 +169,25 @@ class NotificationService {
     }
   }
 
-  static Future<String?> getToken() async {
-    try {
-      if (kIsWeb) {
-        return await _messaging.getToken(
-          vapidKey:
-              'BN2EVbxicFWSR0pqm12eGK0F2DZcMhY2w3DUQWKJbc3-ldd1R0Nb_vwQabM4cXbjd96c0FMY3Hnc2Mo8OMDKMK0',
-        );
+  static Future<String?> getToken({int retries = 3}) async {
+    for (int i = 0; i < retries; i++) {
+      try {
+        String? token;
+        if (kIsWeb) {
+          token = await _messaging.getToken(
+            vapidKey:
+                'BN2EVbxicFWSR0pqm12eGK0F2DZcMhY2w3DUQWKJbc3-ldd1R0Nb_vwQabM4cXbjd96c0FMY3Hnc2Mo8OMDKMK0',
+          );
+        } else {
+          token = await _messaging.getToken();
+        }
+        if (token != null) return token;
+      } catch (e) {
+        debugPrint("Error getting FCM token (attempt ${i + 1}): $e");
+        if (i == retries - 1) return null;
+        await Future.delayed(Duration(seconds: 2 * (i + 1)));
       }
-      return await _messaging.getToken();
-    } catch (e) {
-      debugPrint("Error getting FCM token: $e");
-      return null;
     }
+    return null;
   }
 }

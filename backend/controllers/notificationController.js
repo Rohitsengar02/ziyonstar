@@ -35,28 +35,33 @@ exports.clearAll = async (req, res) => {
 
 exports.createNotification = async (userId, title, message, type, bookingId) => {
     try {
-        console.log(`Creating notification for user: ${userId}, Title: ${title}`);
-        // 1. Save to MongoDB
+        console.log(`[Notification] Triggered for target ID: ${userId}`);
+
+        // 1. Find the target person (User or Technician)
+        let target = await User.findById(userId);
+        if (!target) {
+            target = await Technician.findById(userId);
+        }
+
+        if (!target) {
+            console.error(`[Notification] Error: Target not found in MongoDB for ID: ${userId}`);
+            return null;
+        }
+
+        console.log(`[Notification] Target identified: ${target.email} (${target.role || 'user'})`);
+
+        // 2. Save to MongoDB (Internal History)
         const notification = new Notification({
-            userId,
+            userId: target._id,
             title,
             message,
-            type,
+            type: type || 'info',
             bookingId
         });
         await notification.save();
 
-        // 2. Find internal User/Technician to get firebaseUid and fcmToken
-        let target = await User.findById(userId) || await Technician.findById(userId);
-
-        if (!target) {
-            console.error(`Target not found in MongoDB for ID: ${userId}`);
-            return notification;
-        }
-
-        console.log(`Target found: ${target.email}, Role: ${target.role || 'user'}, FCM Token: ${target.fcmToken ? 'Yes' : 'No'}`);
-
-        // 3. Save to Firestore History (for cross-device parity)
+        // 3. Sync to Firebase Cloud Firestore (User-facing History)
+        // This is what the app listens to for the notification list
         if (target.firebaseUid) {
             try {
                 const db = admin.firestore();
@@ -69,18 +74,20 @@ exports.createNotification = async (userId, title, message, type, bookingId) => 
                     data: {
                         type: type || 'info',
                         bookingId: bookingId ? bookingId.toString() : '',
-                        mongoId: notification._id.toString()
+                        mongoId: notification._id.toString(),
+                        title: title,
+                        body: message
                     },
                     timestamp: admin.firestore.FieldValue.serverTimestamp(),
                     seen: false,
                     role: target.role || 'user'
                 });
-                console.log('Notification synced to Firestore for user:', target.firebaseUid);
+                console.log(`[Notification] Firestore sync SUCCESS for UID: ${target.firebaseUid}`);
             } catch (fsError) {
-                console.error('Error syncing to Firestore:', fsError.message);
+                console.error(`[Notification] Firestore Error: ${fsError.message}`);
             }
         } else {
-            console.warn(`Target ${target.email} has no firebaseUid, skipping Firestore sync.`);
+            console.warn(`[Notification] Firestore skip: Target ${target.email} has no firebaseUid`);
         }
 
         // 4. Send Push Notification via FCM
@@ -95,6 +102,8 @@ exports.createNotification = async (userId, title, message, type, bookingId) => 
                 data: {
                     type: type || 'info',
                     bookingId: bookingId ? bookingId.toString() : '',
+                    title: title,
+                    body: message,
                     click_action: 'FLUTTER_NOTIFICATION_CLICK'
                 },
                 android: {
@@ -102,8 +111,10 @@ exports.createNotification = async (userId, title, message, type, bookingId) => 
                     notification: {
                         channelId: isTechnician ? 'technician_high_importance' : 'high_importance_channel',
                         sound: 'default',
-                        priority: 'high',
-                        visibility: 'public',
+                        icon: 'ic_launcher',
+                        color: '#1E3A8A',
+                        clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+                        visibility: 'public'
                     }
                 },
                 apns: {
@@ -112,6 +123,7 @@ exports.createNotification = async (userId, title, message, type, bookingId) => 
                             sound: 'default',
                             contentAvailable: true,
                             badge: 1,
+                            interruptionLevel: 'critical'
                         }
                     }
                 },
@@ -119,19 +131,19 @@ exports.createNotification = async (userId, title, message, type, bookingId) => 
             };
 
             try {
-                console.log(`Sending FCM to ${target.email} via token: ${target.fcmToken.substring(0, 10)}...`);
-                await admin.messaging().send(payload);
-                console.log(`Push notification sent successfully to ${target.role}: ${target.email}`);
+                console.log(`[Notification] Attempting FCM push to token suffix: ...${target.fcmToken.slice(-10)}`);
+                const response = await admin.messaging().send(payload);
+                console.log(`[Notification] Push SUCCESS. Message ID: ${response}`);
             } catch (fcmError) {
-                console.error('Error sending FCM:', fcmError.message);
+                console.error(`[Notification] FCM Error: ${fcmError.message}`);
             }
         } else {
-            console.warn(`Target ${target.email} has no fcmToken, skipping Push Notification.`);
+            console.warn(`[Notification] FCM Skip: Target ${target.email} has no fcmToken registered.`);
         }
 
         return notification;
     } catch (error) {
-        console.error('Error creating notification:', error);
+        console.error('[Notification] Critical System Error:', error);
     }
 };
 

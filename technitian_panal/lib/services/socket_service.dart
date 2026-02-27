@@ -18,11 +18,11 @@ class SocketService {
     debugPrint('🔌 Connecting to Socket.io at: $socketUrl');
 
     socket = IO.io(socketUrl, <String, dynamic>{
-      'transports': ['polling', 'websocket'],
+      'transports': ['websocket', 'polling'], // Prefer websocket for Render
       'autoConnect': true,
       'reconnection': true,
-      'reconnectionAttempts': 5,
-      'reconnectionDelay': 1000,
+      'reconnectionAttempts': 10,
+      'reconnectionDelay': 2000,
     });
 
     socket!.onConnect((_) {

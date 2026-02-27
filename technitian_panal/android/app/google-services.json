@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:1038243894712:android:7c1195186e3207ecb62b4d",
         "android_client_info": {
-          "package_name": "com.example.technitian_panal"
+          "package_name": "com.patelpulseventures.ziyontechnician"
         }
       },
       "oauth_client": [
@@ -17,7 +17,7 @@
           "client_id": "1038243894712-eor1k78ok58s8oec4vbvl45knp6p0ugc.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.technitian_panal",
+            "package_name": "com.patelpulseventures.ziyontechnician",
             "certificate_hash": "7b4febbb7c146c53d8792c878fbdb7522561baa9"
           }
         },
@@ -25,7 +25,7 @@
           "client_id": "1038243894712-um5m0m3r5n6jdhr659p20au8rderral4.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.technitian_panal",
+            "package_name": "com.patelpulseventures.ziyontechnician",
             "certificate_hash": "269eb47d2d65b873ea3a916f3bef7edfde887ebc"
           }
         },
