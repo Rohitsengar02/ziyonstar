@@ -134,3 +134,27 @@ exports.createNotification = async (userId, title, message, type, bookingId) => 
         console.error('Error creating notification:', error);
     }
 };
+
+exports.sendTestNotification = async (req, res) => {
+    try {
+        const { firebaseUid } = req.body;
+        console.log(`Test notification requested for firebaseUid: ${firebaseUid}`);
+
+        const technician = await Technician.findOne({ firebaseUid });
+        if (!technician) {
+            return res.status(404).json({ message: 'Technician not found' });
+        }
+
+        await exports.createNotification(
+            technician._id,
+            '🔔 Test Notification!',
+            'Your push notification system is working correctly. Great job!',
+            'info'
+        );
+
+        res.status(200).json({ message: 'Test notification sent' });
+    } catch (error) {
+        console.error('Error in sendTestNotification:', error);
+        res.status(500).json({ message: 'Error sending test notification', error: error.message });
+    }
+};

@@ -22,6 +22,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
+  late List<Widget> _pages;
 
   // Global polling state
   Timer? _globalTimer;
@@ -32,6 +33,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _pages = [
+      _HomeContent(
+        technicianData: widget.technicianData!,
+        onTabChange: (index) => setState(() => _selectedIndex = index),
+      ),
+      MyJobsScreen(technicianId: widget.technicianData!['_id']),
+      WalletScreen(technicianId: widget.technicianData!['_id']),
+      const ProfileScreen(),
+    ];
     // Start global polling for new job notifications
     _startGlobalPolling();
     _initSocket();
@@ -53,33 +63,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _startGlobalPolling() {
-    // Poll every 5 seconds for new bookings
+    // Poll every 10 seconds for new bookings (slightly slower to reduce churn)
     _globalTimer = Timer.periodic(
-      const Duration(seconds: 5),
+      const Duration(seconds: 10),
       (_) => _checkForNewJobs(),
     );
   }
 
   Future<void> _checkForNewJobs() async {
-    if (widget.technicianData == null) return;
+    if (widget.technicianData == null || !mounted) return;
 
     try {
       final bookings = await _globalApiService.getTechnicianBookings(
         widget.technicianData!['_id'],
       );
-      final pendingCount = bookings
-          .where((b) => b['status'] == 'Pending_Acceptance')
-          .length;
 
-      // Only play sound if NOT first load AND there are MORE pending bookings
+      if (!mounted) return;
+
+      final pendingJobs = bookings
+          .where((b) => b['status'] == 'Pending_Acceptance')
+          .toList();
+
+      final pendingCount = pendingJobs.length;
+
+      // Only play sound and show popup if NOT first load AND there are MORE pending bookings
       if (_lastPendingCount >= 0 && pendingCount > _lastPendingCount) {
         _playNotificationSound();
-        _showNewBookingPopup(
-          bookings.firstWhere((b) => b['status'] == 'Pending_Acceptance'),
-        );
+        if (pendingJobs.isNotEmpty) {
+          _showNewBookingPopup(pendingJobs.first);
+        }
       }
 
-      _lastPendingCount = pendingCount;
+      setState(() {
+        _lastPendingCount = pendingCount;
+      });
     } catch (e) {
       debugPrint('Global polling error: $e');
     }
@@ -211,16 +228,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     final String techId = widget.technicianData!['_id'];
-
-    final List<Widget> _pages = [
-      _HomeContent(
-        technicianData: widget.technicianData!,
-        onTabChange: (index) => setState(() => _selectedIndex = index),
-      ),
-      MyJobsScreen(technicianId: techId),
-      WalletScreen(technicianId: techId),
-      const ProfileScreen(),
-    ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -769,10 +776,6 @@ class _HomeContentState extends State<_HomeContent> {
     super.initState();
     _isOnline = widget.technicianData['isOnline'] ?? true;
     _fetchBookings();
-    _timer = Timer.periodic(
-      const Duration(seconds: 5),
-      (_) => _fetchBookings(),
-    );
   }
 
   @override

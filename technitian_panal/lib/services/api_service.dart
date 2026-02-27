@@ -500,4 +500,22 @@ class ApiService {
       rethrow;
     }
   }
+
+  // Test Notification
+  Future<void> triggerTestNotification(String firebaseUid) async {
+    final url = Uri.parse('$baseUrl/notifications/test');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'firebaseUid': firebaseUid}),
+      );
+      if (response.statusCode != 200) {
+        throw Exception('Server error: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error triggering test notification: $e');
+      rethrow;
+    }
+  }
 }

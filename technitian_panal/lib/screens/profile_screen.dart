@@ -471,6 +471,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                           ),
+                          _buildMenuItem(
+                            LucideIcons.zap,
+                            'Test Notification',
+                            'Tap to test if push alerts work',
+                            onTap: () async {
+                              final user = FirebaseAuth.instance.currentUser;
+                              if (user == null) return;
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Requesting test notification...',
+                                  ),
+                                ),
+                              );
+
+                              try {
+                                // We'll trigger a test notification through the backend
+                                await _apiService.triggerTestNotification(
+                                  user.uid,
+                                );
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Test failed: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            },
+                          ),
                         ]),
                       ],
 
