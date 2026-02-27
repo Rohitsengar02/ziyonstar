@@ -18,7 +18,7 @@ const findNextTechnician = async (excludedTechIds = []) => {
 // 1. Create Booking
 exports.createBooking = async (req, res) => {
     try {
-        const { userId, deviceBrand, deviceModel, issues, totalPrice, scheduledDate, timeSlot, addressId, technicianId } = req.body;
+        const { userId, deviceBrand, deviceModel, issues, totalPrice, scheduledDate, timeSlot, addressId, address, technicianId } = req.body;
 
         let assignedTech = null;
 
@@ -47,7 +47,7 @@ exports.createBooking = async (req, res) => {
             totalPrice,
             scheduledDate,
             timeSlot,
-            address: addressId,
+            address: addressId || address,
             addressDetails: req.body.addressDetails,
             technicianId: assignedTech ? assignedTech._id : null,
             status: isOnlinePayment
@@ -58,20 +58,44 @@ exports.createBooking = async (req, res) => {
         });
 
         await newBooking.save();
+        console.log(`Booking created: ${newBooking._id} for user: ${userId}`);
 
         // Notify User
-        await notificationController.createNotification(
-            userId,
-            'Booking Placed',
-            `Your repair for ${deviceBrand} ${deviceModel} has been booked.`,
-            'success',
-            newBooking._id
-        );
+        try {
+            await notificationController.createNotification(
+                userId,
+                'Booking Placed',
+                `Your repair for ${deviceBrand} ${deviceModel} has been booked.`,
+                'success',
+                newBooking._id
+            );
+            console.log(`Notification triggered for user: ${userId}`);
+        } catch (err) {
+            console.error(`Failed to notify user: ${err.message}`);
+        }
 
-        // TODO: Notify Technician if assigned
+        // Notify Technician if assigned
+        if (assignedTech) {
+            console.log(`Assigned Technician found: ${assignedTech._id} (${assignedTech.email})`);
+            try {
+                await notificationController.createNotification(
+                    assignedTech._id,
+                    'New Job Request!',
+                    `You have a new repair request for ${deviceBrand} ${deviceModel}.`,
+                    'info',
+                    newBooking._id
+                );
+                console.log(`Notification triggered for technician: ${assignedTech._id}`);
+            } catch (err) {
+                console.error(`Failed to notify technician: ${err.message}`);
+            }
+        } else {
+            console.warn(`No technician assigned to booking: ${newBooking._id}`);
+        }
 
         res.status(201).json(newBooking);
     } catch (error) {
+        console.error('Error in createBooking:', error);
         res.status(500).json({ message: 'Error creating booking', error: error.message });
     }
 };
@@ -195,6 +219,15 @@ exports.reassignBooking = async (req, res) => {
                 booking.userId,
                 'New Technician Assigned',
                 'We have assigned a new technician for your repair.',
+                'info',
+                booking._id
+            );
+
+            // Notify Technician
+            await notificationController.createNotification(
+                nextTech._id,
+                'Urgent: Job Reassigned to You',
+                `A repair for ${booking.deviceBrand} has been reassigned to you.`,
                 'info',
                 booking._id
             );

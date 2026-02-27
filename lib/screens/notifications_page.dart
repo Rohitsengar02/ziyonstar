@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../services/notification_service.dart';
 import '../services/api_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationsPage extends StatefulWidget {
@@ -38,16 +39,63 @@ class _NotificationsPageState extends State<NotificationsPage> {
       if (uid != null) {
         final api = ApiService();
         final mongoUser = await api.getUser(uid);
+
+        // 1. Fetch from MongoDB
+        List<Map<String, dynamic>> allNotifs = [];
         if (mongoUser != null) {
           final notifications = await api.getUserNotifications(
             mongoUser['_id'],
           );
-          setState(() {
-            _notifications = List<Map<String, dynamic>>.from(notifications);
-            _isLoading = false;
-          });
-          return;
+          allNotifs = List<Map<String, dynamic>>.from(notifications);
         }
+
+        // 2. Fetch from Firestore (Real-time/Sync backup)
+        try {
+          final fsSnap = await FirebaseFirestore.instance
+              .collection('notifications')
+              .where('userId', isEqualTo: uid)
+              .orderBy('timestamp', descending: true)
+              .limit(50)
+              .get();
+
+          for (var doc in fsSnap.docs) {
+            final data = doc.data();
+            // Basic deduplication using mongoId or localId if present
+            final mongoId = data['data']?['mongoId'];
+            bool exists = allNotifs.any((n) => n['_id'] == mongoId);
+
+            if (!exists) {
+              allNotifs.add({
+                'id': doc.id,
+                'title': data['title'],
+                'message': data['body'],
+                'type': data['data']?['type'] ?? 'info',
+                'createdAt': (data['timestamp'] as Timestamp?)
+                    ?.toDate()
+                    .toIso8601String(),
+                'seen': data['seen'] ?? false,
+                'isFirestore': true,
+              });
+            }
+          }
+
+          // Sort merged list by date
+          allNotifs.sort((a, b) {
+            final dateA =
+                DateTime.tryParse(a['createdAt'] ?? '') ?? DateTime(2000);
+            final dateB =
+                DateTime.tryParse(b['createdAt'] ?? '') ?? DateTime(2000);
+            return dateB.compareTo(dateA);
+          });
+        } catch (e) {
+          debugPrint('Error fetching from Firestore: $e');
+        }
+
+        setState(() {
+          _notifications = allNotifs;
+          _isLoading = false;
+        });
+        return;
       }
 
       // Fallback to local if no user or error

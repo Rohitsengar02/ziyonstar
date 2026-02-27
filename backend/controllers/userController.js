@@ -3,7 +3,7 @@ const User = require('../models/User');
 // Register or Update User (Upsert)
 exports.registerUser = async (req, res) => {
     try {
-        const { name, email, firebaseUid, photoUrl, phone, role } = req.body;
+        const { name, email, firebaseUid, photoUrl, phone, role, fcmToken } = req.body;
 
         let user = await User.findOne({ firebaseUid });
 
@@ -18,6 +18,7 @@ exports.registerUser = async (req, res) => {
             user.firebaseUid = firebaseUid || user.firebaseUid; // Update UID if it changed
             user.photoUrl = photoUrl || user.photoUrl;
             user.phone = phone || user.phone;
+            user.fcmToken = fcmToken || user.fcmToken;
             // Only update role if provided
             if (role) user.role = role;
 
@@ -30,6 +31,7 @@ exports.registerUser = async (req, res) => {
                 firebaseUid,
                 photoUrl,
                 phone,
+                fcmToken: fcmToken || '',
                 role: role || 'user'
             });
             await user.save();

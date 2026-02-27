@@ -49,3 +49,8 @@ app.*.map.json
 node_modules/
 *.apk
 backend/.env
+# Firebase Secrets
+*-firebase-adminsdk-*.json
+firebase-service-account.json
+google-services*.json
+

@@ -14,6 +14,8 @@ import 'package:ziyonstar/widgets/footer.dart';
 import 'package:ziyonstar/widgets/app_drawer.dart';
 import 'package:ziyonstar/screens/mobile_home_screen.dart';
 import 'package:ziyonstar/services/api_service.dart';
+import 'package:ziyonstar/services/notification_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // Scroll-triggered animation wrapper for cards
 class FadeInScaleCard extends StatefulWidget {
@@ -92,6 +94,31 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _showPreloader = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFCMToken();
+  }
+
+  Future<void> _syncFCMToken() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final token = await NotificationService.getToken();
+        if (token != null) {
+          debugPrint("User: Syncing FCM token to backend...");
+          await ApiService().updateUser(
+            user.uid,
+            {}, // Just syncing token
+            fcmToken: token,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("User: Failed to sync FCM token: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1117,7 +1144,11 @@ class _RepairCategoriesSectionState extends State<_RepairCategoriesSection> {
     );
   }
 
-  void _showDeviceSelectModal(BuildContext context, {String? initialIssue, String? initialBrand}) {
+  void _showDeviceSelectModal(
+    BuildContext context, {
+    String? initialIssue,
+    String? initialBrand,
+  }) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1144,90 +1175,91 @@ class _RepairCategoriesSectionState extends State<_RepairCategoriesSection> {
       },
       child: Container(
         width: 260,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(25),
-            blurRadius: 20,
-            spreadRadius: 2,
-            offset: const Offset(0, 8),
-          ),
-        ],
-        border: Border.all(color: Colors.grey.withAlpha(20)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Top Half - Image Area
-          Container(
-            height: 200,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(24),
-                topRight: Radius.circular(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(25),
+              blurRadius: 20,
+              spreadRadius: 2,
+              offset: const Offset(0, 8),
+            ),
+          ],
+          border: Border.all(color: Colors.grey.withAlpha(20)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top Half - Image Area
+            Container(
+              height: 200,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F6),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+              ),
+              child: Center(
+                child: _build3DSphere(
+                  cat['icon'] as IconData,
+                  cat['color'] as Color,
+                ),
               ),
             ),
-            child: Center(
-              child: _build3DSphere(
-                cat['icon'] as IconData,
-                cat['color'] as Color,
-              ),
-            ),
-          ),
-          // Bottom Half - Content
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    cat['label'] as String,
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: AppColors.textHeading,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    cat['desc'] as String,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: AppColors.textBody,
-                      height: 1.5,
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.withAlpha(50)),
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: Text(
-                      'Learn more',
+            // Bottom Half - Content
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      cat['label'] as String,
                       style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
                         color: AppColors.textHeading,
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    Text(
+                      cat['desc'] as String,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: AppColors.textBody,
+                        height: 1.5,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.withAlpha(50)),
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: Text(
+                        'Learn more',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textHeading,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    )).animate().scale(
+    ).animate().scale(
       delay: 100.ms,
       duration: 400.ms,
       curve: Curves.easeOutBack,
@@ -2051,7 +2083,11 @@ class _CarouselSectionState extends State<_CarouselSection> {
     return 'assets/images/issues/issue_screen.png';
   }
 
-  void _showDeviceSelectModal(BuildContext context, {String? initialIssue, String? initialBrand}) {
+  void _showDeviceSelectModal(
+    BuildContext context, {
+    String? initialIssue,
+    String? initialBrand,
+  }) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -2086,95 +2122,96 @@ class _CarouselSectionState extends State<_CarouselSection> {
       },
       child: Container(
         width: 420, // Slightly wider for better content
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(20),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Stack(
-          children: [
-            // Background Image (Network with Asset Fallback)
-            Positioned.fill(
-              child: networkImage != null && networkImage.startsWith('http')
-                  ? Image.network(
-                      networkImage,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          Image.asset(issueImagePath, fit: BoxFit.cover),
-                    )
-                  : Image.asset(issueImagePath, fit: BoxFit.cover),
-            ),
-            // Gradient Overlay
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                gradient: LinearGradient(
-                  colors: [Colors.black.withAlpha(200), Colors.transparent],
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  stops: const [0.0, 0.6],
-                ),
-              ),
-            ),
-            // Content
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: AppColors.accentYellow,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          LucideIcons.wrench,
-                          size: 16,
-                          color: Colors.black,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(
-                            color: Colors.white.withAlpha(230),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(20),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Stack(
+            children: [
+              // Background Image (Network with Asset Fallback)
+              Positioned.fill(
+                child: networkImage != null && networkImage.startsWith('http')
+                    ? Image.network(
+                        networkImage,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Image.asset(issueImagePath, fit: BoxFit.cover),
+                      )
+                    : Image.asset(issueImagePath, fit: BoxFit.cover),
+              ),
+              // Gradient Overlay
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  gradient: LinearGradient(
+                    colors: [Colors.black.withAlpha(200), Colors.transparent],
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    stops: const [0.0, 0.6],
+                  ),
+                ),
+              ),
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: AppColors.accentYellow,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            LucideIcons.wrench,
+                            size: 16,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              color: Colors.white.withAlpha(230),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-    ));
+    );
   }
 }
 
@@ -2299,7 +2336,12 @@ class _BrandSelectionSectionState extends State<_BrandSelectionSection> {
                                     padding: EdgeInsets.symmetric(
                                       horizontal: isDesktop ? 16 : 10,
                                     ),
-                                    child: _brandCard(brand, index, isDesktop, context),
+                                    child: _brandCard(
+                                      brand,
+                                      index,
+                                      isDesktop,
+                                      context,
+                                    ),
                                   );
                                 },
                               ),
@@ -2330,7 +2372,11 @@ class _BrandSelectionSectionState extends State<_BrandSelectionSection> {
     return colors[index % colors.length];
   }
 
-  void _showDeviceSelectModal(BuildContext context, {String? initialIssue, String? initialBrand}) {
+  void _showDeviceSelectModal(
+    BuildContext context, {
+    String? initialIssue,
+    String? initialBrand,
+  }) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -2350,7 +2396,12 @@ class _BrandSelectionSectionState extends State<_BrandSelectionSection> {
     );
   }
 
-  Widget _brandCard(dynamic brand, int index, bool isDesktop, BuildContext context) {
+  Widget _brandCard(
+    dynamic brand,
+    int index,
+    bool isDesktop,
+    BuildContext context,
+  ) {
     final String name = brand['title'] ?? brand['name'] ?? '';
     final String firstLetter = name.isNotEmpty
         ? name.substring(0, 1).toUpperCase()
@@ -2363,86 +2414,91 @@ class _BrandSelectionSectionState extends State<_BrandSelectionSection> {
       },
       child: Container(
         width: isDesktop ? 220 : 180,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(15),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-        border: Border.all(color: Colors.grey.withAlpha(20)),
-      ),
-      child: Column(
-        children: [
-          Expanded(
-            flex: 3,
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(15),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+          border: Border.all(color: Colors.grey.withAlpha(20)),
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              flex: 3,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                ),
+                child: Center(
+                  child:
+                      Container(
+                        width: isDesktop ? 80 : 60,
+                        height: isDesktop ? 80 : 60,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [color, color.withOpacity(0.7)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: color.withOpacity(0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Text(
+                            firstLetter,
+                            style: GoogleFonts.inter(
+                              fontSize: isDesktop ? 32 : 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ).animate().scale(
+                        duration: 500.ms,
+                        curve: Curves.easeOutBack,
+                      ),
                 ),
               ),
+            ),
+            Expanded(
+              flex: 2,
               child: Center(
-                child: Container(
-                  width: isDesktop ? 80 : 60,
-                  height: isDesktop ? 80 : 60,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [color, color.withOpacity(0.7)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    name,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      fontSize: isDesktop ? 18 : 16,
+                      color: AppColors.textHeading,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: color.withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  child: Center(
-                    child: Text(
-                      firstLetter,
-                      style: GoogleFonts.inter(
-                        fontSize: isDesktop ? 32 : 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack),
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  name,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.bold,
-                    fontSize: isDesktop ? 18 : 16,
-                    color: AppColors.textHeading,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    )).animate().scale(
+    ).animate().scale(
       delay: 100.ms,
       duration: 400.ms,
       curve: Curves.easeOutBack,
@@ -3476,7 +3532,7 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
           _apiBrands = brands;
           _isLoadingBrands = false;
         });
-        
+
         // If initialBrand is provided, we need to fetch models for it once brands load
         if (widget.initialBrand != null) {
           final brand = _apiBrands.firstWhere(
@@ -3484,7 +3540,7 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
             orElse: () => null,
           );
           if (brand != null) {
-             _fetchModels(brand['_id']);
+            _fetchModels(brand['_id']);
           }
         }
       }
@@ -3769,16 +3825,16 @@ class _DeviceSearchWidgetState extends State<_DeviceSearchWidget> {
               child: ElevatedButton(
                 onPressed: selectedBrand != null && selectedModel != null
                     ? () {
-            final extraMap = <String, dynamic>{
-              'deviceBrand': selectedBrand!,
-              'deviceModel': selectedModel!,
-              'modelData': selectedModelData,
-            };
-            if (widget.initialIssue != null) {
-              extraMap['initialIssue'] = widget.initialIssue;
-            }
-            context.go('/repair', extra: extraMap);
-          }
+                        final extraMap = <String, dynamic>{
+                          'deviceBrand': selectedBrand!,
+                          'deviceModel': selectedModel!,
+                          'modelData': selectedModelData,
+                        };
+                        if (widget.initialIssue != null) {
+                          extraMap['initialIssue'] = widget.initialIssue;
+                        }
+                        context.go('/repair', extra: extraMap);
+                      }
                     : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryButton,

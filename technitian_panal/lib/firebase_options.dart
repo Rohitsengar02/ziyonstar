@@ -58,8 +58,8 @@ class DefaultFirebaseOptions {
   // or GoogleService-Info.plist if they differ, or download those files.
   // Ideally, use `flutterfire configure` to generate this file accurately.
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDGBAzPeRC2hHMrRJapAG-x2qJxtPt_7lA',
-    appId: '1:1038243894712:android:PLACEHOLDER', // UPDATE THIS
+    apiKey: 'AIzaSyBE0n5VCQwPwoagZEos6zXRW-_C9FNaLXE',
+    appId: '1:1038243894712:android:7c1195186e3207ecb62b4d',
     messagingSenderId: '1038243894712',
     projectId: 'ziyonstar',
     storageBucket: 'ziyonstar.firebasestorage.app',

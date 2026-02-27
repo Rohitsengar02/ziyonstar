@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "1038243894712-um5m0m3r5n6jdhr659p20au8rderral4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.technitian_panal",
+            "certificate_hash": "269eb47d2d65b873ea3a916f3bef7edfde887ebc"
+          }
+        },
+        {
           "client_id": "1038243894712-7919cpcl7j7v0oa282boj4vru1u33hng.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -37,6 +45,13 @@
             {
               "client_id": "1038243894712-7919cpcl7j7v0oa282boj4vru1u33hng.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "1038243894712-5cmkpe75n2sfc0vu137o4kf73hkotj6b.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.ziyonstar"
+              }
             }
           ]
         }
@@ -50,6 +65,14 @@
         }
       },
       "oauth_client": [
+        {
+          "client_id": "1038243894712-rubov7kheipbc97rpkhcukjna1gjt6g9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ziyonstar",
+            "certificate_hash": "baeffd23c150a6dd689b8ba49f4a270fc8094074"
+          }
+        },
         {
           "client_id": "1038243894712-trn57vv012q3kkdu1ick45hflgvufhuv.apps.googleusercontent.com",
           "client_type": 1,
@@ -74,6 +97,73 @@
             {
               "client_id": "1038243894712-7919cpcl7j7v0oa282boj4vru1u33hng.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "1038243894712-5cmkpe75n2sfc0vu137o4kf73hkotj6b.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.ziyonstar"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1038243894712:android:06932edf5929bba4b62b4d",
+        "android_client_info": {
+          "package_name": "com.patelpulseventures.ziyonstar"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1038243894712-de2keg70iukqe9t178unjefnscejj915.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.patelpulseventures.ziyonstar",
+            "certificate_hash": "269eb47d2d65b873ea3a916f3bef7edfde887ebc"
+          }
+        },
+        {
+          "client_id": "1038243894712-plido9v4sdn9d52po0klhvsd6gb9t7nt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.patelpulseventures.ziyonstar",
+            "certificate_hash": "baeffd23c150a6dd689b8ba49f4a270fc8094074"
+          }
+        },
+        {
+          "client_id": "1038243894712-sigsl61bno5f155qp5ct75c39sc4q8ha.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.patelpulseventures.ziyonstar",
+            "certificate_hash": "7b4febbb7c146c53d8792c878fbdb7522561baa9"
+          }
+        },
+        {
+          "client_id": "1038243894712-7919cpcl7j7v0oa282boj4vru1u33hng.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBE0n5VCQwPwoagZEos6zXRW-_C9FNaLXE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1038243894712-7919cpcl7j7v0oa282boj4vru1u33hng.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1038243894712-5cmkpe75n2sfc0vu137o4kf73hkotj6b.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.ziyonstar"
+              }
             }
           ]
         }

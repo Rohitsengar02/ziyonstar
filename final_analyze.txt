@@ -394,8 +394,7 @@ warning • The value of the field '_nextInstruction' isn't used • technitian_
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • technitian_panal/lib/screens/profile/kyc_documents_screen.dart:104:22 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • technitian_panal/lib/screens/profile/kyc_documents_screen.dart:106:41 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • technitian_panal/lib/screens/profile/kyc_documents_screen.dart:128:34 • deprecated_member_use
-warning • Unused import: 'package:lucide_icons/lucide_icons.dart' • technitian_panal/lib/screens/profile/notifications_prefs_screen.dart:3:8 • unused_import
-   info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre • technitian_panal/lib/screens/profile/notifications_prefs_screen.dart:135:9 • deprecated_member_use
+   info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre • technitian_panal/lib/screens/profile/notifications_prefs_screen.dart:134:9 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • technitian_panal/lib/screens/profile/subscription_fees_screen.dart:84:33 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • technitian_panal/lib/screens/profile/subscription_fees_screen.dart:99:39 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • technitian_panal/lib/screens/profile/subscription_fees_screen.dart:136:35 • deprecated_member_use
@@ -442,4 +441,4 @@ warning • Unused import: 'dart:convert' • technitian_panal/lib/services/noti
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • technitian_panal/lib/widgets/auth_sidebar.dart:250:50 • deprecated_member_use
    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • technitian_panal/lib/widgets/auth_sidebar.dart:277:37 • deprecated_member_use
 
-441 issues found. (ran in 2.4s)
+440 issues found. (ran in 2.6s)

@@ -326,11 +326,16 @@ class _BookingSuccessScreenState extends State<BookingSuccessScreen>
                   'Repair Service',
                   style: GoogleFonts.inter(color: Colors.grey[600]),
                 ),
-                Text(
-                  widget.deviceName,
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textHeading,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    widget.deviceName,
+                    textAlign: TextAlign.right,
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textHeading,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -377,22 +382,29 @@ class _BookingSuccessScreenState extends State<BookingSuccessScreen>
                   'Technician',
                   style: GoogleFonts.inter(color: Colors.grey[600]),
                 ),
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundImage: AssetImage(widget.technicianImage),
-                      backgroundColor: Colors.grey[200],
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      widget.technicianName,
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textHeading,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundImage: AssetImage(widget.technicianImage),
+                        backgroundColor: Colors.grey[200],
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: Text(
+                          widget.technicianName,
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textHeading,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

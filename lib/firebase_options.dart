@@ -54,28 +54,28 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDGBAzPeRC2hHMrRJapAG-x2qJxtPt_7lA',
-    appId: '1:1038243894712:android:PLACEHOLDER', // UPDATE THIS
+    apiKey: 'AIzaSyBE0n5VCQwPwoagZEos6zXRW-_C9FNaLXE',
+    appId: '1:1038243894712:android:06932edf5929bba4b62b4d',
     messagingSenderId: '1038243894712',
     projectId: 'ziyonstar',
     storageBucket: 'ziyonstar.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDGBAzPeRC2hHMrRJapAG-x2qJxtPt_7lA',
-    appId: '1:1038243894712:ios:PLACEHOLDER', // UPDATE THIS
+    apiKey: 'AIzaSyAu78q3BEFDrMS1DyAjUlMe1jZ8v87fHUI',
+    appId: '1:1038243894712:ios:34939be633612ee3b62b4d',
     messagingSenderId: '1038243894712',
     projectId: 'ziyonstar',
     storageBucket: 'ziyonstar.firebasestorage.app',
-    iosBundleId: 'com.example.technitianPanal',
+    iosBundleId: 'com.patelpulseventures.ziyonstar',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyDGBAzPeRC2hHMrRJapAG-x2qJxtPt_7lA',
-    appId: '1:1038243894712:ios:PLACEHOLDER', // UPDATE THIS
+    apiKey: 'AIzaSyAu78q3BEFDrMS1DyAjUlMe1jZ8v87fHUI',
+    appId: '1:1038243894712:ios:34939be633612ee3b62b4d',
     messagingSenderId: '1038243894712',
     projectId: 'ziyonstar',
     storageBucket: 'ziyonstar.firebasestorage.app',
-    iosBundleId: 'com.example.technitianPanal',
+    iosBundleId: 'com.patelpulseventures.ziyonstar',
   );
 }

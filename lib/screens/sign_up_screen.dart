@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -6,6 +7,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
+import 'dart:math';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -16,14 +21,95 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen> {
   bool _isGoogleLoading = false;
+  bool _isAppleLoading = false;
+
+  /// Generates a cryptographically secure random nonce
+  String _generateNonce([int length = 32]) {
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.-_';
+    final random = Random.secure();
+    return List.generate(
+      length,
+      (_) => charset[random.nextInt(charset.length)],
+    ).join();
+  }
+
+  /// Returns the sha256 hash of [input] in hex format.
+  String _sha256ofString(String input) {
+    final bytes = utf8.encode(input);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
+  Future<void> _handleAppleSignUp() async {
+    setState(() => _isAppleLoading = true);
+
+    try {
+      final rawNonce = _generateNonce();
+      final nonce = _sha256ofString(rawNonce);
+
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+
+      final OAuthCredential credential = OAuthProvider(
+        'apple.com',
+      ).credential(idToken: appleCredential.identityToken, rawNonce: rawNonce);
+
+      final UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithCredential(credential);
+      final User? firebaseUser = userCredential.user;
+
+      if (firebaseUser != null) {
+        String displayName = firebaseUser.displayName ?? '';
+        if (displayName.isEmpty) {
+          final givenName = appleCredential.givenName ?? '';
+          final familyName = appleCredential.familyName ?? '';
+          displayName = '$givenName $familyName'.trim();
+        }
+        if (displayName.isEmpty) displayName = 'Apple User';
+
+        await _registerAndNavigate(
+          name: displayName,
+          email: firebaseUser.email ?? 'no-email@ziyonstar.com',
+          uid: firebaseUser.uid,
+          photoUrl: firebaseUser.photoURL,
+          phone: firebaseUser.phoneNumber,
+        );
+      }
+    } catch (e) {
+      debugPrint("Apple Sign Up Failed: $e");
+      if (mounted) {
+        if (e.toString().contains(
+          'SignInWithAppleAuthorizationError.canceled',
+        )) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Apple Sign Up Failed: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isAppleLoading = false);
+    }
+  }
 
   Future<void> _handleGoogleSignUp() async {
     setState(() => _isGoogleLoading = true);
 
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn(
-        clientId:
-            '1038243894712-7919cpcl7j7v0oa282boj4vru1u33hng.apps.googleusercontent.com',
+        clientId: kIsWeb
+            ? '1038243894712-7919cpcl7j7v0oa282boj4vru1u33hng.apps.googleusercontent.com'
+            : null,
         scopes: ['email', 'profile'],
       );
 
@@ -242,7 +328,45 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                   ],
                 ),
-        ).animate().fadeIn(delay: 400.ms),
+        ).animate().fadeIn(delay: 350.ms),
+        if (!kIsWeb && Theme.of(context).platform == TargetPlatform.iOS) ...[
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: _isAppleLoading ? null : _handleAppleSignUp,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+              elevation: 2,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: _isAppleLoading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(LucideIcons.apple, size: 24),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Sign up with Apple',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+          ).animate().fadeIn(delay: 450.ms),
+        ],
         const SizedBox(height: 32),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,

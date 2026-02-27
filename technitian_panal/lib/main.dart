@@ -9,6 +9,25 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'services/api_service.dart';
 import 'screens/pending_approval_screen.dart';
+import 'services/notification_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    debugPrint("Technician: Received background message: ${message.messageId}");
+
+    // Explicitly show the notification card
+    await NotificationService.showNotification(message);
+    debugPrint("Technician: Background notification processed.");
+  } catch (e) {
+    debugPrint("Technician: Error in background handler: $e");
+  }
+}
 
 void main() async {
   try {
@@ -19,7 +38,9 @@ void main() async {
       await dotenv.load(fileName: "assets/.env");
       debugPrint("TechnicianApp: DotEnv loaded.");
     } catch (e) {
-      debugPrint("TechnicianApp: DotEnv load failed: $e");
+      debugPrint("TechnicianApp: DotEnv load failed (using defaults): $e");
+      // Initialize with empty map to avoid NotInitializedError
+      dotenv.testLoad(fileInput: "");
     }
 
     try {
@@ -27,6 +48,14 @@ void main() async {
         options: DefaultFirebaseOptions.currentPlatform,
       );
       debugPrint("TechnicianApp: Firebase initialized.");
+
+      // Initialize Push Notifications
+      if (!kIsWeb) {
+        FirebaseMessaging.onBackgroundMessage(
+          _firebaseMessagingBackgroundHandler,
+        );
+        await NotificationService.initialize();
+      }
     } catch (e) {
       debugPrint("TechnicianApp: Firebase init failed: $e");
     }
@@ -98,7 +127,30 @@ class _TechnicianRouterState extends State<TechnicianRouter> {
   @override
   void initState() {
     super.initState();
-    _techFuture = ApiService().getTechnician(widget.user.uid);
+    _techFuture = _initializeAndGetTech();
+  }
+
+  Future<Map<String, dynamic>?> _initializeAndGetTech() async {
+    final apiService = ApiService();
+    // Fetch current data
+    final techData = await apiService.getTechnician(widget.user.uid);
+
+    // Sync FCM token to backend
+    try {
+      final token = await NotificationService.getToken();
+      if (token != null) {
+        debugPrint("Technician: Syncing FCM token to backend...");
+        await apiService.updateTechnicianProfile(
+          firebaseUid: widget.user.uid,
+          data: {}, // Just syncing token
+          fcmToken: token,
+        );
+      }
+    } catch (e) {
+      debugPrint("Technician: Failed to sync FCM token: $e");
+    }
+
+    return techData;
   }
 
   @override

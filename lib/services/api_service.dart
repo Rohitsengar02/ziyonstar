@@ -207,15 +207,19 @@ class ApiService {
   // ===== USER APIs =====
 
   Future<Map<String, dynamic>?> registerUser(
-    Map<String, dynamic> userData,
-  ) async {
+    Map<String, dynamic> userData, {
+    String? fcmToken,
+  }) async {
     final url = Uri.parse('$baseUrl/users/register');
     debugPrint('ApiService: Registering user at $url');
     try {
+      final reqBody = Map<String, dynamic>.from(userData);
+      if (fcmToken != null) reqBody['fcmToken'] = fcmToken;
+
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(userData),
+        body: jsonEncode(reqBody),
       );
 
       debugPrint('ApiService: Register response code: ${response.statusCode}');
@@ -251,13 +255,15 @@ class ApiService {
 
   Future<Map<String, dynamic>?> updateUser(
     String firebaseUid,
-    Map<String, dynamic> userData,
-  ) async {
+    Map<String, dynamic> userData, {
+    String? fcmToken,
+  }) async {
     final url = Uri.parse('$baseUrl/users/register'); // Upsert logic
     debugPrint('ApiService: Updating user at $url');
     try {
       final data = Map<String, dynamic>.from(userData);
       data['firebaseUid'] = firebaseUid;
+      if (fcmToken != null) data['fcmToken'] = fcmToken;
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},

@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../theme.dart';
 import '../responsive.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 
 class TechnicianSelectionScreen extends StatefulWidget {
   final String deviceName;
@@ -301,7 +302,16 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
       // Call API
       final newBooking = await _apiService.createBooking(bookingData);
 
-      // Show In-App Notification
+      // Save to notification history (Firestore + Local)
+      await NotificationService.addNotification(
+        title: 'Booking Confirmed!',
+        message:
+            'Your repair for ${widget.deviceName} has been scheduled with ${technician['name']}.',
+        type: 'success',
+        bookingId: newBooking?['booking']?['_id'] ?? '',
+      );
+
+      // Show In-App Notification Overlay
       _showNotification();
 
       await Future.delayed(const Duration(seconds: 1));
@@ -821,12 +831,15 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                tech['name'] ?? 'Technician',
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  color: AppColors.textHeading,
+                              Expanded(
+                                child: Text(
+                                  tech['name'] ?? 'Technician',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color: AppColors.textHeading,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               if (tech['isOnline'] == true)
@@ -921,17 +934,23 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildTechStat(
-                      LucideIcons.briefcase,
-                      '${tech['jobs'] ?? 0}+ Repairs',
+                    Expanded(
+                      child: _buildTechStat(
+                        LucideIcons.briefcase,
+                        '${tech['jobs'] ?? 0}+ Repairs',
+                      ),
                     ),
-                    _buildTechStat(
-                      LucideIcons.award,
-                      '${tech['experience'] ?? '1 Year'} Exp.',
+                    Expanded(
+                      child: _buildTechStat(
+                        LucideIcons.award,
+                        '${tech['experience'] ?? '1 Year'} Exp.',
+                      ),
                     ),
-                    _buildTechStat(
-                      LucideIcons.mapPin,
-                      tech['distance']?.toString() ?? 'Unknown location',
+                    Expanded(
+                      child: _buildTechStat(
+                        LucideIcons.mapPin,
+                        tech['distance']?.toString() ?? 'Unknown location',
+                      ),
                     ),
                   ],
                 ),
@@ -1010,9 +1029,12 @@ class _TechnicianSelectionScreenState extends State<TechnicianSelectionScreen> {
       children: [
         Icon(icon, size: 14, color: Colors.grey),
         const SizedBox(width: 6),
-        Text(
-          text,
-          style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[700]),
+        Expanded(
+          child: Text(
+            text,
+            style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[700]),
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );

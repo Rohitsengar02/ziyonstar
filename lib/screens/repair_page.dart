@@ -15,7 +15,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:js' as js;
+import '../utils/web_payment_stub.dart'
+    if (dart.library.js) '../utils/web_payment_web.dart';
 
 class RepairPage extends StatefulWidget {
   final String deviceBrand;
@@ -3117,44 +3118,32 @@ class _PaymentDialogContentState extends State<_PaymentDialogContent> {
   }
 
   void _triggerWebPayment(String sessionId) {
-    try {
-      debugPrint('Triggering UPIGateway SDK with Session ID: $sessionId');
-      final paymentSDK = js.JsObject(js.context['EKQR'], [
-        js.JsObject.jsify({
-          'sessionId': sessionId,
-          'callbacks': {
-            'onSuccess': (response) {
-              debugPrint('SDK Success Callback: $response');
-              setState(() => _isPaymentSuccessful = true);
-              _statusTimer?.cancel();
-              Future.delayed(const Duration(seconds: 2), () {
-                if (mounted) {
-                  Navigator.pop(context); // Close dialog
-                  widget.onSuccess();
-                }
-              });
-            },
-            'onError': (response) {
-              debugPrint('SDK Error Callback: $response');
-              if (mounted) {
-                setState(
-                  () => _errorMessage = 'Payment failed. Please try again.',
-                );
-              }
-            },
-            'onCancelled': (response) {
-              debugPrint('SDK Cancelled Callback');
-              if (mounted) {
-                Navigator.pop(context);
-              }
-            },
-          },
-        }),
-      ]);
-      paymentSDK.callMethod('pay');
-    } catch (e) {
-      debugPrint('Error calling EKQR SDK: $e');
-    }
+    triggerWebPaymentSdk(
+      sessionId,
+      onSuccess: (response) {
+        debugPrint('SDK Success Callback: $response');
+        setState(() => _isPaymentSuccessful = true);
+        _statusTimer?.cancel();
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            Navigator.pop(context); // Close dialog
+            widget.onSuccess();
+          }
+        });
+      },
+      onError: (response) {
+        debugPrint('SDK Error Callback: $response');
+        if (mounted) {
+          setState(() => _errorMessage = 'Payment failed. Please try again.');
+        }
+      },
+      onCancelled: (response) {
+        debugPrint('SDK Cancelled Callback');
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      },
+    );
   }
 
   void _startStatusPolling() {

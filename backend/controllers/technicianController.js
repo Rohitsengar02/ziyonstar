@@ -11,7 +11,7 @@ exports.registerTechnician = async (req, res) => {
             brandExpertise, repairExpertise,
             serviceTypes, coverageAreas,
             bankName, accountHolderName, accountNumber, ifscCode, upiId,
-            agreedToTerms, isOnline
+            agreedToTerms, isOnline, fcmToken
         } = req.body;
 
         // Check if technician exists
@@ -26,7 +26,7 @@ exports.registerTechnician = async (req, res) => {
                 brandExpertise, repairExpertise,
                 serviceTypes, coverageAreas,
                 bankName, accountHolderName, accountNumber, ifscCode, upiId,
-                agreedToTerms, isOnline
+                agreedToTerms, isOnline, fcmToken
             };
 
             // Only update fields that are present in the request
@@ -68,6 +68,7 @@ exports.registerTechnician = async (req, res) => {
                 bankName, accountHolderName, accountNumber, ifscCode, upiId,
                 agreedToTerms,
                 isOnline,
+                fcmToken: fcmToken || '',
                 status: 'pending'
             });
             if (agreedToTerms) technician.agreementDate = new Date();

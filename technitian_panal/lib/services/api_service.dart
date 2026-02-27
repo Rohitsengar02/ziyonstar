@@ -18,6 +18,7 @@ class ApiService {
     required String firebaseUid,
     String? photoUrl,
     String? phone,
+    String? fcmToken,
   }) async {
     final url = Uri.parse('$baseUrl/technicians/register');
     try {
@@ -30,6 +31,7 @@ class ApiService {
           'firebaseUid': firebaseUid,
           'photoUrl': photoUrl,
           'phone': phone,
+          'fcmToken': fcmToken,
         }),
       );
 
@@ -52,6 +54,7 @@ class ApiService {
     String? photoUrl,
     String? phone,
     String? role,
+    String? fcmToken,
   }) async {
     final url = Uri.parse('$baseUrl/users/register');
     try {
@@ -65,6 +68,7 @@ class ApiService {
           'photoUrl': photoUrl,
           'phone': phone,
           'role': role,
+          'fcmToken': fcmToken,
         }),
       );
 
@@ -181,12 +185,14 @@ class ApiService {
   Future<Map<String, dynamic>> updateTechnicianProfile({
     required String firebaseUid,
     required Map<String, dynamic> data,
+    String? fcmToken,
   }) async {
     final url = Uri.parse('$baseUrl/technicians/register'); // Uses upsert logic
 
     // Add firebaseUid to data if not present, though body must contain it
     final bodyData = Map<String, dynamic>.from(data);
     bodyData['firebaseUid'] = firebaseUid;
+    if (fcmToken != null) bodyData['fcmToken'] = fcmToken;
 
     try {
       final response = await http.post(

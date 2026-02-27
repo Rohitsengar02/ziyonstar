@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -7,6 +8,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ziyonstar/services/api_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
+import 'dart:math';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -18,6 +23,89 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   final ApiService _apiService = ApiService();
   bool _isGoogleLoading = false;
+  bool _isAppleLoading = false;
+
+  /// Generates a cryptographically secure random nonce
+  String _generateNonce([int length = 32]) {
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.-_';
+    final random = Random.secure();
+    return List.generate(
+      length,
+      (_) => charset[random.nextInt(charset.length)],
+    ).join();
+  }
+
+  /// Returns the sha256 hash of [input] in hex format.
+  String _sha256ofString(String input) {
+    final bytes = utf8.encode(input);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
+  Future<void> _handleAppleSignIn() async {
+    setState(() => _isAppleLoading = true);
+
+    try {
+      final rawNonce = _generateNonce();
+      final nonce = _sha256ofString(rawNonce);
+
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+
+      final OAuthCredential credential = OAuthProvider(
+        'apple.com',
+      ).credential(idToken: appleCredential.identityToken, rawNonce: rawNonce);
+
+      final UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithCredential(credential);
+      final User? firebaseUser = userCredential.user;
+
+      if (firebaseUser != null) {
+        // Apple only gives Name on the FIRST sign in.
+        // If it's null, we'll try to use the one from appleCredential if available
+        String displayName = firebaseUser.displayName ?? '';
+        if (displayName.isEmpty) {
+          final givenName = appleCredential.givenName ?? '';
+          final familyName = appleCredential.familyName ?? '';
+          displayName = '$givenName $familyName'.trim();
+        }
+        if (displayName.isEmpty) displayName = 'Apple User';
+
+        await _loginAndNavigate(
+          name: displayName,
+          email: firebaseUser.email ?? '',
+          uid: firebaseUser.uid,
+          photoUrl: firebaseUser.photoURL,
+          phone: firebaseUser.phoneNumber,
+        );
+      }
+    } catch (e) {
+      debugPrint("Apple Sign In Failed: $e");
+      if (mounted) {
+        // Don't show snackbar if user cancelled
+        if (e.toString().contains(
+          'SignInWithAppleAuthorizationError.canceled',
+        )) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Apple Sign In Error: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isAppleLoading = false);
+    }
+  }
 
   // Real Google Sign In Logic
   Future<void> _handleGoogleSignIn() async {
@@ -25,8 +113,9 @@ class _SignInScreenState extends State<SignInScreen> {
 
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn(
-        clientId:
-            '1038243894712-7919cpcl7j7v0oa282boj4vru1u33hng.apps.googleusercontent.com',
+        clientId: kIsWeb
+            ? '1038243894712-7919cpcl7j7v0oa282boj4vru1u33hng.apps.googleusercontent.com'
+            : null,
         scopes: ['email', 'profile'],
       );
 
@@ -291,7 +380,48 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ],
                 ),
-        ).animate().fadeIn(delay: 400.ms).scale(begin: const Offset(0.9, 0.9)),
+        ).animate().fadeIn(delay: 350.ms).scale(begin: const Offset(0.9, 0.9)),
+        if (!kIsWeb && Theme.of(context).platform == TargetPlatform.iOS) ...[
+          const SizedBox(height: 16),
+          ElevatedButton(
+                onPressed: _isAppleLoading ? null : _handleAppleSignIn,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  padding: const EdgeInsets.symmetric(vertical: 22),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: _isAppleLoading
+                    ? const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(LucideIcons.apple, size: 28),
+                          const SizedBox(width: 16),
+                          Text(
+                            'Continue with Apple',
+                            style: GoogleFonts.outfit(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+              )
+              .animate()
+              .fadeIn(delay: 450.ms)
+              .scale(begin: const Offset(0.9, 0.9)),
+        ],
         const SizedBox(height: 40),
         Text(
           'By continuing, you agree to our Terms of Service and Privacy Policy',

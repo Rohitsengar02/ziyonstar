@@ -30,6 +30,24 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'firebase_options.dart';
+import 'package:ziyonstar/services/notification_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    debugPrint("User App: Received background message: ${message.messageId}");
+
+    // Show the "real" notification banner
+    await NotificationService.showNotification(message);
+    debugPrint("User App: Background notification processed.");
+  } catch (e) {
+    debugPrint("User App: Error in background handler: $e");
+  }
+}
 
 // Move router to top level for better persistence and clean URLs
 final GoRouter _router = GoRouter(
@@ -180,6 +198,14 @@ Future<void> main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+
+    // Initialize Push Notifications
+    if (!kIsWeb) {
+      FirebaseMessaging.onBackgroundMessage(
+        _firebaseMessagingBackgroundHandler,
+      );
+      await NotificationService.initialize();
+    }
   } catch (e) {
     debugPrint("⚠️ Firebase init failed: $e");
   }
@@ -216,12 +242,10 @@ class AuthWrapper extends StatelessWidget {
           );
         }
 
-        // On web, we often want to show home directly if not explicitly navigating to login
         if (kIsWeb || snapshot.hasData) {
           return const HomeScreen();
         }
 
-        // On mobile, show onboarding or login
         return FutureBuilder<bool>(
           future: SharedPreferences.getInstance().then(
             (p) => p.getBool('has_onboarded') ?? false,

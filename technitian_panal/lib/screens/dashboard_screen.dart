@@ -110,9 +110,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             const Icon(LucideIcons.zap, color: Colors.orange),
             const SizedBox(width: 10),
-            Text(
-              'New Repair Request',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+            Expanded(
+              child: Text(
+                'New Repair Request',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
@@ -144,9 +146,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         color: Colors.grey,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        '${lastBooking['deviceBrand']} ${lastBooking['deviceModel']}',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                      Expanded(
+                        child: Text(
+                          '${lastBooking['deviceBrand']} ${lastBooking['deviceModel']}',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
@@ -159,11 +164,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         color: Colors.green,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        '₹${lastBooking['totalPrice']}',
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green,
+                      Expanded(
+                        child: Text(
+                          '₹${lastBooking['totalPrice']}',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
                         ),
                       ),
                     ],

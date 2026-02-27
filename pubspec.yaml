@@ -44,6 +44,7 @@ dependencies:
   firebase_auth: ^6.1.3
   firebase_core: ^4.3.0
   cloud_firestore: ^6.1.1
+  firebase_messaging: ^16.1.0
   image_picker: ^1.1.2
   just_audio: ^0.10.5
   geolocator: ^13.0.2
@@ -54,6 +55,9 @@ dependencies:
   latlong2: ^0.9.1
   qr_flutter: ^4.1.0
   go_router: ^17.1.0
+  sign_in_with_apple: ^7.0.1
+  crypto: ^3.0.7
+  flutter_local_notifications: ^18.0.1
 
 dev_dependencies:
   flutter_test:
