@@ -326,7 +326,8 @@ class _SignInScreenState extends State<SignInScreen> {
         Center(
           child: Image.asset(
             'assets/images/app_logo.png',
-            height: 240,
+            height:
+                MediaQuery.of(context).size.height * 0.22, // Responsive height
             fit: BoxFit.contain,
           ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
         ),
