@@ -11,4 +11,7 @@ router.post('/register', userController.registerUser);
 // Get User by Firebase UID
 router.get('/:firebaseUid', userController.getUser);
 
+// Delete User
+router.delete('/:firebaseUid', userController.deleteUser);
+
 module.exports = router;

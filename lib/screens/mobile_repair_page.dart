@@ -520,8 +520,26 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
     );
 
     if (paymentOrderResponse == null || !paymentOrderResponse['success']) {
-      _showSnack(
-        'Failed to generate payment QR. Please try again or choose cash.',
+      final String errMsg =
+          paymentOrderResponse?['message'] ?? 'Unknown payment error';
+      final String msgDetails =
+          paymentOrderResponse?['details']?.toString() ?? '';
+
+      _showSnack('Failed: $errMsg');
+
+      // Let's use dialog to be sure we can read it fully
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text("Payment Error"),
+          content: SingleChildScrollView(child: Text("$errMsg\n$msgDetails")),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("OK"),
+            ),
+          ],
+        ),
       );
       setState(() => _isBookingLoading = false);
       return;
@@ -741,13 +759,10 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
         elevation: 0,
         toolbarHeight: 70,
-        leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
         title: Text(
           'ZiyonStar',
           style: GoogleFonts.poppins(

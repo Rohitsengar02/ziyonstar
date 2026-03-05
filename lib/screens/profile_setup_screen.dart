@@ -16,6 +16,7 @@ class ProfileSetupScreen extends StatefulWidget {
   final String email;
   final String uid;
   final String? photoUrl;
+  final String? phone;
 
   const ProfileSetupScreen({
     super.key,
@@ -23,6 +24,7 @@ class ProfileSetupScreen extends StatefulWidget {
     required this.email,
     required this.uid,
     this.photoUrl,
+    this.phone,
   });
 
   @override
@@ -44,6 +46,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     super.initState();
     _nameController.text = widget.name;
     _currentPhotoUrl = widget.photoUrl;
+    if (widget.phone != null) {
+      _phoneController.text = widget.phone!;
+    }
   }
 
   Future<void> _pickImage() async {
@@ -62,7 +67,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       return;
     }
 
-    if (_passwordController.text.trim().length < 6) {
+    final user = FirebaseAuth.instance.currentUser;
+    final isOAuth =
+        user?.providerData.any(
+          (p) => p.providerId == 'google.com' || p.providerId == 'apple.com',
+        ) ??
+        false;
+
+    if (!isOAuth && _passwordController.text.trim().length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Password must be at least 6 characters')),
       );
@@ -93,14 +105,15 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         'isProfileComplete': true,
       };
 
-      // 2. Update Firebase Auth Password (optional but good for consistency)
-      try {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          await user.updatePassword(_passwordController.text.trim());
+      // 2. Update Firebase Auth Password if not OAuth
+      if (!isOAuth) {
+        try {
+          if (user != null && _passwordController.text.trim().isNotEmpty) {
+            await user.updatePassword(_passwordController.text.trim());
+          }
+        } catch (e) {
+          debugPrint("Could not update Firebase password: $e");
         }
-      } catch (e) {
-        debugPrint("Could not update Firebase password: $e");
       }
 
       // 3. Update Backend
@@ -136,6 +149,13 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final isOAuth =
+        user?.providerData.any(
+          (p) => p.providerId == 'google.com' || p.providerId == 'apple.com',
+        ) ??
+        false;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -254,14 +274,17 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             ),
             const SizedBox(height: 20),
 
-            _buildLabel('Set Password*'),
-            _buildTextField(
-              controller: _passwordController,
-              icon: LucideIcons.lock,
-              hint: 'Create a password',
-              isPassword: true,
-            ),
-            const SizedBox(height: 40),
+            if (!isOAuth) ...[
+              _buildLabel('Set Password*'),
+              _buildTextField(
+                controller: _passwordController,
+                icon: LucideIcons.lock,
+                hint: 'Create a password',
+                isPassword: true,
+              ),
+              const SizedBox(height: 40),
+            ],
+            if (isOAuth) const SizedBox(height: 40),
 
             ElevatedButton(
               onPressed: _isLoading ? null : _handleSave,

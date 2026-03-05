@@ -14,19 +14,19 @@ class MobileBottomNav extends StatelessWidget {
 
     switch (index) {
       case 0:
-        context.go('/home');
+        context.push('/home');
         break;
       case 1:
-        context.go('/bookings');
+        context.push('/bookings');
         break;
       case 2:
-        context.go('/repair');
+        context.push('/repair');
         break;
       case 3:
-        context.go('/about');
+        context.push('/about');
         break;
       case 4:
-        context.go('/profile');
+        context.push('/profile');
         break;
     }
   }

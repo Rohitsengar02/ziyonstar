@@ -253,6 +253,17 @@ class ApiService {
     }
   }
 
+  Future<bool> deleteUser(String firebaseUid) async {
+    final url = Uri.parse('$baseUrl/users/$firebaseUid');
+    try {
+      final response = await http.delete(url);
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('ApiService: Error deleting user: $e');
+      return false;
+    }
+  }
+
   Future<Map<String, dynamic>?> updateUser(
     String firebaseUid,
     Map<String, dynamic> userData, {
@@ -574,13 +585,13 @@ class ApiService {
           'customerMobile': customerMobile,
         }),
       );
-      if (response.statusCode == 200 || response.statusCode == 400) {
+      if (response.body.isNotEmpty) {
         return jsonDecode(response.body);
       }
       return null;
     } catch (e) {
       debugPrint('Error creating payment order: $e');
-      return null;
+      return {'success': false, 'message': e.toString()};
     }
   }
 

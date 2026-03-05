@@ -67,3 +67,17 @@ exports.getAllUsers = async (req, res) => {
         res.status(500).send('Server Error');
     }
 };
+
+// Delete User by Firebase UID
+exports.deleteUser = async (req, res) => {
+    try {
+        const user = await User.findOneAndDelete({ firebaseUid: req.params.firebaseUid });
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        res.json({ msg: 'User deleted successfully' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};

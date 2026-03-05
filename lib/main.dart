@@ -130,11 +130,13 @@ final GoRouter _router = GoRouter(
         final email = state.uri.queryParameters['email'] ?? '';
         final uid = state.uri.queryParameters['uid'] ?? '';
         final photoUrl = state.uri.queryParameters['photoUrl'];
+        final phone = state.uri.queryParameters['phone'];
         return ProfileSetupScreen(
           name: name,
           email: email,
           uid: uid,
           photoUrl: photoUrl,
+          phone: phone,
         );
       },
     ),

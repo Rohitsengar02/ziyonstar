@@ -226,7 +226,31 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () => context.go('/profile-setup'),
+            onPressed: () {
+              final uid =
+                  _userProfile?['firebaseUid'] ??
+                  FirebaseAuth.instance.currentUser?.uid ??
+                  '';
+              final email =
+                  _userProfile?['email'] ??
+                  FirebaseAuth.instance.currentUser?.email ??
+                  '';
+              final name = _userProfile?['name'] ?? '';
+              final photo = _userProfile?['photoUrl'] ?? '';
+              final phone = _userProfile?['phone'] ?? '';
+              context.go(
+                Uri(
+                  path: '/profile-setup',
+                  queryParameters: {
+                    'name': name,
+                    'email': email,
+                    'uid': uid,
+                    if (photo.isNotEmpty) 'photoUrl': photo,
+                    if (phone.isNotEmpty) 'phone': phone,
+                  },
+                ).toString(),
+              );
+            },
             icon: const Icon(LucideIcons.edit, size: 16),
             label: const Text("Edit Profile"),
             style: ElevatedButton.styleFrom(
@@ -447,6 +471,88 @@ class _ProfilePageState extends State<ProfilePage> {
                       debugPrint('Sign out error: $e');
                     }
                     if (context.mounted) context.go('/login');
+                  },
+                  isDestructive: true,
+                ),
+                _buildDivider(),
+                _buildSettingTile(
+                  icon: LucideIcons.trash2,
+                  title: 'Delete Account',
+                  subtitle: 'Permanently remove your account',
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete Account?'),
+                        content: const Text(
+                          'This action is permanent and cannot be undone. All your bookings and data will be lost.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              final user = FirebaseAuth.instance.currentUser;
+                              if (user != null) {
+                                final uid = user.uid;
+                                // 1. Delete from backend
+                                final bool deletedFromMongo = await _apiService
+                                    .deleteUser(uid);
+                                if (deletedFromMongo) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'User deleted from MongoDB successfully.',
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Failed to delete from MongoDB. Please check if backend is deployed.',
+                                      ),
+                                      backgroundColor: Colors.orange,
+                                    ),
+                                  );
+                                }
+                                // 2. Delete from Firebase
+                                try {
+                                  await user.delete();
+                                } catch (e) {
+                                  debugPrint(
+                                    'Error deleting user from Firebase: $e',
+                                  );
+                                  // Re-authentication might be required
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Re-authentication required to delete account.',
+                                      ),
+                                    ),
+                                  );
+                                }
+                                // 3. Clear local storage
+                                final prefs =
+                                    await SharedPreferences.getInstance();
+                                await prefs.clear();
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                  context.go('/login');
+                                }
+                              }
+                            },
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.red,
+                            ),
+                            child: const Text('Delete'),
+                          ),
+                        ],
+                      ),
+                    );
                   },
                   isDestructive: true,
                 ),

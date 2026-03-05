@@ -6,6 +6,7 @@ import '../responsive.dart';
 import '../widgets/navbar.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/footer.dart';
+import 'mobile_about_page.dart';
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
@@ -20,6 +21,10 @@ class _AboutPageState extends State<AboutPage> {
   @override
   Widget build(BuildContext context) {
     final bool isDesktop = ResponsiveLayout.isDesktop(context);
+
+    if (!isDesktop) {
+      return const MobileAboutPage();
+    }
 
     return Scaffold(
       key: _scaffoldKey,

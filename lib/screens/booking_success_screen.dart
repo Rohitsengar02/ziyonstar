@@ -77,151 +77,156 @@ class _BookingSuccessScreenState extends State<BookingSuccessScreen>
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: Colors.white,
-      drawer: const AppDrawer(),
-      body: Column(
-        children: [
-          // Navbar
-          Container(
-            color: Colors.white,
-            padding: EdgeInsets.symmetric(
-              horizontal: isDesktop ? 80 : 20,
-              vertical: isDesktop ? 20 : 16,
-            ),
-            child: Navbar(scaffoldKey: _scaffoldKey),
-          ),
-          // Main Content
-          Expanded(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(isDesktop ? 40 : 20),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ScaleTransition(
-                      scale: _scaleAnimation,
-                      child: Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: Colors.green.withAlpha(20),
-                          shape: BoxShape.circle,
+      drawer: isDesktop ? const AppDrawer() : null,
+      body: SafeArea(
+        top: !isDesktop,
+        bottom: false,
+        child: Column(
+          children: [
+            // Navbar
+            if (isDesktop)
+              Container(
+                color: Colors.white,
+                padding: EdgeInsets.symmetric(
+                  horizontal: isDesktop ? 80 : 20,
+                  vertical: isDesktop ? 20 : 16,
+                ),
+                child: Navbar(scaffoldKey: _scaffoldKey),
+              ),
+            // Main Content
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(isDesktop ? 40 : 20),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ScaleTransition(
+                        scale: _scaleAnimation,
+                        child: Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            color: Colors.green.withAlpha(20),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Container(
+                              width: 80,
+                              height: 80,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF10B981),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Color(0x6610B981),
+                                    blurRadius: 20,
+                                    offset: Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                LucideIcons.check,
+                                color: Colors.white,
+                                size: 50,
+                              ),
+                            ),
+                          ),
                         ),
-                        child: Center(
-                          child: Container(
-                            width: 80,
-                            height: 80,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF10B981),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Color(0x6610B981),
-                                  blurRadius: 20,
-                                  offset: Offset(0, 10),
+                      ),
+                      const SizedBox(height: 32),
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: Column(
+                          children: [
+                            Text(
+                              'Booking Confirmed!',
+                              style: GoogleFonts.poppins(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textHeading,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Your repair slot has been successfully booked.\nOur technician will arrive on time.',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                color: Colors.grey[600],
+                                height: 1.5,
+                              ),
+                            ),
+                            const SizedBox(height: 40),
+                            _buildSummaryCard(),
+                            const SizedBox(height: 40),
+                            Wrap(
+                              alignment: WrapAlignment.center,
+                              spacing: 16,
+                              runSpacing: 12,
+                              children: [
+                                OutlinedButton(
+                                  onPressed: () {
+                                    context.go('/bookings');
+                                  },
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 28,
+                                      vertical: 18,
+                                    ),
+                                    side: const BorderSide(color: Colors.grey),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'View Bookings',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textHeading,
+                                    ),
+                                  ),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    context.go('/home');
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primaryButton,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 36,
+                                      vertical: 18,
+                                    ),
+                                    elevation: 8,
+                                    shadowColor: AppColors.primaryButton
+                                        .withOpacity(0.4),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Continue',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
-                            child: const Icon(
-                              LucideIcons.check,
-                              color: Colors.white,
-                              size: 50,
-                            ),
-                          ),
+                          ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 32),
-                    FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: Column(
-                        children: [
-                          Text(
-                            'Booking Confirmed!',
-                            style: GoogleFonts.poppins(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textHeading,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Your repair slot has been successfully booked.\nOur technician will arrive on time.',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              color: Colors.grey[600],
-                              height: 1.5,
-                            ),
-                          ),
-                          const SizedBox(height: 40),
-                          _buildSummaryCard(),
-                          const SizedBox(height: 40),
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: 16,
-                            runSpacing: 12,
-                            children: [
-                              OutlinedButton(
-                                onPressed: () {
-                                  context.go('/bookings');
-                                },
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 28,
-                                    vertical: 18,
-                                  ),
-                                  side: const BorderSide(color: Colors.grey),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                                child: Text(
-                                  'View Bookings',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.textHeading,
-                                  ),
-                                ),
-                              ),
-                              ElevatedButton(
-                                onPressed: () {
-                                  context.go('/home');
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primaryButton,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 36,
-                                    vertical: 18,
-                                  ),
-                                  elevation: 8,
-                                  shadowColor: AppColors.primaryButton
-                                      .withOpacity(0.4),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                                child: Text(
-                                  'Continue',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

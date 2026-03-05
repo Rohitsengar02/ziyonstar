@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -58,9 +59,11 @@ class _SignInScreenState extends State<SignInScreen> {
         nonce: nonce,
       );
 
-      final OAuthCredential credential = OAuthProvider(
-        'apple.com',
-      ).credential(idToken: appleCredential.identityToken, rawNonce: rawNonce);
+      final OAuthCredential credential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        rawNonce: rawNonce,
+        accessToken: appleCredential.authorizationCode,
+      );
 
       final UserCredential userCredential = await FirebaseAuth.instance
           .signInWithCredential(credential);
@@ -83,6 +86,7 @@ class _SignInScreenState extends State<SignInScreen> {
           uid: firebaseUser.uid,
           photoUrl: firebaseUser.photoURL,
           phone: firebaseUser.phoneNumber,
+          bypassProfileCheck: true,
         );
       }
     } catch (e) {
@@ -183,6 +187,7 @@ class _SignInScreenState extends State<SignInScreen> {
     required String uid,
     String? photoUrl,
     String? phone,
+    bool bypassProfileCheck = false,
   }) async {
     setState(() => _isGoogleLoading = true);
 
@@ -194,7 +199,7 @@ class _SignInScreenState extends State<SignInScreen> {
           existingUser['phone'] == null ||
           existingUser['phone'].toString().isEmpty;
 
-      if (isProfileIncomplete) {
+      if (isProfileIncomplete && !bypassProfileCheck) {
         if (mounted) {
           context.go(
             '/profile-setup?name=${existingUser?['name'] ?? name}&email=$email&uid=$uid&photoUrl=${existingUser?['photoUrl'] ?? photoUrl ?? ''}',
@@ -204,15 +209,18 @@ class _SignInScreenState extends State<SignInScreen> {
       }
 
       final Map<String, dynamic> userData = {
-        'name': existingUser['name'] ?? name,
+        'name': existingUser?['name'] ?? name,
         'email': email,
         'firebaseUid': uid,
-        'photoUrl': existingUser['photoUrl'] ?? photoUrl,
-        'phone': existingUser['phone'] ?? phone,
-        'role': existingUser['role'] ?? 'user',
+        'photoUrl': existingUser?['photoUrl'] ?? photoUrl,
+        'phone': existingUser?['phone'] ?? phone ?? '',
+        'role': existingUser?['role'] ?? 'user',
         'createdAt':
-            existingUser['createdAt'] ?? DateTime.now().toIso8601String(),
+            existingUser?['createdAt'] ?? DateTime.now().toIso8601String(),
       };
+
+      // Ensure user is created/updated in the backend if we bypass the profile form
+      await _apiService.updateUser(uid, userData);
 
       if (mounted) {
         final prefs = await SharedPreferences.getInstance();
@@ -423,10 +431,35 @@ class _SignInScreenState extends State<SignInScreen> {
               .scale(begin: const Offset(0.9, 0.9)),
         ],
         const SizedBox(height: 40),
-        Text(
-          'By continuing, you agree to our Terms of Service and Privacy Policy',
-          style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[500]),
+        RichText(
           textAlign: TextAlign.center,
+          text: TextSpan(
+            style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[500]),
+            children: [
+              const TextSpan(text: 'By continuing, you agree to our '),
+              TextSpan(
+                text: 'Terms of Service',
+                style: const TextStyle(
+                  color: Colors.blue,
+                  fontWeight: FontWeight.bold,
+                  decoration: TextDecoration.underline,
+                ),
+                recognizer: TapGestureRecognizer()
+                  ..onTap = () => context.go('/terms-conditions'),
+              ),
+              const TextSpan(text: ' and '),
+              TextSpan(
+                text: 'Privacy Policy',
+                style: const TextStyle(
+                  color: Colors.blue,
+                  fontWeight: FontWeight.bold,
+                  decoration: TextDecoration.underline,
+                ),
+                recognizer: TapGestureRecognizer()
+                  ..onTap = () => context.go('/privacy-policy'),
+              ),
+            ],
+          ),
         ).animate().fadeIn(delay: 600.ms),
       ],
     );

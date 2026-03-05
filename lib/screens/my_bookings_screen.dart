@@ -434,12 +434,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       appBar: isDesktop
           ? null
           : AppBar(
+              automaticallyImplyLeading: false,
               backgroundColor: Colors.white,
               elevation: 0,
-              leading: IconButton(
-                icon: const Icon(LucideIcons.arrowLeft, color: Colors.black),
-                onPressed: () => Navigator.pop(context),
-              ),
               title: Text(
                 'My Bookings',
                 style: GoogleFonts.poppins(

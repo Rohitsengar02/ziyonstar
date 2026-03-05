@@ -15,6 +15,7 @@ class MobileAboutPage extends StatelessWidget {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
+            automaticallyImplyLeading: false,
             expandedHeight: 250.0,
             floating: false,
             pinned: true,
