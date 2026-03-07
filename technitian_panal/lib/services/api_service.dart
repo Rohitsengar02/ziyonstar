@@ -3,7 +3,6 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class ApiService {
   // Use localhost for Android emulator (10.0.2.2) and local IP for real device testing if needed

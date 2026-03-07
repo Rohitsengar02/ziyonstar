@@ -57,5 +57,18 @@
 		<string>Ziyonstar Technician needs access to your location to assign nearby repair jobs to you, even when the app is in the background.</string>
 		<key>NSLocationAlwaysUsageDescription</key>
 		<string>Ziyonstar Technician needs access to your location to assign nearby repair jobs to you, even when the app is in the background.</string>
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>com.googleusercontent.apps.1038243894712-1oq87iom30h0trfidj08bqaar78dglqe</string>
+				</array>
+			</dict>
+		</array>
+		<key>GIDClientID</key>
+		<string>1038243894712-1oq87iom30h0trfidj08bqaar78dglqe.apps.googleusercontent.com</string>
 	</dict>
 </plist>
