@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ApiService {
   // Use localhost for Android emulator (10.0.2.2) and local IP for real device testing if needed
@@ -13,7 +14,7 @@ class ApiService {
 
   // Register technician
   Future<Map<String, dynamic>> registerTechnician({
-    required String name,
+    String? name,
     required String email,
     required String firebaseUid,
     String? photoUrl,
@@ -22,17 +23,19 @@ class ApiService {
   }) async {
     final url = Uri.parse('$baseUrl/technicians/register');
     try {
+      final body = {
+        'email': email,
+        'firebaseUid': firebaseUid,
+        'photoUrl': photoUrl,
+        'phone': phone,
+        'fcmToken': fcmToken,
+      };
+      if (name != null) body['name'] = name;
+
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'name': name,
-          'email': email,
-          'firebaseUid': firebaseUid,
-          'photoUrl': photoUrl,
-          'phone': phone,
-          'fcmToken': fcmToken,
-        }),
+        body: jsonEncode(body),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -48,7 +51,7 @@ class ApiService {
 
   // Register User (Generic)
   Future<Map<String, dynamic>> registerUser({
-    required String name,
+    String? name,
     required String email,
     required String firebaseUid,
     String? photoUrl,
@@ -58,18 +61,20 @@ class ApiService {
   }) async {
     final url = Uri.parse('$baseUrl/users/register');
     try {
+      final body = {
+        'email': email,
+        'firebaseUid': firebaseUid,
+        'photoUrl': photoUrl,
+        'phone': phone,
+        'role': role,
+        'fcmToken': fcmToken,
+      };
+      if (name != null) body['name'] = name;
+
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'name': name,
-          'email': email,
-          'firebaseUid': firebaseUid,
-          'photoUrl': photoUrl,
-          'phone': phone,
-          'role': role,
-          'fcmToken': fcmToken,
-        }),
+        body: jsonEncode(body),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -193,6 +198,18 @@ class ApiService {
     final bodyData = Map<String, dynamic>.from(data);
     bodyData['firebaseUid'] = firebaseUid;
     if (fcmToken != null) bodyData['fcmToken'] = fcmToken;
+
+    // Safety: Ensure name and email are always sent if possible to avoid backend validation errors
+    // especially if this is the first time we're hit for this user (upsert)
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      if (bodyData['name'] == null || bodyData['name'].toString().isEmpty) {
+        bodyData['name'] = user.displayName ?? 'Technician';
+      }
+      if (bodyData['email'] == null || bodyData['email'].toString().isEmpty) {
+        bodyData['email'] = user.email ?? '';
+      }
+    }
 
     try {
       final response = await http.post(
@@ -515,6 +532,20 @@ class ApiService {
       }
     } catch (e) {
       debugPrint('Error triggering test notification: $e');
+      rethrow;
+    }
+  }
+
+  // Delete Technician
+  Future<void> deleteTechnician(String firebaseUid) async {
+    final url = Uri.parse('$baseUrl/technicians/uid/$firebaseUid');
+    try {
+      final response = await http.delete(url);
+      if (response.statusCode != 200) {
+        throw Exception('Failed to delete: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error deleting technician: $e');
       rethrow;
     }
   }

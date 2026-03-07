@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ApiService {
   static String get baseUrl {
@@ -216,6 +217,17 @@ class ApiService {
       final reqBody = Map<String, dynamic>.from(userData);
       if (fcmToken != null) reqBody['fcmToken'] = fcmToken;
 
+      // Safety check: Ensure name and email are included for backend validation
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        if (reqBody['name'] == null || reqBody['name'].toString().isEmpty) {
+          reqBody['name'] = user.displayName ?? 'User';
+        }
+        if (reqBody['email'] == null || reqBody['email'].toString().isEmpty) {
+          reqBody['email'] = user.email ?? '';
+        }
+      }
+
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -275,6 +287,18 @@ class ApiService {
       final data = Map<String, dynamic>.from(userData);
       data['firebaseUid'] = firebaseUid;
       if (fcmToken != null) data['fcmToken'] = fcmToken;
+
+      // Safety check: Ensure name and email are included for backend validation
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        if (data['name'] == null || data['name'].toString().isEmpty) {
+          data['name'] = user.displayName ?? 'User';
+        }
+        if (data['email'] == null || data['email'].toString().isEmpty) {
+          data['email'] = user.email ?? '';
+        }
+      }
+
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},

@@ -199,7 +199,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(LucideIcons.arrowLeft, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.go('/profile'),
         ),
         actions: [
           if (_notifications.isNotEmpty)

@@ -13,6 +13,7 @@ import 'services/notification_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'screens/profile/privacy_policy_screen.dart';
+import 'screens/profile/terms_conditions_screen.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -85,7 +86,10 @@ class TechnicianApp extends StatelessWidget {
       title: 'ZiyonStar Technician',
       theme: AppTheme.lightTheme,
       home: const TechAuthWrapper(),
-      routes: {'/privacy-policy': (context) => const PrivacyPolicyScreen()},
+      routes: {
+        '/privacy-policy': (context) => const PrivacyPolicyScreen(),
+        '/terms-of-service': (context) => const TermsConditionsScreen(),
+      },
     );
   }
 }

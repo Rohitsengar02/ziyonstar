@@ -22,6 +22,11 @@ router.get('/', technicianController.getAllTechnicians);
 // @access  Public (Admin)
 router.delete('/:id', technicianController.deleteTechnician);
 
+// @route   DELETE api/technicians/uid/:firebaseUid
+// @desc    Delete technician by Firebase UID
+// @access  Public
+router.delete('/uid/:firebaseUid', technicianController.deleteTechnicianByUid);
+
 // @route   PUT api/technicians/:id
 // @desc    Update technician status/task
 // @access  Public (Admin)

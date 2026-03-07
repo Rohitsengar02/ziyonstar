@@ -63,6 +63,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _showDeleteAccountDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Account?'),
+        content: const Text(
+          'This will permanently delete your technician account and all associated data. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteAccount();
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete Permanently'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteAccount() async {
+    setState(() => _isLoading = true);
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // 1. Delete from Backend
+        await _apiService.deleteTechnician(user.uid);
+
+        // 2. Delete from Firebase Auth
+        await user.delete();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Account deleted successfully')),
+          );
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+            (route) => false,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error deleting account: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete account: $e. Please re-login.'),
+          ),
+        );
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   Future<void> _updatePhoto() async {
     final picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.gallery);
@@ -551,6 +611,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                             ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Permanent Delete
+                      SizedBox(
+                        width: isDesktop ? 300 : double.infinity,
+                        child: TextButton(
+                          onPressed: _showDeleteAccountDialog,
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.grey[600],
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: Text(
+                            'Permanently Delete Account',
+                            style: GoogleFonts.inter(
+                              decoration: TextDecoration.underline,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                       ),

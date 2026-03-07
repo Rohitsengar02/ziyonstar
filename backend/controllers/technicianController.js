@@ -17,10 +17,18 @@ exports.registerTechnician = async (req, res) => {
         // Check if technician exists
         let technician = await Technician.findOne({ firebaseUid });
 
+        if (!technician) {
+            // Fallback: Check if technician exists with the same email
+            technician = await Technician.findOne({ email: email?.toLowerCase() });
+        }
+
         if (technician) {
             // Update existing
             const fieldsToUpdate = {
-                name, email, photoUrl, phone, role,
+                name,
+                email: email?.toLowerCase(),
+                firebaseUid, // Link to the new UID if we found by email
+                photoUrl, phone, role,
                 dob, gender, city, serviceAreaRadius,
                 kycType, kycNumber, kycDocumentFront, kycDocumentBack,
                 brandExpertise, repairExpertise,
@@ -60,7 +68,9 @@ exports.registerTechnician = async (req, res) => {
         } else {
             // Create new
             technician = new Technician({
-                name, email, firebaseUid, photoUrl, phone, role,
+                name,
+                email: email?.toLowerCase(),
+                firebaseUid, photoUrl, phone, role,
                 dob, gender, city, serviceAreaRadius,
                 kycType, kycNumber, kycDocumentFront, kycDocumentBack,
                 brandExpertise, repairExpertise,
@@ -130,6 +140,20 @@ exports.deleteTechnician = async (req, res) => {
         }
         await technician.deleteOne();
         res.json({ msg: 'Technician removed' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// Delete Technician by Firebase UID
+exports.deleteTechnicianByUid = async (req, res) => {
+    try {
+        const technician = await Technician.findOneAndDelete({ firebaseUid: req.params.firebaseUid });
+        if (!technician) {
+            return res.status(404).json({ msg: 'Technician not found' });
+        }
+        res.json({ msg: 'Technician deleted successfully' });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');

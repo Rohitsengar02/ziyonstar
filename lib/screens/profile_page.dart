@@ -330,7 +330,7 @@ class _ProfilePageState extends State<ProfilePage> {
               crossAxisCount: isDesktop ? 5 : 2,
               mainAxisSpacing: 20,
               crossAxisSpacing: 20,
-              childAspectRatio: isDesktop ? 0.9 : 1.1,
+              childAspectRatio: isDesktop ? 0.9 : 0.75,
             ),
             itemCount: actions.length,
             itemBuilder: (context, index) {
@@ -355,9 +355,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     ],
                   ),
                   child: Container(
-                    padding: const EdgeInsets.all(24),
+                    padding: EdgeInsets.all(isDesktop ? 24 : 16),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
@@ -372,11 +372,11 @@ class _ProfilePageState extends State<ProfilePage> {
                             color: Colors.white,
                           ),
                         ),
-                        const Spacer(),
+                        const SizedBox(height: 12),
                         Text(
                           actions[index]['title'] as String,
                           style: GoogleFonts.poppins(
-                            fontSize: 18,
+                            fontSize: isDesktop ? 18 : 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
@@ -431,31 +431,24 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Column(
               children: [
                 _buildSettingTile(
-                  icon: LucideIcons.lock,
-                  title: 'Change Password',
-                  subtitle: 'Update your password',
-                  onTap: () {},
-                ),
-                _buildDivider(),
-                _buildSettingTile(
-                  icon: LucideIcons.smartphone,
-                  title: 'My Devices',
-                  subtitle: 'View registered devices',
-                  onTap: () {},
-                ),
-                _buildDivider(),
-                _buildSettingTile(
-                  icon: LucideIcons.creditCard,
-                  title: 'Payment Methods',
-                  subtitle: 'Manage saved payment methods',
-                  onTap: () {},
-                ),
-                _buildDivider(),
-                _buildSettingTile(
                   icon: LucideIcons.helpCircle,
                   title: 'Help & Support',
                   subtitle: 'Get help with your account',
-                  onTap: () {},
+                  onTap: () => context.go('/contact'),
+                ),
+                _buildDivider(),
+                _buildSettingTile(
+                  icon: LucideIcons.fileText,
+                  title: 'Terms of Service',
+                  subtitle: 'Our legal and usage terms',
+                  onTap: () => context.go('/terms-conditions'),
+                ),
+                _buildDivider(),
+                _buildSettingTile(
+                  icon: LucideIcons.messageSquare,
+                  title: 'FAQs',
+                  subtitle: 'Common questions answered',
+                  onTap: () => context.push('/faqs'),
                 ),
                 _buildDivider(),
                 _buildSettingTile(

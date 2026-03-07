@@ -47,5 +47,15 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSCameraUsageDescription</key>
+		<string>Ziyonstar Technician needs access to your camera to capture device repair photos and profile pictures.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Ziyonstar Technician needs access to your photo library to upload device repair photos and profile pictures.</string>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>Ziyonstar Technician needs access to your location to assign nearby repair jobs to you.</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>Ziyonstar Technician needs access to your location to assign nearby repair jobs to you, even when the app is in the background.</string>
+		<key>NSLocationAlwaysUsageDescription</key>
+		<string>Ziyonstar Technician needs access to your location to assign nearby repair jobs to you, even when the app is in the background.</string>
 	</dict>
 </plist>

@@ -20,6 +20,7 @@ import 'package:ziyonstar/screens/chat_page.dart';
 import 'package:ziyonstar/screens/notifications_page.dart';
 import 'package:ziyonstar/screens/return_refund_page.dart';
 import 'package:ziyonstar/screens/child_protection_page.dart';
+import 'package:ziyonstar/screens/faq_page.dart';
 import 'package:ziyonstar/responsive.dart';
 import 'package:ziyonstar/screens/mobile_repair_page.dart';
 import 'package:ziyonstar/screens/address_picker_screen.dart';
@@ -152,6 +153,7 @@ final GoRouter _router = GoRouter(
       },
     ),
     GoRoute(path: '/chat', builder: (context, state) => const ChatPage()),
+    GoRoute(path: '/faqs', builder: (context, state) => const FaqPage()),
     GoRoute(
       path: '/notifications',
       builder: (context, state) => const NotificationsPage(),

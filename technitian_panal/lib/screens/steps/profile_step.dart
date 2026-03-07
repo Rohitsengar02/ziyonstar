@@ -20,16 +20,59 @@ class ProfileStep extends StatefulWidget {
 }
 
 class _ProfileStepState extends State<ProfileStep> {
+  final _nameController = TextEditingController();
   final _dobController = TextEditingController();
   final _phoneController = TextEditingController();
   final _cityController = TextEditingController();
   final _radiusController = TextEditingController();
 
   XFile? _profileImage;
+  String? _existingPhotoUrl;
   DateTime? _selectedDob;
 
   String? _selectedGender;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchExistingData();
+  }
+
+  Future<void> _fetchExistingData() async {
+    setState(() => _isLoading = true);
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final data = await ApiService().getTechnician(user.uid);
+        if (data != null) {
+          setState(() {
+            _nameController.text = data['name'] ?? user.displayName ?? '';
+            _phoneController.text = data['phone'] ?? user.phoneNumber ?? '';
+            _selectedGender = data['gender'];
+            _cityController.text = data['city'] ?? '';
+            _radiusController.text =
+                data['serviceAreaRadius']?.toString() ?? '';
+            _existingPhotoUrl = data['photoUrl'];
+
+            if (data['dob'] != null) {
+              _selectedDob = DateTime.parse(data['dob']);
+              _dobController.text =
+                  "${_selectedDob!.day.toString().padLeft(2, '0')}/${_selectedDob!.month.toString().padLeft(2, '0')}/${_selectedDob!.year}";
+            }
+          });
+        } else {
+          // New user, just pre-fill from Firebase
+          _nameController.text = user.displayName ?? '';
+          _phoneController.text = user.phoneNumber ?? '';
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching existing data: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
@@ -158,14 +201,15 @@ class _ProfileStepState extends State<ProfileStep> {
 
   Future<void> _handleNext() async {
     // Validate
-    if (_profileImage == null) {
+    if (_profileImage == null && _existingPhotoUrl == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please add your profile image')),
       );
       return;
     }
 
-    if (_selectedGender == null ||
+    if (_nameController.text.trim().isEmpty ||
+        _selectedGender == null ||
         _phoneController.text.trim().isEmpty ||
         _cityController.text.isEmpty ||
         _radiusController.text.isEmpty ||
@@ -195,6 +239,9 @@ class _ProfileStepState extends State<ProfileStep> {
         }
 
         final profileData = {
+          'name': _nameController.text
+              .trim(), // Don't overwrite with 'Technician'
+          'email': user.email ?? '',
           'gender': _selectedGender,
           'phone': _phoneController.text.trim(),
           'city': _cityController.text.trim(),
@@ -210,6 +257,8 @@ class _ProfileStepState extends State<ProfileStep> {
 
         // Sync to Firestore
         final firestoreData = {
+          'name': _nameController.text.trim(),
+          'email': user.email ?? '',
           'gender': _selectedGender,
           'phone': _phoneController.text.trim(),
           'city': _cityController.text.trim(),
@@ -296,6 +345,20 @@ class _ProfileStepState extends State<ProfileStep> {
                               },
                             ),
                           )
+                        : _existingPhotoUrl != null
+                        ? ClipOval(
+                            child: Image.network(
+                              _existingPhotoUrl!,
+                              fit: BoxFit.cover,
+                              width: 120,
+                              height: 120,
+                              errorBuilder: (c, e, s) => const Icon(
+                                LucideIcons.user,
+                                size: 60,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          )
                         : const Icon(
                             LucideIcons.user,
                             size: 60,
@@ -323,9 +386,14 @@ class _ProfileStepState extends State<ProfileStep> {
             ),
           ),
           const SizedBox(height: 40),
-
-          // Note: Name/Email are usually pre-filled or readonly if coming from Auth
-          // We focus on new fields here.
+          _buildFieldSection(
+            'Full Name',
+            LucideIcons.user,
+            'Enter your full name',
+            controller: _nameController,
+          ),
+          const SizedBox(height: 20),
+          // Email is readonly because it's the unique identifier
           _buildFieldSection(
             'Date of Birth',
             LucideIcons.calendar,

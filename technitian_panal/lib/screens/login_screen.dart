@@ -9,6 +9,7 @@ import 'onboarding_wrapper.dart';
 import 'register_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'pending_approval_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -28,7 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final apiService = ApiService();
       // Sync/Register
       await apiService.registerTechnician(
-        name: user.displayName ?? 'Known Tech',
+        name: user.displayName, // No fallback
         email: user.email!,
         firebaseUid: user.uid,
         photoUrl: user.photoURL,
@@ -99,6 +100,39 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to sign in with Google: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _signInWithApple() async {
+    setState(() => _isLoading = true);
+    try {
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      final OAuthCredential credential = OAuthProvider("apple.com").credential(
+        idToken: appleCredential.identityToken,
+        accessToken: appleCredential.authorizationCode,
+      );
+
+      final UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithCredential(credential);
+
+      final user = userCredential.user;
+      if (user != null) {
+        await _handleNavigation(user);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to sign in with Apple: $e')),
         );
       }
     } finally {
@@ -387,6 +421,26 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
 
+        const SizedBox(height: 12),
+
+        // Apple Sign In (Required for App Store if Google is present)
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _signInWithApple,
+            icon: const Icon(LucideIcons.apple, color: Colors.black),
+            label: const Text('Sign in with Apple'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              side: const BorderSide(color: Colors.grey),
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
+
         const SizedBox(height: 16),
 
         Row(
@@ -397,9 +451,23 @@ class _LoginScreenState extends State<LoginScreen> {
               style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
             ),
             GestureDetector(
-              onTap: () {
-                Navigator.pushNamed(context, '/privacy-policy');
-              },
+              onTap: () => Navigator.pushNamed(context, '/terms-of-service'),
+              child: Text(
+                "Terms",
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  decoration: TextDecoration.underline,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            Text(
+              " & ",
+              style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
+            ),
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(context, '/privacy-policy'),
               child: Text(
                 "Privacy Policy",
                 style: GoogleFonts.inter(

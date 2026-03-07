@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme.dart';
-import 'mobile_profile_page.dart';
 import 'location_picker_page.dart';
 import '../services/location_service.dart';
 import '../services/api_service.dart';
@@ -774,10 +773,7 @@ class _MobileRepairPageState extends State<MobileRepairPage> {
         centerTitle: true,
         actions: [
           GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (c) => const MobileProfilePage()),
-            ),
+            onTap: () => context.push('/profile'),
             child: const Padding(
               padding: EdgeInsets.only(right: 16.0),
               child: CircleAvatar(
