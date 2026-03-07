@@ -33,6 +33,8 @@ migrate_working_dir/
 # Exclude all build files except build/web for Vercel
 /build/*
 !/build/web/
+/technitian_panal/build/*
+!/technitian_panal/build/web/
 /coverage/
 
 # Symbolication related
