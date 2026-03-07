@@ -26,11 +26,11 @@ class ApiService {
       final body = {
         'email': email,
         'firebaseUid': firebaseUid,
-        'photoUrl': photoUrl,
-        'phone': phone,
         'fcmToken': fcmToken,
       };
-      if (name != null) body['name'] = name;
+      if (name != null && name.isNotEmpty) body['name'] = name;
+      if (photoUrl != null && photoUrl.isNotEmpty) body['photoUrl'] = photoUrl;
+      if (phone != null && phone.isNotEmpty) body['phone'] = phone;
 
       final response = await http.post(
         url,
@@ -64,12 +64,12 @@ class ApiService {
       final body = {
         'email': email,
         'firebaseUid': firebaseUid,
-        'photoUrl': photoUrl,
-        'phone': phone,
         'role': role,
         'fcmToken': fcmToken,
       };
-      if (name != null) body['name'] = name;
+      if (name != null && name.isNotEmpty) body['name'] = name;
+      if (photoUrl != null && photoUrl.isNotEmpty) body['photoUrl'] = photoUrl;
+      if (phone != null && phone.isNotEmpty) body['phone'] = phone;
 
       final response = await http.post(
         url,
@@ -199,17 +199,8 @@ class ApiService {
     bodyData['firebaseUid'] = firebaseUid;
     if (fcmToken != null) bodyData['fcmToken'] = fcmToken;
 
-    // Safety: Ensure name and email are always sent if possible to avoid backend validation errors
-    // especially if this is the first time we're hit for this user (upsert)
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      if (bodyData['name'] == null || bodyData['name'].toString().isEmpty) {
-        bodyData['name'] = user.displayName ?? 'Technician';
-      }
-      if (bodyData['email'] == null || bodyData['email'].toString().isEmpty) {
-        bodyData['email'] = user.email ?? '';
-      }
-    }
+    // Safety: The backend now handles the upsert logic safely.
+    // We only send the fields that are explicitly provided in 'data'.
 
     try {
       final response = await http.post(

@@ -217,16 +217,7 @@ class ApiService {
       final reqBody = Map<String, dynamic>.from(userData);
       if (fcmToken != null) reqBody['fcmToken'] = fcmToken;
 
-      // Safety check: Ensure name and email are included for backend validation
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        if (reqBody['name'] == null || reqBody['name'].toString().isEmpty) {
-          reqBody['name'] = user.displayName ?? 'User';
-        }
-        if (reqBody['email'] == null || reqBody['email'].toString().isEmpty) {
-          reqBody['email'] = user.email ?? '';
-        }
-      }
+      // Safety check: The backend handles validation and non-destructive updates.
 
       final response = await http.post(
         url,

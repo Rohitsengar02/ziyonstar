@@ -37,15 +37,26 @@ exports.registerTechnician = async (req, res) => {
                 agreedToTerms, isOnline, fcmToken
             };
 
-            // Only update fields that are present in the request
+            // Only update fields that are present in the request and not empty/null
             Object.keys(fieldsToUpdate).forEach(key => {
-                if (fieldsToUpdate[key] !== undefined) {
-                    // Explicitly handle booleans to avoid truthy/falsy string confusion
+                const newValue = fieldsToUpdate[key];
+                const oldValue = technician[key];
+
+                if (newValue !== undefined) {
+                    // Explicitly handle booleans
                     if (key === 'isOnline' || key === 'agreedToTerms') {
-                        technician[key] = fieldsToUpdate[key] === true || fieldsToUpdate[key] === 'true';
-                    } else {
-                        technician[key] = fieldsToUpdate[key];
+                        technician[key] = newValue === true || newValue === 'true';
+                        return;
                     }
+
+                    // Special protection: don't overwrite existing data with null/empty if we already have it
+                    // This is common during social login sync where provider might return null for phone/photo
+                    if ((newValue === null || newValue === '') && (oldValue !== null && oldValue !== '' && oldValue !== undefined)) {
+                        console.log(`Skipping update for ${key} because new value is empty and old value exists`);
+                        return;
+                    }
+
+                    technician[key] = newValue;
                 }
             });
 
