@@ -37,6 +37,9 @@ migrate_working_dir/
 !/technitian_panal/build/web/
 /admin_panal/build/*
 !/admin_panal/build/web/
+/admin_panal/web/*
+!/admin_panal/web/
+
 
 /coverage/
 
