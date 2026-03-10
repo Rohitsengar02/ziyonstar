@@ -35,6 +35,9 @@ migrate_working_dir/
 !/build/web/
 /technitian_panal/build/*
 !/technitian_panal/build/web/
+/admin_panal/build/*
+!/admin_panal/build/web/
+
 /coverage/
 
 # Symbolication related
