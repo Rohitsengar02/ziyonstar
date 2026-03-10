@@ -3,9 +3,43 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme.dart';
 import '../widgets/mobile_bottom_nav.dart';
+import '../services/api_service.dart';
 
-class MobileAboutPage extends StatelessWidget {
+
+class MobileAboutPage extends StatefulWidget {
   const MobileAboutPage({super.key});
+
+  @override
+  State<MobileAboutPage> createState() => _MobileAboutPageState();
+}
+
+class _MobileAboutPageState extends State<MobileAboutPage> {
+  final ApiService _apiService = ApiService();
+  List<dynamic> _teamMembers = [];
+  bool _isLoadingTeam = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTeamMembers();
+  }
+
+  Future<void> _fetchTeamMembers() async {
+    try {
+      final members = await _apiService.getTeamMembers();
+      if (mounted) {
+        setState(() {
+          _teamMembers = members;
+          _isLoadingTeam = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading team: $e');
+      if (mounted) {
+        setState(() => _isLoadingTeam = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -233,6 +267,14 @@ class MobileAboutPage extends StatelessWidget {
   }
 
   Widget _buildTeamSection() {
+    if (_isLoadingTeam) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_teamMembers.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -248,32 +290,23 @@ class MobileAboutPage extends StatelessWidget {
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
-            children: [
-              _buildTeamMember(
-                'David Miller',
-                'Lead Tech',
-                'assets/images/tech_avatar_1.png',
-              ),
-              const SizedBox(width: 16),
-              _buildTeamMember(
-                'Maria Garcia',
-                'Specialist',
-                'assets/images/tech_avatar_2.png',
-              ),
-              const SizedBox(width: 16),
-              _buildTeamMember(
-                'Robert Fox',
-                'Expert',
-                'assets/images/tech_avatar_3.png',
-              ),
-            ],
+            children: _teamMembers.map((member) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 16.0),
+                child: _buildTeamMember(
+                  member['name'] ?? '',
+                  member['role'] ?? '',
+                  member['image'] ?? '',
+                ),
+              );
+            }).toList(),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildTeamMember(String name, String role, String imagePath) {
+  Widget _buildTeamMember(String name, String role, String imageUrl) {
     return Container(
       width: 140,
       padding: const EdgeInsets.all(16),
@@ -297,7 +330,9 @@ class MobileAboutPage extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               image: DecorationImage(
-                image: AssetImage(imagePath),
+                image: imageUrl.startsWith('http')
+                    ? NetworkImage(imageUrl)
+                    : AssetImage(imageUrl) as ImageProvider,
                 fit: BoxFit.cover,
               ),
               border: Border.all(
@@ -326,3 +361,4 @@ class MobileAboutPage extends StatelessWidget {
     );
   }
 }
+

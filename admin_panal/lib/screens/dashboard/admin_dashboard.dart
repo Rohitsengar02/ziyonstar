@@ -13,7 +13,9 @@ import '../promos/promos_screen.dart';
 import '../support/support_screen.dart';
 import 'approve_admins_screen.dart';
 import '../notifications/notifications_screen.dart';
+import '../support/manage_team_screen.dart';
 import '../auth/login_screen.dart';
+
 import '../profile/profile_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_colors.dart';
@@ -730,6 +732,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     );
                   },
                 ),
+                _buildSidebarItem(
+                  icon: LucideIcons.users,
+                  label: 'Manage Team',
+                  isActive: false,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ManageTeamScreen(),
+                      ),
+                    );
+                  },
+                ),
+
                 _buildSidebarItem(
                   icon: LucideIcons.settings,
                   label: 'Settings',

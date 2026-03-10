@@ -88,6 +88,8 @@ app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/chat', require('./routes/chatRoutes'));
 app.use('/api/payments', require('./routes/paymentRoutes'));
+app.use('/api/team', require('./routes/teamRoutes'));
+
 
 
 

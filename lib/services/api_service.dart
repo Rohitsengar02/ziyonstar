@@ -626,4 +626,20 @@ class ApiService {
       return null;
     }
   }
+
+  // ===== TEAM API =====
+  Future<List<dynamic>> getTeamMembers() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/team'));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['data'] ?? [];
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error fetching team members: $e');
+      return [];
+    }
+  }
 }
+

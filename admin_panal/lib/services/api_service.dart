@@ -618,4 +618,116 @@ class ApiService {
       throw Exception(body['msg'] ?? 'Failed to update password');
     }
   }
+
+  // ===== TEAM APIs =====
+  Future<List<dynamic>> getTeamMembers() async {
+    final response = await http.get(Uri.parse('$baseUrl/team'));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['data'] ?? [];
+    }
+    throw Exception('Failed to load team members');
+  }
+
+  Future<void> createTeamMember(
+    String name,
+    String role,
+    int displayOrder,
+    XFile? imageFile,
+    String? imageUrl,
+  ) async {
+    final uri = Uri.parse('$baseUrl/team');
+    
+    // If we have an image file, use multipart
+    if (imageFile != null) {
+      var request = http.MultipartRequest('POST', uri);
+      request.fields['name'] = name;
+      request.fields['role'] = role;
+      request.fields['displayOrder'] = displayOrder.toString();
+
+      final bytes = await imageFile.readAsBytes();
+      final mimeTypeData = lookupMimeType(imageFile.path, headerBytes: bytes)?.split('/');
+      
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'image', // The field name expected by a generic upload or handled by controller
+          bytes,
+          filename: imageFile.name,
+          contentType: mimeTypeData != null ? MediaType(mimeTypeData[0], mimeTypeData[1]) : null,
+        ),
+      );
+      
+      // Note: My current teamController expects 'image' as a string URL or base64. 
+      // If I want to support file upload, I need to use the upload route first or update the team route.
+      // Let's assume we use the existing upload API first.
+    } else {
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'name': name,
+          'role': role,
+          'displayOrder': displayOrder,
+          'image': imageUrl ?? '',
+        }),
+      );
+      if (response.statusCode != 201) throw Exception('Failed to create team member');
+    }
+  }
+
+  // Generic Image Upload
+  Future<String?> uploadImage(XFile file) async {
+    try {
+      var uri = Uri.parse('$baseUrl/upload');
+      var request = http.MultipartRequest('POST', uri);
+
+      final bytes = await file.readAsBytes();
+      final mimeTypeData = lookupMimeType(file.path, headerBytes: bytes)?.split('/');
+      
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          bytes,
+          filename: file.name,
+          contentType: mimeTypeData != null ? MediaType(mimeTypeData[0], mimeTypeData[1]) : null,
+        ),
+      );
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        return json['url'];
+      }
+      return null;
+    } catch (e) {
+      print('Error uploading image: $e');
+      return null;
+    }
+  }
+
+  Future<void> addTeamMember(Map<String, dynamic> data) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/team'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(data),
+    );
+    if (response.statusCode != 201) throw Exception('Failed to add team member');
+  }
+
+  Future<void> updateTeamMember(String id, Map<String, dynamic> data) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/team/$id'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(data),
+    );
+    if (response.statusCode != 200) throw Exception('Failed to update team member');
+  }
+
+  Future<void> deleteTeamMember(String id) async {
+    final response = await http.delete(Uri.parse('$baseUrl/team/$id'));
+    if (response.statusCode != 200) throw Exception('Failed to delete team member');
+  }
 }
+
