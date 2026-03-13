@@ -8,7 +8,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiService {
   static String get baseUrl {
-    return dotenv.env['BACKEND_URL'] ?? 'https://ziyonstar.onrender.com/api';
+    return dotenv.env['BACKEND_URL'] ?? 'https://api.ziyonstar.com/api';
   }
 
   Future<Map<String, dynamic>> login(String email, String password) async {

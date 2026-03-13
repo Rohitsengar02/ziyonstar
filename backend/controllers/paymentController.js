@@ -30,7 +30,7 @@ exports.createPaymentOrder = async (req, res) => {
             customer_name: customerName,
             customer_email: customerEmail || 'customer@ziyonstar.com',
             customer_mobile: cleanMobile,
-            redirect_url: process.env.FRONTEND_URL || 'https://ziyonstar.onrender.com/payment-status'
+            redirect_url: process.env.FRONTEND_URL || 'https://api.ziyonstar.com/payment-status'
         };
 
         console.log('UPIGateway Request Payload:', { ...payload, key: '***' });

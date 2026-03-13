@@ -8,7 +8,7 @@ class ApiService {
   // Use localhost for Android emulator (10.0.2.2) and local IP for real device testing if needed
   // For web, localhost works fine.
   static String get baseUrl {
-    return dotenv.env['BACKEND_URL'] ?? 'https://ziyonstar.onrender.com/api';
+    return dotenv.env['BACKEND_URL'] ?? 'https://api.ziyonstar.com/api';
   }
 
   // Register technician

@@ -7,7 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class ApiService {
   static String get baseUrl {
-    return dotenv.env['BACKEND_URL'] ?? 'https://ziyonstar.onrender.com/api';
+    return dotenv.env['BACKEND_URL'] ?? 'https://api.ziyonstar.com/api';
   }
 
   Future<List<dynamic>> getIssues() async {
