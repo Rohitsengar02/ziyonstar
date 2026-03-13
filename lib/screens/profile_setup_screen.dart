@@ -117,6 +117,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       }
 
       // 3. Update Backend
+      debugPrint("ApiService: Sending update for ${widget.uid} with name: ${userData['name']} and photo: ${userData['photoUrl']}");
       await _apiService.updateUser(widget.uid, userData);
 
       // 4. Sync to Firestore
@@ -125,23 +126,43 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           .doc(widget.uid)
           .set(userData, SetOptions(merge: true));
 
-      // 5. Save locally
+      // 5. Sync to Firebase Auth Profile (CRITICAL for Navbar/Drawer)
+      try {
+        if (user != null) {
+          await user.updateDisplayName(userData['name']);
+          if (finalPhotoUrl != null) {
+            await user.updatePhotoURL(finalPhotoUrl);
+          }
+          debugPrint("Firebase: Auth Profile synced successfully.");
+        }
+      } catch (e) {
+        debugPrint("Firebase: Auth Profile sync failed: $e");
+      }
+
+      // 6. Save locally
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_onboarded', true);
       await prefs.setString('user_uid', widget.uid);
       await prefs.setString('user_name', _nameController.text.trim());
       await prefs.setString('user_email', widget.email);
-      if (finalPhotoUrl != null)
+      if (finalPhotoUrl != null) {
         await prefs.setString('user_photo', finalPhotoUrl);
+      }
       await prefs.setString('user_phone', _phoneController.text.trim());
 
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully!')),
+        );
         context.go('/home');
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      debugPrint("Profile Setup Error: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
