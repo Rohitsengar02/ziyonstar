@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "outputDirectory": "web",
+  "outputDirectory": "deploy_web",
   "routes": [
     {
       "handle": "filesystem"
